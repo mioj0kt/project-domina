@@ -5,8 +5,8 @@ var bonus_active: bool = false
 
 func _init() -> void:
 	id = "vengeful_fury"
-	name = "Furia Vingativa"
-	description = "Ao perder uma peca, a proxima peca sua a se mover ganha +1 casa de alcance de captura neste turno."
+	name = "Fúria Vingativa"
+	description = "Ao perder uma peça, a próxima peça sua a se mover ganha +1 casa de alcance de captura neste turno."
 	category = Category.COMBO
 	scope = Scope.PLAYER_ONLY
 	rarity = Rarity.EPIC
