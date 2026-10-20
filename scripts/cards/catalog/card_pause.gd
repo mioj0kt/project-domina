@@ -9,7 +9,7 @@ func _init() -> void:
 	id = "pause"
 	icon_path = "res://assets/sprites/cards/icons/pause.png"
 	name = "Pausa"
-	description = "Congela o relogio da Morte Subita por uma rodada. So com a Morte Subita ativa."
+	description = "Congela o relógio da Morte Súbita por uma rodada. Só consegue usar com a Morte Súbita ativa."
 	rarity = Rarity.RARE
 	target_type = TargetType.NONE
 

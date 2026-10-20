@@ -4,7 +4,7 @@ extends RuleCard
 func _init() -> void:
 	id = "optional_capture"
 	name = "Captura Opcional"
-	description = "Voce nao e obrigado a capturar pecas inimigas. Movimentos comuns continuam disponiveis."
+	description = "Você nao e obrigado a capturar pecas inimigas. Movimentos comuns continuam disponiveis."
 	category = Category.CAPTURE
 	scope = Scope.PLAYER_ONLY
 	priority = 20

@@ -8,7 +8,7 @@ func _init() -> void:
 	id = "scorched_earth"
 	icon_path = "res://assets/sprites/cards/icons/scorched_earth.png"
 	name = "Terra Queimada"
-	description = "A casa e as 4 vizinhas pegam fogo por 2 turnos: quem POUSAR nelas e destruido."
+	description = "A casa e as 4 vizinhas pegam fogo por 2 turnos: a peça POUSAR nelas é destruída."
 	rarity = Rarity.RARE
 	target_type = TargetType.EMPTY_TILE
 

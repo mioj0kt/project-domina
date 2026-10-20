@@ -10,7 +10,7 @@ func _init() -> void:
 	id = "triple_toss"
 	icon_path = "res://assets/sprites/cards/icons/triple_toss.png"
 	name = "Cara ou Coroa Triplo"
-	description = "Sorteia ate 3 pecas inimigas e gira 3 moedas: cada uma que cair na cor das suas pecas captura a peca sorteada na hora. Cada uma que cair contra voce custa uma peca sua aleatoria."
+	description = "Sorteia até 3 peças inimigas e gira 3 moedas: cada moeda que cair na cor das suas peças captura a peça sorteada do inimigo. Cada uma que cair contra você custa uma peça sua aleatória."
 	rarity = Rarity.EPIC
 	target_type = TargetType.NONE
 

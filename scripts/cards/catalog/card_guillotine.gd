@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "guillotine"
 	icon_path = "res://assets/sprites/cards/icons/guillotine.png"
 	name = "Guilhotina"
-	description = "Captura imediatamente uma Dama inimiga, onde ela estiver."
+	description = "Captura imediatamente uma Dama inimiga."
 	rarity = Rarity.LEGENDARY
 	target_type = TargetType.ENEMY_PIECE
 

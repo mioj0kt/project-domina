@@ -9,7 +9,7 @@ var used_this_duel: bool = false
 func _init() -> void:
 	id = "echo"
 	name = "Lei do Eco"
-	description = "A primeira Carta que voce usar em cada duelo, de qualquer raridade, volta para a sua mao depois de usada."
+	description = "A primeira Carta que voce usar em cada duelo, de qualquer raridade, volta para a sua mão depois de usada."
 	category = Category.TURN
 	scope = Scope.PLAYER_ONLY
 	rarity = Rarity.EPIC

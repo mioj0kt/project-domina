@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "vision"
 	icon_path = "res://assets/sprites/cards/icons/vision.png"
 	name = "Visao"
-	description = "Revela os movimentos e capturas ameacados pelo inimigo para este turno."
+	description = "Revela os movimentos e capturas ameaçados pelo inimigo para este turno."
 	rarity = Rarity.COMMON
 	target_type = TargetType.NONE
 

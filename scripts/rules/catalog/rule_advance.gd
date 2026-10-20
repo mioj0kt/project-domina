@@ -4,7 +4,7 @@ extends RuleCard
 func _init() -> void:
 	id = "advance"
 	name = "Investida"
-	description = "Suas pecas comuns podem andar ATE 2 casas por vez (1 ou 2, a sua escolha), desde que o caminho esteja livre. Nao afeta capturas."
+	description = "Suas peças comuns podem andar ATÉ 2 casas por vez (1 ou 2, a sua escolha), desde que o caminho esteja livre. Não afeta capturas."
 	category = Category.MOVEMENT
 	scope = Scope.PLAYER_ONLY
 	rarity = Rarity.RARE

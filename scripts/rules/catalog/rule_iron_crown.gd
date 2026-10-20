@@ -4,7 +4,7 @@ extends RuleCard
 func _init() -> void:
 	id = "iron_crown"
 	name = "Coroa de Ferro"
-	description = "[LEI INIMIGA] Damas inimigas sao blindadas: so podem ser capturadas por outras Damas."
+	description = "[LEI INIMIGA] Damas inimigas só podem ser capturadas por outras Damas."
 	category = Category.CAPTURE
 	scope = Scope.BOTH
 	priority = 5

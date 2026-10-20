@@ -10,7 +10,7 @@ const SHIELD_DURATION: int = 2
 func _init() -> void:
 	id = "mourning"
 	name = "Lei do Luto"
-	description = "Quando uma peca sua e capturada, a peca aliada mais proxima ganha um escudo: a proxima captura contra ela falha. Dura ate o fim do seu proximo turno."
+	description = "Quando uma peça sua é capturada, a peça aliada mais próxima ganha um escudo: a próxima captura contra ela falha. Dura até o fim do seu próximo turno."
 	category = Category.BOARD
 	scope = Scope.PLAYER_ONLY
 	rarity = Rarity.RARE

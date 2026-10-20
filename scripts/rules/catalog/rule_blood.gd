@@ -6,7 +6,7 @@ var consecutive_captures: int = 0
 func _init() -> void:
 	id = "blood"
 	name = "Sangue"
-	description = "A cada captura consecutiva no mesmo turno, a peca se enfurece: ganha +1 casa de alcance de salto para a proxima captura."
+	description = "A cada captura consecutiva no mesmo turno, a peça se enfurece: ganha +1 casa de alcance de salto para a próxima captura."
 	category = Category.COMBO
 	scope = Scope.PLAYER_ONLY
 	rarity = Rarity.COMMON

@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "sacrifice"
 	icon_path = "res://assets/sprites/cards/icons/sacrifice.png"
 	name = "Sacrificio"
-	description = "Remove voluntariamente uma peca sua do tabuleiro para ganhar +5 de Ouro e comprar 1 carta extra."
+	description = "Remove voluntariamente uma peça sua do tabuleiro para ganhar +15 de Ouro e comprar 1 carta extra."
 	rarity = Rarity.RARE
 	target_type = TargetType.ALLY_PIECE
 
@@ -16,7 +16,7 @@ func execute(board: Board, target_pos: Vector2i, _human_team: int, context: Dict
 		board.piece_destroyed.emit(target_pos, piece)
 		
 		if RunManager != null:
-			RunManager.add_effect_gold(5)
+			RunManager.add_effect_gold(15)
 
 		var deck_mgr = context.get("deck_mgr")
 		if deck_mgr != null and deck_mgr.has_method("draw_cards"):

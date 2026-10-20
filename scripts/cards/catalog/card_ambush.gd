@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "ambush"
 	icon_path = "res://assets/sprites/cards/icons/ambush.png"
 	name = "Emboscada"
-	description = "Uma peca inimiga nao pode andar nem capturar no proximo turno dele."
+	description = "Uma peça inimiga não pode andar nem capturar no proximo turno dele."
 	rarity = Rarity.COMMON
 	target_type = TargetType.ENEMY_PIECE
 

@@ -3,8 +3,8 @@ extends RuleCard
 
 func _init() -> void:
 	id = "early_promotion"
-	name = "Promocao Relampago"
-	description = "Suas pecas se tornam Damas ao atingirem a penultima linha do tabuleiro."
+	name = "Promoção Relampago"
+	description = "Suas peças se tornam Damas ao atingirem a penúltima linha do tabuleiro."
 	category = Category.PROMOTION
 	scope = Scope.PLAYER_ONLY
 	priority = 30
@@ -23,5 +23,5 @@ func check_custom_promotion(piece: BoardPiece, to_pos: Vector2i, board: RefCount
 
 func get_promotion_trigger_banner(to_pos: Vector2i) -> Dictionary:
 	if to_pos.y > 0:
-		return {"text": "PROMOCAO RELAMPAGO!", "color": Color(1.0, 0.85, 0.25)}
+		return {"text": "PROMOÇÃO RELAMPAGO!", "color": Color(1.0, 0.85, 0.25)}
 	return {}

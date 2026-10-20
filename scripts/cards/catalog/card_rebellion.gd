@@ -9,7 +9,7 @@ func _init() -> void:
 	id = "rebellion"
 	icon_path = "res://assets/sprites/cards/icons/rebellion.png"
 	name = "Rebeliao"
-	description = "Converte ate 2 pecas comuns inimigas isoladas para o seu lado: a escolhida e mais uma."
+	description = "Converte ate 2 peças comuns inimigas isoladas para o seu lado: a escolhida e mais uma."
 	rarity = Rarity.LEGENDARY
 	target_type = TargetType.ENEMY_PIECE
 

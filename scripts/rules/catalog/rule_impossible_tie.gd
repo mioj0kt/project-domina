@@ -8,8 +8,8 @@ extends RuleCard
 # scope = AI_ONLY em LootTables.get_random_ai_rules).
 func _init() -> void:
 	id = "impossible_tie_law"
-	name = "Empate Impossivel"
-	description = "Ao comecar a Morte Subita, gira 3 moedas em sequencia: cada uma que cair na cor das suas pecas promove uma peca comum aleatoria sua a Dama."
+	name = "Empate Impossível"
+	description = "Ao começaar a Morte Subita, gira 3 moedas em sequencia: cada uma que cair na cor das suas peças promove uma peça comum aleatória sua a Dama."
 	category = Category.PROMOTION
 	scope = Scope.PLAYER_ONLY
 	priority = 5

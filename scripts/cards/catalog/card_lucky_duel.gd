@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "lucky_duel"
 	icon_path = "res://assets/sprites/cards/icons/lucky_duel.png"
 	name = "Duelo de Sorte"
-	description = "Escolha uma peca inimiga e gire a moeda: se cair na cor das suas pecas, ela e capturada na hora, sem precisar estar na posicao certa. Senao, uma peca sua aleatoria e capturada."
+	description = "Escolha uma peça inimiga e gire a moeda: se cair na cor das suas peças, ela é capturada. Senão, uma peça sua aleatória é capturada."
 	rarity = Rarity.COMMON
 	target_type = TargetType.ENEMY_PIECE
 

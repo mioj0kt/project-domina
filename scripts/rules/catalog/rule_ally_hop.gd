@@ -4,7 +4,7 @@ extends RuleCard
 func _init() -> void:
 	id = "ally_hop"
 	name = "Salto Camarada"
-	description = "Suas pecas podem pular sobre pecas aliadas na diagonal como se fossem capturas, avancando 2 casas sem destruir a aliada."
+	description = "Suas peças podem pular sobre peças aliadas na diagonal como se fossem capturas, avançando 2 casas sem destruir a aliada."
 	category = Category.MOVEMENT
 	scope = Scope.PLAYER_ONLY
 	priority = 12

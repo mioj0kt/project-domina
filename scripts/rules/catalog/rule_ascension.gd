@@ -18,8 +18,8 @@ extends RuleCard
 # invertido porque essa Lei é contra quem NÃO a possui.
 func _init() -> void:
 	id = "ascension_law"
-	name = "Lei da Ascensao"
-	description = "Toda vez que uma peca INIMIGA for promovida a Dama, gire uma moeda antes: se cair na cor dela, promove normalmente. Senao, a peca nao promove (mas sobrevive)."
+	name = "Lei da Ascensão"
+	description = "Toda vez que uma peça INIMIGA for promovida a Dama, gire uma moeda: se cair na cor dela, promove normalmente. Senão, a peça não promove."
 	category = Category.PROMOTION
 	scope = Scope.PLAYER_ONLY
 	priority = 8

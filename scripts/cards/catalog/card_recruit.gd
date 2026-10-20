@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "recruit"
 	icon_path = "res://assets/sprites/cards/icons/recruit.png"
 	name = "Recrutamento"
-	description = "Invoca uma peca comum em uma casa escura vazia nas duas primeiras linhas do seu lado."
+	description = "Invoca uma peça comum em uma casa escura vazia nas duas primeiras linhas do seu lado."
 	rarity = Rarity.RARE
 	target_type = TargetType.EMPTY_TILE
 

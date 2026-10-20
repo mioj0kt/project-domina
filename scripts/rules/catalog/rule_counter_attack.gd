@@ -10,7 +10,7 @@ var charges: int = 0
 func _init() -> void:
 	id = "counter_attack"
 	name = "Contra-Ataque"
-	description = "[LEI INIMIGA] Toda vez que o inimigo perde uma peca, ganha um movimento extra com OUTRA peca no turno seguinte (ate 2 por turno)."
+	description = "[LEI INIMIGA] Toda vez que o inimigo perde uma peça, ganha um movimento extra no turno seguinte (até 2 por turno)."
 	category = Category.TURN
 	scope = Scope.AI_ONLY
 	priority = 55

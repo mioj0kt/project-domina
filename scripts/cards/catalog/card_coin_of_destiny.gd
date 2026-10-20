@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "coin_of_destiny"
 	icon_path = "res://assets/sprites/cards/icons/coin_of_destiny.png"
 	name = "Moeda do Destino"
-	description = "Escolha uma peca aliada comum e gire a moeda: se cair na cor dela, vira Dama na hora. Senao, a peca e perdida."
+	description = "Escolha uma peça aliada comum e gire a moeda: se cair na cor dela, vira Dama na hora. Senão, a peça é perdida."
 	rarity = Rarity.COMMON
 	target_type = TargetType.ALLY_PIECE
 

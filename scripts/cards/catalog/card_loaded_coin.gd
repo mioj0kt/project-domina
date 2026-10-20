@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "loaded_coin"
 	icon_path = "res://assets/sprites/cards/icons/loaded_coin.png"
 	name = "Moeda Viciada"
-	description = "A proxima moeda do duelo cai na cor das suas pecas."
+	description = "A próxima moeda do duelo cai na cor das suas peças."
 	rarity = Rarity.EPIC
 	target_type = TargetType.NONE
 

@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "recycle"
 	icon_path = "res://assets/sprites/cards/icons/recycle.png"
 	name = "Reciclar"
-	description = "Devolve a sua mao a ultima carta usada neste duelo."
+	description = "Devolve à sua mão a ultima carta usada neste duelo."
 	rarity = Rarity.EPIC
 	target_type = TargetType.NONE
 

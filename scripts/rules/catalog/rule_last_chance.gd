@@ -13,8 +13,8 @@ var used: bool = false
 
 func _init() -> void:
 	id = "last_chance"
-	name = "Ultima Chance"
-	description = "Uma vez por duelo, quando uma Dama sua for perdida (capturada, Guilhotina, Duelo de Sorte, devorada) ou rebaixada, gire a moeda: na cor das suas pecas ela e salva e volta a ser peca comum. Na fileira de coroacao ela e coroada de novo e continua Dama."
+	name = "Última Chance"
+	description = "Uma vez por duelo, quando uma Dama sua for perdida ou rebaixada, gire a moeda: na cor das suas peças ela é salva e volta a ser peça comum. Na fileira de coroacao ela e coroada de novo e continua Dama."
 	category = Category.CAPTURE
 	scope = Scope.PLAYER_ONLY
 	rarity = Rarity.EPIC

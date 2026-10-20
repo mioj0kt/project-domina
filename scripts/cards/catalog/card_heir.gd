@@ -9,7 +9,7 @@ func _init() -> void:
 	id = "heir"
 	icon_path = "res://assets/sprites/cards/icons/heir.png"
 	name = "Herdeiro"
-	description = "Uma peca comum sua vira Dama por 3 turnos e depois volta a ser comum."
+	description = "Uma peça comum sua vira Dama por 3 turnos e depois volta a ser comum."
 	rarity = Rarity.EPIC
 	target_type = TargetType.ALLY_PIECE
 

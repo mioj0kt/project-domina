@@ -10,7 +10,7 @@ func _init() -> void:
 	id = "light_up"
 	icon_path = "res://assets/sprites/cards/icons/light_up.png"
 	name = "Acender Casa"
-	description = "Acende uma casa clara por 2 turnos do inimigo: suas pecas nas 4 casas escuras ao redor dela nao podem ser capturadas."
+	description = "Acende uma casa clara por 2 turnos: suas peças nas 4 casas escuras ao redor dela não podem ser capturadas."
 	rarity = Rarity.RARE
 	target_type = TargetType.EMPTY_TILE
 

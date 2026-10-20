@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "demote"
 	icon_path = "res://assets/sprites/cards/icons/demote.png"
 	name = "Rebaixar"
-	description = "Uma Dama inimiga volta a ser uma peca comum."
+	description = "Uma Dama inimiga volta a ser uma peça comum."
 	rarity = Rarity.RARE
 	target_type = TargetType.ENEMY_PIECE
 

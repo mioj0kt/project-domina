@@ -24,6 +24,12 @@ var slot_containers: Array[Control] = []
 var law_board: LawBoard
 var _current_rules: Array[RuleCard] = []
 
+# Indicador da Moeda Viciada / Lei da Moeda Fiel: aparece enquanto existe uma
+# moeda armada (CoinFlipView.rigged_team) e some quando ela é consumida.
+var rigged_badge: Control
+var rigged_tip: PanelContainer
+var _rigged_shown: bool = false
+
 # Pilhas Visuais integradas
 var deck_mgr_ref: CardDeckManager
 var draw_pile_widget: Control
@@ -36,6 +42,7 @@ func _ready() -> void:
 	layer = 80
 	_build_side_panel()
 
+	set_process(true)
 	if RunManager != null and not RunManager.rules_updated.is_connected(refresh_deck):
 		RunManager.rules_updated.connect(refresh_deck)
 
@@ -124,6 +131,7 @@ func _build_side_panel() -> void:
 	gold_icon.position = Vector2(14, (TOP_BTN_H - 32.0) * 0.5)
 	gold_icon.size = Vector2(32, 32)
 	gold_wrap.add_child(gold_icon)
+	_build_rigged_badge(gold_wrap, half_w)
 
 	var gold_hbox = HBoxContainer.new()
 	gold_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -407,6 +415,63 @@ func update_gold() -> void:
 	Juice.float_text(self, ("+%d" if up else "%d") % delta, pos, Color(0.65, 1.0, 0.55) if up else Color(1.0, 0.5, 0.45), 28)
 	if up:
 		Juice.burst(self, gold_label.global_position + Vector2(-20, 14), Juice.C_GOLD, mini(6 + delta, 16), 130.0, 0.5, 3.0, 260.0, 120.0)
+
+func _build_rigged_badge(parent: Control, half_w: float) -> void:
+	rigged_badge = PanelContainer.new()
+	rigged_badge.custom_minimum_size = Vector2(TOP_BTN_H, TOP_BTN_H)
+	rigged_badge.size = Vector2(TOP_BTN_H, TOP_BTN_H)
+	rigged_badge.position = Vector2(half_w + 8.0, 0.0)
+	rigged_badge.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.09, 0.1, 0.14, 0.97), Color(1.0, 0.85, 0.3), 2))
+	rigged_badge.mouse_filter = Control.MOUSE_FILTER_STOP
+	rigged_badge.visible = false
+	var icon := TextureRect.new()
+	icon.texture = load("res://assets/sprites/cards/icons/loaded_coin.png")
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rigged_badge.add_child(icon)
+	parent.add_child(rigged_badge)
+	rigged_badge.mouse_entered.connect(_show_rigged_tip)
+	rigged_badge.mouse_exited.connect(_hide_rigged_tip)
+
+	rigged_tip = PanelContainer.new()
+	rigged_tip.add_theme_stylebox_override("panel", PixelUI.make_tooltip_panel(3, 8, Color(1.0, 0.85, 0.3)))
+	rigged_tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rigged_tip.z_index = 100
+	rigged_tip.visible = false
+	var lbl := Label.new()
+	lbl.text = "A próxima moeda cairá na sua cor"
+	lbl.add_theme_font_size_override("font_size", 24)
+	lbl.add_theme_color_override("font_color", Color(1.0, 0.95, 0.75))
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rigged_tip.add_child(lbl)
+	add_child(rigged_tip)
+
+func _show_rigged_tip() -> void:
+	if rigged_tip == null or rigged_badge == null:
+		return
+	rigged_tip.visible = true
+	rigged_tip.reset_size()
+	rigged_tip.global_position = rigged_badge.global_position + Vector2(rigged_badge.size.x + 12.0, (rigged_badge.size.y - rigged_tip.size.y) * 0.5)
+
+func _hide_rigged_tip() -> void:
+	if rigged_tip != null:
+		rigged_tip.visible = false
+
+func _process(_delta: float) -> void:
+	if rigged_badge == null:
+		return
+	var armed: bool = CoinFlipView.rigged_team != 0
+	if armed == _rigged_shown:
+		return
+	_rigged_shown = armed
+	rigged_badge.visible = armed
+	if armed:
+		rigged_badge.pivot_offset = rigged_badge.size / 2.0
+		Juice.pulse(rigged_badge, 1.3, 0.35)
+	else:
+		_hide_rigged_tip()
 
 func _on_rule_slot_hovered(idx: int) -> void:
 	if rule_tooltip == null or idx >= _current_rules.size():

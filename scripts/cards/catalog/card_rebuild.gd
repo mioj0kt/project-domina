@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "rebuild"
 	icon_path = "res://assets/sprites/cards/icons/rebuild.png"
 	name = "Reconstrucao"
-	description = "Revive uma peca que foi capturada e a posiciona em uma casa vazia da sua primeira fileira."
+	description = "Revive uma peça que foi capturada e a posiciona em uma casa vazia da sua primeira fileira."
 	rarity = Rarity.RARE
 	target_type = TargetType.EMPTY_TILE
 

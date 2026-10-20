@@ -7,7 +7,7 @@ func _init() -> void:
 	id = "fortify"
 	icon_path = "res://assets/sprites/cards/icons/fortify.png"
 	name = "Fortificar"
-	description = "Bloqueia uma casa vazia por 3 turnos — nenhuma peca pode passar ou pousar nela enquanto durar."
+	description = "Bloqueia uma casa vazia por 3 turnos — nenhuma peça pode passar ou pousar nela enquanto ativo."
 	rarity = Rarity.RARE
 	target_type = TargetType.EMPTY_TILE
 

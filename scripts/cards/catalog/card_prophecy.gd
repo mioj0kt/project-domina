@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "prophecy"
 	icon_path = "res://assets/sprites/cards/icons/prophecy.png"
 	name = "Profecia"
-	description = "Revela qual jogada o inimigo pretende fazer no proximo turno dele."
+	description = "Revela qual jogada o inimigo pretende fazer no próximo turno dele."
 	rarity = Rarity.RARE
 	target_type = TargetType.NONE
 
