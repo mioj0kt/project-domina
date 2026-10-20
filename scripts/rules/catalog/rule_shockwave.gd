@@ -29,4 +29,5 @@ func on_game_event(event_name: StringName, context: Dictionary, board: RefCounte
 			if target != Board.EMPTY and target.owner_team != attacker.owner_team:
 				board.grid[nr][nc] = Board.EMPTY
 				board.piece_destroyed.emit(Vector2i(nc, nr), target)
+				board.rule_fired.emit(id)
 				return

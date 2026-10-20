@@ -50,6 +50,12 @@ var extra_turns_by_team: Dictionary = {}
 # Dama Voadora | "turn" = turno extra inteiro. Quem escreve é o DuelTurnController.
 var extra_skip_kind: String = ""
 var skip_extra_btn: Button
+var skip_extra_title: Label
+var skip_extra_sub: Label
+var _skip_extra_was_shown: bool = false
+var _skip_extra_t: float = 0.0
+const SKIP_EXTRA_W: float = 330.0
+const SKIP_EXTRA_H: float = 84.0
 var show_enemy_threats: bool = false
 var lost_piece_last_enemy_turn: bool = false
 var predicted_ai_move: Dictionary = {}
@@ -187,6 +193,7 @@ func _setup_board(size: Vector2i, node_type: int) -> void:
 	board.set_theme_for_duel(node_type == MapNode.NodeType.DueloForte or node_type == MapNode.NodeType.Chefe)
 	board.piece_destroyed.connect(_on_board_piece_destroyed)
 	board.capture_prevented.connect(_on_board_capture_prevented)
+	board.rule_fired.connect(_on_rule_fired)
 
 # Leis e baralho da IA, conforme a dificuldade do duelo (ver DuelBase.get_enemy_*).
 # No tutorial o inimigo não recebe nada — só o que o roteiro pede.
@@ -310,6 +317,7 @@ func _setup_modules(max_dim: int) -> void:
 
 	rule_banner_view = RuleTriggerBannerView.new()
 	add_child(rule_banner_view)
+	rule_banner_view.rule_fired.connect(_on_rule_fired)
 
 func _setup_ui() -> void:
 	var ui_layer = CanvasLayer.new()
@@ -353,15 +361,36 @@ func _setup_ui() -> void:
 	action_card_reward_modal.skipped.connect(_leave_duel)
 	ui_layer.add_child(action_card_reward_modal)
 
-	# Botão "IGNORAR ... EXTRA": aparece acima do tabuleiro enquanto o jogador tem
+	# Botão "IGNORAR ... EXTRA": aparece no canto de baixo do tabuleiro (lado do
+	# painel de Leis inimigas, sem cobrir moldura nem mão) enquanto o jogador tem
 	# uma jogada/turno de bônus, para poder abrir mão dela.
 	skip_extra_btn = Button.new()
-	skip_extra_btn.custom_minimum_size = Vector2(380, 52)
-	skip_extra_btn.add_theme_font_size_override("font_size", 22)
+	skip_extra_btn.custom_minimum_size = Vector2(SKIP_EXTRA_W, SKIP_EXTRA_H)
 	skip_extra_btn.focus_mode = Control.FOCUS_NONE
 	skip_extra_btn.visible = false
 	PixelUI.skin_button(skip_extra_btn, Color(0.85, 0.64, 0.25))
 	skip_extra_btn.pressed.connect(func(): turn_controller.skip_extra())
+	var skip_box := VBoxContainer.new()
+	skip_box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	skip_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	skip_box.add_theme_constant_override("separation", 2)
+	skip_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	skip_extra_btn.add_child(skip_box)
+	skip_extra_title = Label.new()
+	skip_extra_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	skip_extra_title.add_theme_font_size_override("font_size", 26)
+	skip_extra_title.add_theme_color_override("font_color", Color(1.0, 0.92, 0.62))
+	skip_extra_title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
+	skip_extra_title.add_theme_constant_override("shadow_offset_x", 2)
+	skip_extra_title.add_theme_constant_override("shadow_offset_y", 2)
+	skip_extra_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	skip_box.add_child(skip_extra_title)
+	skip_extra_sub = Label.new()
+	skip_extra_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	skip_extra_sub.add_theme_font_size_override("font_size", 18)
+	skip_extra_sub.add_theme_color_override("font_color", Color(0.86, 0.74, 0.52, 0.9))
+	skip_extra_sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	skip_box.add_child(skip_extra_sub)
 	ui_layer.add_child(skip_extra_btn)
 
 	if TutorialManager.is_active:
@@ -599,6 +628,7 @@ func _resolve_impossible_tie() -> void:
 func _play_impossible_tie_for_team(team: int) -> void:
 	if _get_common_piece_positions(team).is_empty():
 		return
+	board.rule_fired.emit("impossible_tie_law")
 
 	is_resolving_card_effect = true
 
@@ -645,7 +675,17 @@ func _on_board_piece_destroyed(grid_pos: Vector2i, destroyed_piece: BoardPiece) 
 
 func _on_board_capture_prevented(grid_pos: Vector2i, _piece: BoardPiece) -> void:
 	var tile_center = board_offset + Vector2(grid_pos.x * cell_size + cell_size / 2.0, grid_pos.y * cell_size + cell_size / 2.0)
-	rule_banner_view.pop_rule_trigger(tile_center, "CAPTURA BLOQUEADA!", Color(0.45, 0.75, 1.0))
+	var preventer_id: String = board.rule_pipeline.last_preventer_id if board.rule_pipeline != null else ""
+	rule_banner_view.pop_rule_trigger(tile_center, "CAPTURA BLOQUEADA!", Color(0.45, 0.75, 1.0), preventer_id)
+
+# Game juice: a Lei agiu -> o slot dela (no quadro do jogador ou do inimigo) treme e brilha.
+func _on_rule_fired(rule_id: String) -> void:
+	if rule_id == "":
+		return
+	if hud_bar != null and hud_bar.flash_rule(rule_id):
+		return
+	if enemy_hud_bar != null:
+		enemy_hud_bar.flash_rule(rule_id)
 
 # ==========================================
 # FIM DE DUELO → PRÓXIMA CENA
@@ -673,6 +713,13 @@ func _on_game_over_action(won: bool) -> void:
 		MetaProgress.settle_run(false)
 		RunManager.start_new_run()
 		_go_run_over()
+		return
+
+	if RunManager.current_node_type == MapNode.NodeType.Chefe and RunManager.has_next_biome():
+		# Chefe do bioma derrotado e ainda há outro mapa (floresta -> deserto): a run
+		# continua com tudo que ganhou; escolhe uma Lei de recompensa e segue pro novo mapa.
+		RunManager.advance_to_next_biome()
+		rule_reward_modal.open_reward_draft()
 		return
 
 	if RunManager.current_node_type == MapNode.NodeType.Chefe:
@@ -766,21 +813,46 @@ func _can_use_debug_keys() -> bool:
 	return DebugFlags.SHORTCUTS and OS.is_debug_build() and not TutorialManager.is_active and not is_starting_match and not is_game_over
 
 func _process(delta: float) -> void:
-	_update_skip_extra_button()
+	_update_skip_extra_button(delta)
 	_poll_tutorial_tips(delta)
 
-func _update_skip_extra_button() -> void:
+func _update_skip_extra_button(delta: float = 0.0) -> void:
 	if skip_extra_btn == null:
 		return
 	var show: bool = extra_skip_kind != "" and not is_game_over and not is_starting_match \
 		and current_turn == human_team and not _is_board_input_blocked()
 	skip_extra_btn.visible = show
 	if not show:
+		_skip_extra_was_shown = false
 		return
-	skip_extra_btn.text = {"step": "IGNORAR PASSO EXTRA", "fly": "IGNORAR 2ª JOGADA", "turn": "IGNORAR TURNO EXTRA"}.get(extra_skip_kind, "IGNORAR EXTRA")
-	skip_extra_btn.size = skip_extra_btn.get_combined_minimum_size().max(skip_extra_btn.custom_minimum_size)
-	var cx: float = board_offset.x + board.cols * cell_size * 0.5
-	skip_extra_btn.position = Vector2(cx - skip_extra_btn.size.x * 0.5, maxf(8.0, board_offset.y - skip_extra_btn.size.y - 10.0))
+	var texts: Dictionary = {
+		"step": ["IGNORAR PASSO EXTRA", "Abre mão do passo e passa a vez"],
+		"fly": ["IGNORAR 2ª JOGADA", "Abre mão da jogada e passa a vez"],
+		"turn": ["IGNORAR TURNO EXTRA", "Abre mão do bônus e passa a vez"],
+	}
+	var tx: Array = texts.get(extra_skip_kind, ["IGNORAR EXTRA", "Passa a vez"])
+	skip_extra_title.text = "» " + String(tx[0])
+	skip_extra_sub.text = String(tx[1])
+	skip_extra_btn.size = Vector2(SKIP_EXTRA_W, SKIP_EXTRA_H)
+	# Canto de baixo do tabuleiro, à direita da moldura; nunca sobe a ponto de
+	# cobrir o painel de Leis inimigas (ele termina por volta de y = 800).
+	var vp: Vector2 = get_viewport_rect().size
+	var frame_right: float = board_offset.x + board.cols * cell_size + 56.0
+	var bx: float = minf(frame_right + 16.0, vp.x - SKIP_EXTRA_W - 24.0)
+	var by: float = maxf(board_offset.y + board.rows * cell_size - SKIP_EXTRA_H, 820.0)
+	if not _skip_extra_was_shown:
+		_skip_extra_was_shown = true
+		_skip_extra_t = 0.0
+	_skip_extra_t += delta
+	# Entra deslizando da direita e depois pulsa de leve, chamando o olhar.
+	var slide: float = (1.0 - ease_out_cubic(clampf(_skip_extra_t / 0.25, 0.0, 1.0))) * 40.0
+	skip_extra_btn.position = Vector2(bx + slide, by)
+	skip_extra_btn.modulate.a = clampf(_skip_extra_t / 0.2, 0.0, 1.0)
+	var pulse: float = 0.5 + 0.5 * sin(_skip_extra_t * 3.2)
+	skip_extra_title.add_theme_color_override("font_color", Color(1.0, 0.92, 0.62).lerp(Color(1.0, 1.0, 0.85), pulse * 0.6))
+
+static func ease_out_cubic(t: float) -> float:
+	return 1.0 - pow(1.0 - t, 3.0)
 
 # Dicas do tutorial que dependem de um estado do tabuleiro (não de um evento
 # pontual). Só roda enquanto o tutorial está ativo e a dica ainda não saiu.

@@ -23,6 +23,7 @@ func on_game_event(event_name: StringName, context: Dictionary, board: RefCounte
 			var victim: BoardPiece = context.get("piece")
 			if victim != null and not victim.is_tree and applies_to_team(victim.owner_team, board.human_team_color):
 				charges = mini(MAX_CHARGES, charges + 1)
+				board.rule_fired.emit(id)
 
 func consume_charges() -> int:
 	var n = charges

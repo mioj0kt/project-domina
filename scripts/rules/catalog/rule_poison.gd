@@ -24,3 +24,4 @@ func on_game_event(event_name: StringName, context: Dictionary, board: RefCounte
 	# "Meio": até 1 fileira de distância do centro do tabuleiro (8 linhas = 3 e 4).
 	if absf(pos.y - (board.rows - 1) / 2.0) <= 1.0:
 		board.fire_tiles[pos] = FIRE_TURNS
+		board.rule_fired.emit(id)

@@ -77,7 +77,7 @@ func _maybe_apply_echo(card: ActionCard) -> void:
 	if _host.rule_banner_view != null:
 		_host.rule_banner_view.pop_rule_trigger(
 			_host.board_offset + Vector2(board.cols * _host.cell_size / 2.0, board.rows * _host.cell_size / 2.0),
-			"ECO!", Color(0.6, 0.8, 1.0))
+			"ECO!", Color(0.6, 0.8, 1.0), "echo")
 
 func has_selected_card() -> bool:
 	return selected_action_card != null

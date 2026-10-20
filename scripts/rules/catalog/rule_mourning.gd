@@ -41,6 +41,7 @@ func on_game_event(event_name: StringName, context: Dictionary, board: RefCounte
 				best_pos = Vector2i(c, r)
 	if best_pos.x >= 0:
 		board.grid[best_pos.y][best_pos.x].shield_turns = SHIELD_DURATION
+		board.rule_fired.emit(id)
 
 func try_prevent_capture(victim: BoardPiece, _board: RefCounted) -> bool:
 	if victim.shield_turns > 0:

@@ -21,6 +21,33 @@ func get_shop_price(base_cost: int) -> int:
 func register_shop_purchase() -> void:
 	shop_purchases += 1
 
+# Bioma do mapa desta run ("floresta" | "deserto"; ver ForestBackground.THEMES).
+var map_biome: String = "floresta"
+# true logo depois de entrar num bioma novo: o mapa mostra o título dele uma vez.
+var biome_intro_pending: bool = false
+
+# Nomes e ordem dos biomas da run (a floresta vem primeiro; o último termina a run).
+const BIOME_ORDER: Array[String] = ["floresta", "deserto"]
+const BIOME_TITLES: Dictionary = {"floresta": "FLORESTA", "deserto": "DESERTO DAS TORRES"}
+
+func has_next_biome() -> bool:
+	return BIOME_ORDER.find(map_biome) >= 0 and BIOME_ORDER.find(map_biome) < BIOME_ORDER.size() - 1
+
+# Chefe derrotado e ainda há outro mapa: gera o próximo bioma mantendo ouro,
+# baralho e Leis da run (o mapa novo é sorteado quando a cena do mapa abre).
+func advance_to_next_biome() -> void:
+	if not has_next_biome():
+		return
+	map_biome = BIOME_ORDER[BIOME_ORDER.find(map_biome) + 1]
+	biome_intro_pending = true
+	map_data = []
+	current_node = null
+	visited_connections = []
+	current_board_size = Vector2i(8, 8)
+	current_board_layout = Board.LAYOUT_CLASSIC
+	current_node_type = 1
+	clear_ambush()
+
 var map_data: Array[Array] = []
 var current_node: MapNode = null
 var visited_connections: Array[String] = []
@@ -100,6 +127,8 @@ func start_new_run():
 	current_node = null
 	visited_connections = []
 	forest_boss_law_id = ""
+	map_biome = "floresta"
+	biome_intro_pending = false
 	clear_ambush()
 	seen_event_ids.clear()
 	rule_pipeline.clear_rules()
@@ -124,6 +153,9 @@ func _init_default_deck() -> void:
 			# Debug ignora o limite de 20.
 			player_deck.append(card)
 		return
+	player_deck.append(CardSecondChance.new())
+	player_deck.append(CardLuckyDuel.new())
+	player_deck.append(CardCoinOfDestiny.new())
 	
 func add_gold(amount: int) -> void:
 	gold += amount

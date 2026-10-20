@@ -55,9 +55,32 @@ var remove_grid: HBoxContainer
 func _ready() -> void:
 	_generate_laws_stock()
 	_reroll_cards_stock()
+	_tutorial_ensure_law_gold()
 	_setup_ui()
 	if TutorialManager.is_active:
 		_setup_tutorial()
+
+# Tutorial: a Lei do estoque didático precisa SEMPRE caber no ouro do jogador
+# (rede de segurança contra softlock se ele chegar aqui com pouco ouro).
+func _tutorial_ensure_law_gold() -> void:
+	if not TutorialManager.is_active or RunManager == null or laws_for_sale.is_empty():
+		return
+	if RunManager.gold < _law_price(laws_for_sale[0]):
+		RunManager.gold = maxi(RunManager.gold, TutorialManager.TUTORIAL_GOLD)
+
+# Tutorial: enquanto a Lei pedida não foi comprada, Cartas ficam travadas (gastar
+# o ouro antes impediria de comprar a Lei). Reroll e Remover ficam travados no
+# tutorial inteiro: só gastariam ouro que os objetivos precisam.
+func _tutorial_cards_locked() -> bool:
+	if not TutorialManager.is_active:
+		return false
+	for id in TutorialManager.SHOP_LAW_IDS:
+		if not _tutorial_owns_rule(id):
+			return true
+	return false
+
+func _tutorial_header_locked() -> bool:
+	return TutorialManager.is_active
 
 func _generate_laws_stock() -> void:
 	laws_for_sale.clear()
@@ -279,11 +302,12 @@ func _create_action_card_shop_item_ui(card: ActionCard, index: int) -> Control:
 
 	var current_gold = RunManager.gold if RunManager != null else 0
 	var deck_full = RunManager != null and not RunManager.can_add_card_to_deck()
-	var can_afford = current_gold >= _card_price(card) and not deck_full
+	var cards_locked: bool = _tutorial_cards_locked()
+	var can_afford = current_gold >= _card_price(card) and not deck_full and not cards_locked
 
 	var buy_btn = Button.new()
 	buy_btn.custom_minimum_size = Vector2(ActionCardVisual.CARD_WIDTH * SHOP_ACTION_SCALE, 52)
-	buy_btn.text = "INVENTARIO CHEIO" if deck_full else "%d OURO" % _card_price(card)
+	buy_btn.text = "INVENTARIO CHEIO" if deck_full else ("COMPRE A LEI ANTES" if cards_locked else "%d OURO" % _card_price(card))
 	buy_btn.disabled = not can_afford
 	buy_btn.add_theme_font_size_override("font_size", 22)
 
@@ -305,7 +329,7 @@ func _update_header_buttons_state() -> void:
 
 	# 1. Reroll
 	if reroll_btn != null:
-		var can_reroll = current_gold >= card_reroll_cost
+		var can_reroll = current_gold >= card_reroll_cost and not _tutorial_header_locked()
 		reroll_btn.text = "REROLL: %d OURO" % card_reroll_cost
 		reroll_btn.disabled = not can_reroll
 		if can_reroll:
@@ -318,7 +342,7 @@ func _update_header_buttons_state() -> void:
 	# 2. Remover Carta
 	if remove_card_btn != null:
 		var has_cards = RunManager != null and not RunManager.player_deck.is_empty()
-		var can_remove = current_gold >= remove_card_cost and has_cards
+		var can_remove = current_gold >= remove_card_cost and has_cards and not _tutorial_header_locked()
 		remove_card_btn.text = "REMOVER: %d OURO" % remove_card_cost
 		remove_card_btn.disabled = not can_remove
 		if can_remove:
@@ -329,7 +353,7 @@ func _update_header_buttons_state() -> void:
 			remove_card_btn.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55))
 
 func _on_reroll_cards_pressed() -> void:
-	if tutorial_intro_playing:
+	if tutorial_intro_playing or _tutorial_header_locked():
 		return
 	if RunManager != null and RunManager.gold >= card_reroll_cost:
 		RunManager.gold -= card_reroll_cost
@@ -369,7 +393,7 @@ func _on_law_replaced(_old: RuleCard, new_rule: RuleCard) -> void:
 	_refresh_store_state()
 
 func _on_buy_action_card_pressed(index: int) -> void:
-	if tutorial_intro_playing:
+	if tutorial_intro_playing or _tutorial_cards_locked():
 		return
 	if index < 0 or index >= cards_for_sale.size():
 		return
@@ -476,7 +500,7 @@ func _build_remove_modal_ui() -> void:
 	vb.add_child(cancel_btn)
 
 func _on_remove_card_clicked() -> void:
-	if tutorial_intro_playing:
+	if tutorial_intro_playing or _tutorial_header_locked():
 		return
 	if RunManager == null or RunManager.gold < remove_card_cost:
 		return

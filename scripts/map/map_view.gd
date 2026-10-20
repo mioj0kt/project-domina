@@ -55,6 +55,7 @@ func _ready() -> void:
 		camera.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
 
 	if RunManager.map_data.is_empty():
+		generator.biome = _current_biome()
 		RunManager.map_data = generator.generate_map()
 		_position_nodes(RunManager.map_data)
 		if not RunManager.map_data.is_empty() and not RunManager.map_data[0].is_empty():
@@ -73,6 +74,9 @@ func _ready() -> void:
 
 	if DebugFlags.SHORTCUTS:
 		_build_debug_hint()
+	if RunManager.biome_intro_pending:
+		RunManager.biome_intro_pending = false
+		_show_biome_title()
 
 func _setup_player_pawn() -> void:
 	player_pawn = MapPlayerPawn.new()
@@ -211,6 +215,7 @@ func _build_forest(layers: Array[Array]) -> void:
 			max_r = maxi(max_r, r)
 	var half = maxi(4, maxi(-min_c, max_c) + FOREST_MARGIN_COLS)
 	forest = ForestBackground.new()
+	forest.biome = _current_biome()
 	forest.name = "ForestBackground"
 	add_child(forest)
 	move_child(forest, 0)
@@ -226,11 +231,47 @@ func _build_forest(layers: Array[Array]) -> void:
 	move_child(island_base, 0)
 	island_base.build(forest.world_rect, MAP_SPRITE_SCALE, camera)
 
+# Título do bioma ao entrar nele: surge, fica um instante e some.
+func _show_biome_title() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 130
+	add_child(layer)
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.alignment = BoxContainer.ALIGNMENT_BEGIN
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.modulate.a = 0.0
+	layer.add_child(box)
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 150)
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(spacer)
+	var title := Label.new()
+	title.text = String(RunManager.BIOME_TITLES.get(_current_biome(), ""))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 72)
+	title.add_theme_color_override("font_color", Color(0.95, 0.82, 0.5))
+	title.add_theme_color_override("font_shadow_color", Color(0.12, 0.07, 0.05, 0.9))
+	title.add_theme_constant_override("shadow_offset_x", 4)
+	title.add_theme_constant_override("shadow_offset_y", 4)
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(title)
+	var tw := create_tween()
+	tw.tween_property(box, "modulate:a", 1.0, 0.7)
+	tw.tween_interval(1.8)
+	tw.tween_property(box, "modulate:a", 0.0, 0.9)
+	tw.tween_callback(layer.queue_free)
+
+func _current_biome() -> String:
+	var b: String = DebugFlags.MAP_BIOME_OVERRIDE if DebugFlags.MAP_BIOME_OVERRIDE != "" else RunManager.map_biome
+	return b if ForestBackground.THEMES.has(b) else "floresta"
+
 func _draw_lines(layers: Array[Array]) -> void:
 	for layer in layers:
 		for node in layer:
 			for child in node.children:
 				var trail = ForestTrail.new()
+				trail.biome = _current_biome()
 				trail.setup(node.position, child.position, MAP_SPRITE_SCALE)
 				lines_container.add_child(trail)
 				lines_dictionary[_get_connection_key(node, child)] = trail

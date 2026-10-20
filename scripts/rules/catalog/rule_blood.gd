@@ -23,5 +23,6 @@ func on_game_event(event_name: StringName, context: Dictionary, board: RefCounte
 			var attacker: BoardPiece = context.get("attacker")
 			if attacker and attacker.owner_team == board.human_team_color:
 				consecutive_captures += 1
+				board.rule_fired.emit(id)
 		&"turn_started":
 			consecutive_captures = 0

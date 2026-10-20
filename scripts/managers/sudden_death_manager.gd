@@ -15,6 +15,7 @@ var just_triggered: bool = false
 # Anti-impasse (SÓ NO CHEFE, quando stall_only = true): sobraram poucas peças (ou só Damas) e ninguém captura há várias
 # jogadas — a IA foge e o duelo nunca acabaria. Liga a Morte Súbita (pontos).
 const STALL_PLIES: int = 10          # jogadas seguidas sem mudar o nº de peças
+const STALL_LONG_PLIES: int = 20     # sem captura por tanto tempo = impasse com QUALQUER nº de peças
 const STALL_MAX_PIECES: int = 6      # só vale com no máximo isso de peças no tabuleiro...
 # ...ou quando TODAS as peças restantes são Damas (qualquer quantidade).
 # true = as outras condições (1 peça restante, nova Dama) NÃO ligam a Morte
@@ -50,6 +51,11 @@ func reset() -> void:
 func configure(max_dim: int = 8) -> void:
 	max_turns = max(4, max_dim + 2)
 	turns_left = max_turns
+
+# Guarda quantas Damas já existem quando a partida começa (Realeza, Guarda Real...).
+# Só Dama ACIMA desse número conta como "nova Dama" e liga a Morte Súbita.
+func snapshot_initial_kings(board: Board) -> void:
+	initial_kings_count = _count_total_kings(board)
 
 func start_immediately() -> void:
 	is_active = true
@@ -125,6 +131,10 @@ func _update_stall(board: Board, total: int) -> bool:
 	if _stall_plies < STALL_PLIES:
 		return false
 	if total <= STALL_MAX_PIECES:
+		return true
+	# Fallback: muitas peças e homens ainda em campo, mas ninguém captura há muito
+	# tempo (ex.: poucas Damas inimigas fugindo de um exército que não as alcança).
+	if _stall_plies >= STALL_LONG_PLIES:
 		return true
 	# Muitas peças, mas só Damas em campo (fora as congeladas): também é impasse.
 	var only_kings: bool = true

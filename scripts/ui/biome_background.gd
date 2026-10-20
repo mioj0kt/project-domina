@@ -16,10 +16,20 @@ const BIOMES: Dictionary = {
 		"line": Color("2a3a31"), "dot": Color("3a4f3f"), "fill": Color("1d2923"),
 		"patterns": ["losango", "xadrez", "escamas", "estrelas", "diagonal", "trama"],
 		"fireflies": Color("d9a441"), "n_fireflies": 22,
-		"leaves": [Color("5b8f4e"), Color("3f6b3a"), Color("d0802f")], "n_leaves": 100,
+		"leaves": [Color("5b8f4e"), Color("3f6b3a"), Color("d0802f")], "n_leaves": 14,
 		"spores": Color("7fa874"), "n_spores": 46,
 		# Cores das transições de cena (SceneTransition): a, b, chefe, detalhe.
 		"trans_a": Color("16201c"), "trans_b": Color("2a3a31"), "trans_boss": Color("2a1418"), "trans_edge": Color("5b8f4e"),
+	},
+	"deserto": {
+		"top": Color("2b2118"), "bottom": Color("3a2a22"),
+		"line": Color("4d3b2a"), "dot": Color("6e5636"), "fill": Color("33261c"),
+		"patterns": ["losango", "xadrez", "escamas", "diagonal", "trama"],
+		# Brilhos de areia ao vento (no lugar dos vaga-lumes) e grãos subindo.
+		"fireflies": Color("f2cf6b"), "n_fireflies": 12,
+		"leaves": [Color("cdb078"), Color("a88a58"), Color("e3c98a")], "n_leaves": 0,
+		"spores": Color("d9bb82"), "n_spores": 64,
+		"trans_a": Color("2b2118"), "trans_b": Color("5a4530"), "trans_boss": Color("3a1a14"), "trans_edge": Color("d9a441"),
 	},
 	"tutorial": {
 		"top": Color("231a2a"), "bottom": Color("1a1420"),
@@ -55,7 +65,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	if biome == "auto":
-		biome = "tutorial" if TutorialManager.is_active else "floresta"
+		biome = "tutorial" if TutorialManager.is_active else RunManager.map_biome
 	_cfg = BIOMES.get(biome, BIOMES["floresta"])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242 + biome.hash() % 1000

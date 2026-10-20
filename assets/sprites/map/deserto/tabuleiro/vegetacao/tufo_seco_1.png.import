@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b12p2127h0d1u"
-path="res://.godot/imported/icone_selo.png-fa5749b052a08afa3928e1bdd5444d50.ctex"
+uid="uid://b31b7fw11n0xn"
+path="res://.godot/imported/tufo_seco_1.png-6f4603196849a421125f880595e9813d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/hud/icone_selo.png"
-dest_files=["res://.godot/imported/icone_selo.png-fa5749b052a08afa3928e1bdd5444d50.ctex"]
+source_file="res://assets/sprites/map/deserto/tabuleiro/vegetacao/tufo_seco_1.png"
+dest_files=["res://.godot/imported/tufo_seco_1.png-6f4603196849a421125f880595e9813d.ctex"]
 
 [params]
 

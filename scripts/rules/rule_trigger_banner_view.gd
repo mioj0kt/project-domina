@@ -21,7 +21,13 @@ class _SparkIcon:
 		])
 		draw_colored_polygon(pts, spark_color)
 
-func pop_rule_trigger(world_pos: Vector2, rule_name: String, color: Color = Color(1.0, 0.85, 0.3)) -> void:
+# Emitido junto com cada letreiro que pertence a uma Lei (rule_id preenchido):
+# a HUD faz o slot da Lei tremer/brilhar.
+signal rule_fired(rule_id: String)
+
+func pop_rule_trigger(world_pos: Vector2, rule_name: String, color: Color = Color(1.0, 0.85, 0.3), rule_id: String = "") -> void:
+	if rule_id != "":
+		rule_fired.emit(rule_id)
 	# Tutorial: a primeira vez que uma Lei age vira um momento "viu só?".
 	TutorialManager.report_event("law_triggered")
 	TutorialManager.report_law_applied()

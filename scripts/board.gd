@@ -4,6 +4,8 @@ extends RefCounted
 signal piece_destroyed(grid_pos: Vector2i, piece: BoardPiece)
 # Uma Lei (ex: Escudo) impediu a captura desta peça — a peça continua no tabuleiro.
 signal capture_prevented(grid_pos: Vector2i, piece: BoardPiece)
+# Uma Lei acabou de agir (id da Lei): a HUD faz o slot dela tremer/brilhar (game juice).
+signal rule_fired(rule_id: String)
 
 const EMPTY: BoardPiece = null
 const NEUTRAL: int = 0

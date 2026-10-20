@@ -28,3 +28,4 @@ func on_game_event(event_name: StringName, context: Dictionary, board: RefCounte
 				if RunManager != null:
 					RunManager.add_effect_gold(3)
 				attacker.is_king = true
+				board.rule_fired.emit(id)

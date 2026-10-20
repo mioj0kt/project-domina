@@ -109,6 +109,7 @@ func play_tongue_attack(board: Board, tiles_to_attack: Array) -> void:
 		return
 
 	is_attacking = true
+	board.rule_fired.emit("frog_devourer")
 	tongue_origin = Vector2(board_offset.x + (board.cols * cell_size) / 2.0, -160.0)
 
 	for tile_obj in tiles_to_attack:

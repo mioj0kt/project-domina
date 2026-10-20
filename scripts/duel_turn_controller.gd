@@ -78,6 +78,10 @@ func on_coin_flip_completed(player_won_white: bool) -> void:
 		if _host.board.rule_pipeline.has_rule("faithful_coin"):
 			CoinFlipView.rigged_team = _host.human_team
 
+	# Damas que já existem no começo (Realeza, Guarda Real) nunca contam como
+	# "Dama nova" — o relógio da Morte Súbita não pode nem piscar por causa delas.
+	_host.sudden_death_mgr.snapshot_initial_kings(_host.board)
+
 	if _host.current_duel is DuelBoss:
 		var boss_duel = _host.current_duel as DuelBoss
 		boss_duel.should_spawn_new_flies = false
@@ -284,10 +288,12 @@ func handle_cell_click(pos: Vector2i) -> void:
 
 			# Regra de Segundo Movimento (ou qualquer futura regra que conceda passo extra)
 			var used_extra_step = false
+			var extra_step_rule_id: String = ""
 			if not was_capture and board.rule_pipeline != null:
 				for r in board.rule_pipeline.active_rules:
 					if r.try_consume_extra_step():
 						used_extra_step = true
+						extra_step_rule_id = r.id
 						break
 
 			# Dama Voadora: a mesma Dama faz uma 2ª jogada neste turno.
@@ -304,7 +310,7 @@ func handle_cell_click(pos: Vector2i) -> void:
 					return
 
 			if used_extra_step:
-				host.rule_banner_view.pop_rule_trigger(to_center, "PASSO EXTRA!", Color(0.4, 0.9, 0.5))
+				host.rule_banner_view.pop_rule_trigger(to_center, "PASSO EXTRA!", Color(0.4, 0.9, 0.5), extra_step_rule_id)
 				host.extra_skip_kind = "step"
 				# Sem essa checagem, se o jogador não tiver NENHUM movimento
 				# disponível pro passo extra, o jogo ficaria esperando pra
@@ -336,7 +342,7 @@ func _show_rule_move_banner(piece: BoardPiece, from_pos: Vector2i, to_pos: Vecto
 	for r in _host.board.rule_pipeline.active_rules:
 		var banner = r.get_move_trigger_banner(piece, from_pos, to_pos, was_capture)
 		if not banner.is_empty():
-			_host.rule_banner_view.pop_rule_trigger(screen_pos, banner["text"], banner["color"])
+			_host.rule_banner_view.pop_rule_trigger(screen_pos, banner["text"], banner["color"], r.id)
 			return
 
 # Mesma ideia, para o momento de promoção a Dama.
@@ -346,7 +352,7 @@ func _show_rule_promotion_banner(to_pos: Vector2i, screen_pos: Vector2) -> void:
 	for r in _host.board.rule_pipeline.active_rules:
 		var banner = r.get_promotion_trigger_banner(to_pos)
 		if not banner.is_empty():
-			_host.rule_banner_view.pop_rule_trigger(screen_pos, banner["text"], banner["color"])
+			_host.rule_banner_view.pop_rule_trigger(screen_pos, banner["text"], banner["color"], r.id)
 			return
 
 # Lei da Ascensão: só mira peças INIMIGAS (owner_team diferente do
@@ -375,6 +381,7 @@ func _maybe_resolve_ascension_law(host: Node2D, piece: BoardPiece, center: Vecto
 		return true
 
 	host.is_resolving_card_effect = true
+	board.rule_fired.emit("ascension_law")
 
 	var coin_view: CoinFlipView = host.card_coin_flip_view
 	# Favorável = a moeda cair na cor da peça que está sendo promovida.
@@ -438,7 +445,7 @@ func play_ai_turn() -> void:
 				break
 			host.rule_banner_view.pop_rule_trigger(
 				host.board_offset + Vector2(board.cols * host.cell_size / 2.0, board.rows * host.cell_size / 2.0),
-				"CONTRA-ATAQUE!", Color(0.95, 0.35, 0.3))
+				"CONTRA-ATAQUE!", Color(0.95, 0.35, 0.3), "counter_attack")
 			await get_tree().create_timer(0.45).timeout
 			last_pos = await _ai_execute_move_chain(extra_move)
 
@@ -746,19 +753,19 @@ func _process_boss_law_events(boss_duel: DuelBoss) -> void:
 	for ev in boss_duel.advance_turn():
 		match ev["type"]:
 			"night":
-				host.rule_banner_view.pop_rule_trigger(center, "A NOITE CAI!", Color(0.65, 0.55, 1.0))
+				host.rule_banner_view.pop_rule_trigger(center, "A NOITE CAI!", Color(0.65, 0.55, 1.0), "owl_night")
 				await get_tree().create_timer(0.7).timeout
 			"dawn":
-				host.rule_banner_view.pop_rule_trigger(center, "AMANHECE!", Color(1.0, 0.85, 0.35))
+				host.rule_banner_view.pop_rule_trigger(center, "AMANHECE!", Color(1.0, 0.85, 0.35), "owl_night")
 				await get_tree().create_timer(0.7).timeout
 			"vines":
-				host.rule_banner_view.pop_rule_trigger(center, "OS CIPÓS SE MOVEM!", Color(0.45, 0.9, 0.4))
+				host.rule_banner_view.pop_rule_trigger(center, "OS CIPÓS SE MOVEM!", Color(0.45, 0.9, 0.4), "vines")
 				await get_tree().create_timer(0.5).timeout
 			"fireflies":
 				# Sem banner (acontece toda rodada): o renderer desliza as luzes.
-				pass
+				host.board.rule_fired.emit("fireflies")
 			"trees":
-				host.rule_banner_view.pop_rule_trigger(center, "A FLORESTA SE FECHA!", Color(0.45, 0.9, 0.4))
+				host.rule_banner_view.pop_rule_trigger(center, "A FLORESTA SE FECHA!", Color(0.45, 0.9, 0.4), "closing_forest")
 				var tw = create_tween().set_parallel(true)
 				for pos in ev["tiles"]:
 					host.piece_spawn_scales[pos] = 0.0
@@ -813,7 +820,7 @@ func _conclude_turn(team_that_moved: int) -> void:
 		var rp: Vector2i = root_spots[0]
 		host.rule_banner_view.pop_rule_trigger(
 			host.board_offset + Vector2(rp.x * host.cell_size + host.cell_size / 2.0, rp.y * host.cell_size + host.cell_size / 2.0),
-			"ENRAIZADA!", Color(0.45, 0.85, 0.35))
+			"ENRAIZADA!", Color(0.45, 0.85, 0.35), "hungry_roots")
 
 	if await check_game_over():
 		return

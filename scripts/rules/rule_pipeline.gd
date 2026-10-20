@@ -4,6 +4,8 @@ extends RefCounted
 const MAX_ACTIVE_RULES: int = 6
 
 var active_rules: Array[RuleCard] = []
+# Id da última Lei que impediu uma captura (a HUD usa para animar o slot dela).
+var last_preventer_id: String = ""
 
 # Única fonte da validação de limite (6) e incompatibilidade — usada tanto
 # por add_rule quanto por quem precisa perguntar ANTES (ex: a loja, pra não
@@ -142,5 +144,6 @@ func try_prevent_capture(victim: BoardPiece, human_team: int, board: RefCounted)
 	for rule in active_rules:
 		if rule.applies_to_team(victim.owner_team, human_team):
 			if rule.try_prevent_capture(victim, board):
+				last_preventer_id = rule.id
 				return true
 	return false

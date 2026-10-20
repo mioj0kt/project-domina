@@ -20,17 +20,52 @@ const DIR_ORDER: Array[String] = ["N", "NE", "SE", "S", "SW", "NW"]
 
 static var _tex_cache: Dictionary = {}
 
+# Bioma do mapa (ver ForestBackground.THEMES); defina ANTES de setup().
+var biome: String = "floresta"
+
 var _sprites: Array[Sprite2D] = []
 var _names: Array[String] = []
 var _light: Array[bool] = []
 var state: String = "normal"
 
-static func _texture(piece: String, st: String, on_light: bool) -> Texture2D:
-	var key = "%s/%s/%s" % [st, "casa_clara" if on_light else "casa_escura", piece]
+static func _texture(piece: String, st: String, on_light: bool, dir: String = DIR) -> Texture2D:
+	var key = "%s|%s/%s/%s" % [dir, st, "casa_clara" if on_light else "casa_escura", piece]
 	if not _tex_cache.has(key):
-		var path = DIR + st + "/" + ("casa_clara" if on_light else "casa_escura") + "/trilha_" + piece + ".png"
+		var path = dir + st + "/" + ("casa_clara" if on_light else "casa_escura") + "/trilha_" + piece + ".png"
 		_tex_cache[key] = load(path) if ResourceLoader.exists(path) else null
 	return _tex_cache[key]
+
+# Quando um bioma não tem arte própria para um estado, usa a peça "normal" da
+# mesma cor de casa RECOLORIDA pela luminosidade: selecionado = dourado,
+# percorrido = apagado e quente, bloqueado = coberto de areia (translúcido).
+# [escuro, médio, claro, alfa]
+const STATE_RAMPS: Dictionary = {
+	"selecionado": [Color("2e2008"), Color("b07a22"), Color("ffe08a"), 1.0],
+	"percorrido": [Color("1b1514"), Color("5a4d44"), Color("9a8b78"), 1.0],
+	"bloqueado": [Color("3a3028"), Color("8a7a5e"), Color("c9b88c"), 0.55],
+}
+static var _recolor_cache: Dictionary = {}
+
+static func _recolored(tex: Texture2D, st: String, key: String) -> Texture2D:
+	if not STATE_RAMPS.has(st):
+		return tex
+	var ck := key + "|" + st
+	if _recolor_cache.has(ck):
+		return _recolor_cache[ck]
+	var ramp: Array = STATE_RAMPS[st]
+	var img: Image = tex.get_image()
+	img.convert(Image.FORMAT_RGBA8)
+	for y in range(img.get_height()):
+		for x in range(img.get_width()):
+			var p: Color = img.get_pixel(x, y)
+			if p.a <= 0.0:
+				continue
+			var l: float = clampf(p.get_luminance() * 1.25, 0.0, 1.0)
+			var c: Color = (ramp[0] as Color).lerp(ramp[1], l * 2.0) if l < 0.5 else (ramp[1] as Color).lerp(ramp[2], (l - 0.5) * 2.0)
+			img.set_pixel(x, y, Color(c.r, c.g, c.b, p.a * float(ramp[3])))
+	var out := ImageTexture.create_from_image(img)
+	_recolor_cache[ck] = out
+	return out
 
 # Direção (como nome) de um passo em coordenadas de casa (y cresce pra baixo).
 static func _dir_name(step: Vector2i) -> String:
@@ -100,5 +135,13 @@ func _add_piece(g: Vector2i, piece: String, tile_px: float, s: float) -> void:
 # state: "normal" | "selecionado" | "percorrido" | "bloqueado"
 func set_state(new_state: String) -> void:
 	state = new_state
+	var dir: String = String(ForestBackground.THEMES[biome]["trail_dir"])
 	for i in range(_sprites.size()):
-		_sprites[i].texture = _texture(_names[i], state, _light[i])
+		var tex: Texture2D = _texture(_names[i], state, _light[i], dir)
+		var tint := Color.WHITE
+		if tex == null:
+			var base: Texture2D = _texture(_names[i], "normal", _light[i], dir)
+			if base != null:
+				tex = _recolored(base, state, "%s|%s|%s" % [dir, _light[i], _names[i]])
+		_sprites[i].texture = tex
+		_sprites[i].modulate = tint

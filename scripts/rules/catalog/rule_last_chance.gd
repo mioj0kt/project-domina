@@ -63,7 +63,7 @@ static func try_save(host, pos: Vector2i, piece: BoardPiece, keep_king: bool = f
 
 	var tile_center: Vector2 = host.board_offset + Vector2(pos.x * host.cell_size + host.cell_size / 2.0, pos.y * host.cell_size + host.cell_size / 2.0)
 	if host.rule_banner_view != null:
-		host.rule_banner_view.pop_rule_trigger(tile_center, "ULTIMA CHANCE!", Color(1.0, 0.85, 0.3))
+		host.rule_banner_view.pop_rule_trigger(tile_center, "ULTIMA CHANCE!", Color(1.0, 0.85, 0.3), "last_chance")
 	if keep_king:
 		return true
 

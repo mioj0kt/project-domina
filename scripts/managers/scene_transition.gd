@@ -85,9 +85,8 @@ func _apply_biome_colors(menu: bool = false) -> void:
 		_col_edge = DEFAULT_EDGE
 		return
 	var biome := "tutorial" if TutorialManager.is_active else "floresta"
-	var rb = RunManager.get("biome")
-	if rb is String and rb != "" and BiomeBackground.BIOMES.has(rb):
-		biome = rb
+	if not TutorialManager.is_active and BiomeBackground.BIOMES.has(RunManager.map_biome):
+		biome = RunManager.map_biome
 	var cfg: Dictionary = BiomeBackground.BIOMES.get(biome, BiomeBackground.BIOMES["floresta"])
 	_col_a = cfg.get("trans_a", _col_a)
 	_col_b = cfg.get("trans_b", _col_b)

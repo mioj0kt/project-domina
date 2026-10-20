@@ -34,3 +34,4 @@ func on_game_event(event_name: StringName, _context: Dictionary, board: RefCount
 		var guard: BoardPiece = board.grid[back_row][best_c]
 		guard.is_king = true
 		guard.sd_exempt = true
+		board.rule_fired.emit(id)

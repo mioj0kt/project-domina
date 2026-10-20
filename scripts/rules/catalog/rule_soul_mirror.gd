@@ -18,4 +18,5 @@ func on_game_event(event_name: StringName, context: Dictionary, board: RefCounte
 					var p: BoardPiece = board.grid[r][c]
 					if p != Board.EMPTY and p.owner_team == board.human_team_color and not p.is_king:
 						p.is_king = true
+						board.rule_fired.emit(id)
 						return

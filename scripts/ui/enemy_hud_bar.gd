@@ -244,3 +244,12 @@ func _on_rule_slot_hovered(idx: int) -> void:
 func _on_rule_slot_unhovered() -> void:
 	if rule_tooltip != null:
 		rule_tooltip.hide_tooltip()
+
+# Game juice: o slot desta Lei treme/brilha porque ela acabou de agir.
+# Devolve false se a Lei não está neste quadro.
+func flash_rule(rule_id: String) -> bool:
+	for i in range(_current_rules.size()):
+		if _current_rules[i].id == rule_id:
+			law_board.flash_slot(i, RuleCard.get_category_color(_current_rules[i].category))
+			return true
+	return false

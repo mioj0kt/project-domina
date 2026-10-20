@@ -20,6 +20,11 @@ const LAYER_ROLES: Dictionary = {
 	5: {"must": [MapNode.NodeType.Evento], "fill": {MapNode.NodeType.Duelo: 35, MapNode.NodeType.DueloForte: 20, MapNode.NodeType.Evento: 20, MapNode.NodeType.Aposta: 10, MapNode.NodeType.Altar: 32}},
 	6: {"must": [MapNode.NodeType.Loja], "fill": {MapNode.NodeType.Duelo: 40, MapNode.NodeType.DueloForte: 35, MapNode.NodeType.Evento: 25}, "max_nodes": 3},
 }
+# Biomas cujos eventos "?" ainda não existem: ali o mapa não sorteia casas de
+# Evento (viram duelos). Tire o bioma da lista quando houver eventos dele.
+const BIOMES_WITHOUT_EVENTS: Array[String] = ["deserto"]
+var biome: String = "floresta"
+
 # Largura sorteada das camadas intermediárias (nº de nós: peso).
 const WIDTH_WEIGHTS: Dictionary = {2: 30, 3: 45, 4: 25}
 const SINGLE_PER_LAYER: Array = [MapNode.NodeType.Loja, MapNode.NodeType.Aposta, MapNode.NodeType.Altar]
@@ -122,11 +127,16 @@ func _roll_layout(size: Vector2i) -> String:
 # Sorteia os tipos de uma camada intermediária seguindo LAYER_ROLES.
 func _roll_layer_types(layer: int) -> Array:
 	var role: Dictionary = LAYER_ROLES.get(layer, {"must": [], "fill": {MapNode.NodeType.Duelo: 100}})
-	var must: Array = role["must"]
+	var must: Array = (role["must"] as Array).duplicate()
+	var fill: Dictionary = (role["fill"] as Dictionary).duplicate()
+	if biome in BIOMES_WITHOUT_EVENTS:
+		for i in range(must.size()):
+			if must[i] == MapNode.NodeType.Evento:
+				must[i] = MapNode.NodeType.Duelo
+		fill.erase(MapNode.NodeType.Evento)
 	var width: int = _roll_width(mini(int(role.get("max_nodes", max_nodes_per_layer)), max_nodes_per_layer))
 	width = maxi(width, must.size())
 	var types: Array = must.duplicate()
-	var fill: Dictionary = role["fill"]
 	while types.size() < width:
 		var t: int = _pick_weighted(fill)
 		# Loja/Aposta: no máximo uma por camada (senão troca por duelo).

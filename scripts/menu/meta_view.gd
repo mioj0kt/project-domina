@@ -609,7 +609,7 @@ func _side_line(t: String) -> Label:
 # ---------------------------------------------------------------------
 # Guia do Grimório
 # ---------------------------------------------------------------------
-# Botão "?" no canto superior direito, ao lado da engrenagem das Configurações.
+# Botão de informação (i) no canto superior direito, ao lado da engrenagem das Configurações.
 func _build_help_button(canvas: CanvasLayer) -> void:
 	_help_btn = Button.new()
 	_help_btn.custom_minimum_size = Vector2(48, 48)
@@ -628,15 +628,9 @@ func _build_help_button(canvas: CanvasLayer) -> void:
 	_help_btn.add_theme_stylebox_override("hover", PixelUI.make_pixel_panel(Color(0.23, 0.17, 0.25, 0.97), C_GOLD, 4))
 	_help_btn.add_theme_stylebox_override("pressed", PixelUI.make_pixel_panel(Color(0.09, 0.06, 0.11, 0.97), C_GOLD, 4))
 	_help_btn.pressed.connect(func(): _tour.start())
-	# "?" em pixel art branco, centrado de verdade (o texto do botão ficava baixo
-	# por causa da borda mais grossa embaixo do painel).
-	var g := [".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."]
-	var img := Image.create(5, 7, false, Image.FORMAT_RGBA8)
-	for y in range(7):
-		for x in range(5):
-			img.set_pixel(x, y, Color.WHITE if g[y][x] == "#" else Color(0, 0, 0, 0))
+	# Ícone de informação (16x16 nativo, ampliado 2x sem filtro) centrado no botão.
 	var q := TextureRect.new()
-	q.texture = ImageTexture.create_from_image(img)
+	q.texture = PixelUI.hud_texture("icone_informacao")
 	q.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	q.stretch_mode = TextureRect.STRETCH_SCALE
 	q.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -644,10 +638,10 @@ func _build_help_button(canvas: CanvasLayer) -> void:
 	q.set_anchors_preset(Control.PRESET_CENTER)
 	q.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	q.grow_vertical = Control.GROW_DIRECTION_BOTH
-	q.offset_left = -10.0
-	q.offset_right = 10.0
+	q.offset_left = -16.0
+	q.offset_right = 16.0
 	q.offset_top = -16.0
-	q.offset_bottom = 12.0
+	q.offset_bottom = 16.0
 	_help_btn.add_child(q)
 	canvas.add_child(_help_btn)
 

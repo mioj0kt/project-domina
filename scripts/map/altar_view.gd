@@ -10,13 +10,13 @@ extends Control
 # inventário, tooltips, e o modal de revogar quando as Leis estão lotadas.
 
 const MAP_SCENE_PATH: String = "res://map_view.tscn"
-const ART_PATH: String = "res://assets/sprites/events/altar_leis.png"
 const SWAP_COST: int = 10
 const OFFER_COUNT: int = 3
 const OFFER_SCALE: float = 1.0
 const SACRIFICE_SCALE: float = 0.5
 const CHOICE_W: float = 450.0
-const ART_SIZE: Vector2 = Vector2(900, 405)
+# Área do corpo (muda a cada etapa): 3 cartões de ação no menu, Leis nas outras.
+const BODY_SIZE: Vector2 = Vector2(1366, 405)
 const MAX_TEXT_H: float = 190.0
 const MIN_TEXT_FONT: int = 22
 
@@ -86,7 +86,7 @@ func _setup_ui() -> void:
 
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
-	box.custom_minimum_size = Vector2(ART_SIZE.x + CHOICE_W + 16, 0)
+	box.custom_minimum_size = Vector2(BODY_SIZE.x, 0)
 	panel.add_child(box)
 
 	var head := HBoxContainer.new()
@@ -108,14 +108,14 @@ func _setup_ui() -> void:
 
 	text_label = Label.new()
 	text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	text_label.custom_minimum_size = Vector2(ART_SIZE.x + CHOICE_W - 40, 0)
+	text_label.custom_minimum_size = Vector2(BODY_SIZE.x - 40, 0)
 	text_label.add_theme_font_size_override("font_size", 40)
 	text_label.add_theme_color_override("font_color", Color(0.85, 0.88, 0.95))
 	box.add_child(text_label)
 
 	# Corpo: muda a cada etapa (menu / ofertas / sacrifício / resultado).
 	body = VBoxContainer.new()
-	body.custom_minimum_size = Vector2(ART_SIZE.x + CHOICE_W + 16, ART_SIZE.y)
+	body.custom_minimum_size = Vector2(BODY_SIZE.x, BODY_SIZE.y)
 	box.add_child(body)
 
 	leave_btn = Button.new()
@@ -159,17 +159,6 @@ func _clear_body() -> void:
 	for c in body.get_children():
 		c.queue_free()
 
-func _choice_button(label: String, hint: String, accent: Color, disabled: bool = false) -> Button:
-	var btn := Button.new()
-	btn.text = "%s\n%s" % [label, hint]
-	btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	btn.custom_minimum_size = Vector2(CHOICE_W, 0)
-	btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	btn.add_theme_font_size_override("font_size", 34)
-	PixelUI.skin_button(btn, accent)
-	btn.disabled = disabled
-	return btn
-
 func _small_button(text: String, accent: Color, w: float) -> Button:
 	var b := Button.new()
 	b.text = text
@@ -193,47 +182,107 @@ func _show_menu() -> void:
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(row)
 
-	var art := TextureRect.new()
-	art.custom_minimum_size = ART_SIZE
-	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	art.stretch_mode = TextureRect.STRETCH_SCALE
-	art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	if ResourceLoader.exists(ART_PATH):
-		art.texture = load(ART_PATH)
-	row.add_child(art)
-	var frame := Panel.new()
-	frame.set_anchors_preset(Control.PRESET_FULL_RECT)
-	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var fl := StyleBoxFlat.new()
-	fl.bg_color = Color(0, 0, 0, 0)
-	fl.set_border_width_all(4)
-	fl.border_color = C_GOLD
-	frame.add_theme_stylebox_override("panel", fl)
-	art.add_child(frame)
-
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 12)
-	col.custom_minimum_size = Vector2(CHOICE_W, ART_SIZE.y)
-	row.add_child(col)
-
+	# Três cartões de ação lado a lado (sem ilustração): ícone, título, o que faz
+	# e o custo. Os desabilitados mostram o motivo no lugar do texto normal.
 	var have_offers := not _offer_pool().is_empty()
-	var rat := _choice_button("RATIFICAR UMA LEI", "Escolha 1 entre %d Leis novas. Grátis." % OFFER_COUNT if have_offers else "Você já conhece todas as Leis.", Color(0.3, 0.9, 0.4), not have_offers)
+	var rat := _action_card("icone_leis", "RATIFICAR UMA LEI",
+		"Escolha 1 entre %d Leis novas." % OFFER_COUNT if have_offers else "Você já conhece todas as Leis.",
+		Color(0.3, 0.9, 0.4), 0, not have_offers, "GRÁTIS")
 	rat.pressed.connect(_on_ratify)
-	col.add_child(rat)
+	row.add_child(rat)
 
 	var can_swap := not RunManager.active_rules.is_empty() and RunManager.gold >= SWAP_COST
-	var hint := "Sacrifique uma Lei sua (%d ouro) e escolha outra da mesma categoria." % SWAP_COST
+	var swap_desc := "Sacrifique uma Lei sua e escolha outra da mesma categoria."
 	if RunManager.active_rules.is_empty():
-		hint = "Você não tem Leis para trocar."
+		swap_desc = "Você não tem Leis para trocar."
 	elif RunManager.gold < SWAP_COST:
-		hint = "Faltam %d ouro." % (SWAP_COST - RunManager.gold)
-	var swp := _choice_button("TROCAR UMA LEI", hint, Color(0.85, 0.64, 0.25), not can_swap)
+		swap_desc = "Faltam %d ouro." % (SWAP_COST - RunManager.gold)
+	var swp := _action_card("icone_descarte", "TROCAR UMA LEI", swap_desc, Color(0.85, 0.64, 0.25), SWAP_COST, not can_swap)
 	swp.pressed.connect(_on_swap)
-	col.add_child(swp)
+	row.add_child(swp)
 
-	var skip := _choice_button("DEIXAR O ALTAR", "Segue viagem sem mudar nada.", Color.WHITE)
+	var skip := _action_card("icone_mapa", "DEIXAR O ALTAR", "Segue viagem sem mudar nada.", Color.WHITE, 0, false, "SEM CUSTO")
 	skip.pressed.connect(func(): SceneTransition.go(MAP_SCENE_PATH))
-	col.add_child(skip)
+	row.add_child(skip)
+
+# Cartão de ação do menu do altar. cost > 0 mostra a moeda com o preço; senão
+# `free_text` (ex.: GRÁTIS).
+func _action_card(icon: String, title: String, desc: String, accent: Color, cost: int, disabled: bool, free_text: String = "") -> Button:
+	var btn := Button.new()
+	btn.custom_minimum_size = Vector2((BODY_SIZE.x - 40.0) / 3.0, BODY_SIZE.y)
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	btn.focus_mode = Control.FOCUS_NONE
+	PixelUI.skin_button(btn, accent)
+	btn.disabled = disabled
+	var col := VBoxContainer.new()
+	col.set_anchors_preset(Control.PRESET_FULL_RECT)
+	col.offset_left = 24.0
+	col.offset_right = -24.0
+	col.offset_top = 22.0
+	col.offset_bottom = -22.0
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 14)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(col)
+	var tex: Texture2D = PixelUI.hud_texture(icon, 1)
+	if tex != null:
+		var ic := TextureRect.new()
+		ic.texture = tex
+		ic.custom_minimum_size = Vector2(80, 80)
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ic.modulate = Color(1, 1, 1, 0.45 if disabled else 1.0)
+		col.add_child(ic)
+	var t := Label.new()
+	t.text = title
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	t.add_theme_font_size_override("font_size", 38)
+	t.add_theme_color_override("font_color", Color(0.55, 0.5, 0.5) if disabled else Color(1.0, 0.92, 0.62))
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(t)
+	var d := Label.new()
+	d.text = desc
+	d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	d.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	d.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	d.add_theme_font_size_override("font_size", 28)
+	d.add_theme_color_override("font_color", Color(0.5, 0.47, 0.47) if disabled else C_CREAM)
+	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(d)
+	var foot := HBoxContainer.new()
+	foot.alignment = BoxContainer.ALIGNMENT_CENTER
+	foot.add_theme_constant_override("separation", 10)
+	foot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(foot)
+	if cost > 0:
+		var coin: Texture2D = PixelUI.hud_texture("icone_dinheiro", 1)
+		if coin != null:
+			var ci := TextureRect.new()
+			ci.texture = coin
+			ci.custom_minimum_size = Vector2(32, 32)
+			ci.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			ci.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			ci.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			ci.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			foot.add_child(ci)
+		var cl := Label.new()
+		cl.text = str(cost)
+		cl.add_theme_font_size_override("font_size", 34)
+		cl.add_theme_color_override("font_color", C_GOLD if not disabled else Color(0.5, 0.45, 0.35))
+		cl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		foot.add_child(cl)
+	else:
+		var fl := Label.new()
+		fl.text = free_text
+		fl.add_theme_font_size_override("font_size", 28)
+		fl.add_theme_color_override("font_color", Color(0.6, 0.85, 0.6) if not disabled else Color(0.45, 0.45, 0.45))
+		fl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		foot.add_child(fl)
+	return btn
 
 # Leis que o altar pode oferecer: liberadas na meta e que o jogador ainda não tem.
 func _offer_pool(category: int = -1) -> Array[RuleCard]:

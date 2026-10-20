@@ -25,6 +25,7 @@ func on_game_event(event_name: StringName, context: Dictionary, board: RefCounte
 			var victim: BoardPiece = context.get("piece")
 			if victim and victim.owner_team == board.human_team_color:
 				bonus_active = true
+				board.rule_fired.emit(id)
 		&"piece_captured":
 			var attacker: BoardPiece = context.get("attacker")
 			if attacker and attacker.owner_team == board.human_team_color:
