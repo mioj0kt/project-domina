@@ -64,6 +64,53 @@ const WITCH_HERBS_COST: int = 10
 const MONK_SWAP_COST: int = 8
 const MONK_ALMS_GOLD: int = 5
 
+# ---- Deserto das Torres ----
+const MIRAGE_OASIS_CHANCE: float = 0.35
+const MIRAGE_THIRST_CHANCE: float = 0.40
+const MIRAGE_THIRST_LOSS: int = 8
+const MIRAGE_RUIN_GOLD: int = 12
+const MIRAGE_DIG_GOLD: int = 5
+
+const SARC_CARD_CHANCE: float = 0.40
+const SARC_CURSE_CHANCE: float = 0.25
+const SARC_CURSE_GOLD: int = 10
+const SARC_AMBUSH_BONUS: int = 14
+const SARC_LOOT_GOLD: int = 8
+
+const CARAVAN_BREAD_COST: int = 6
+const CARAVAN_RARE_COST: int = 16
+
+const SPHINX_LAW_CHANCE: float = 0.30
+const SPHINX_WRONG_LOSS: int = 6
+const SPHINX_SHADOW_CARD_CHANCE: float = 0.50
+const SPHINX_AMBUSH_BONUS: int = 12
+const SPHINX_SILENCE_GOLD: int = 4
+
+const STORM_WIN_CHANCE: float = 0.45
+const STORM_LOSS_CHANCE: float = 0.30
+const STORM_WIN_GOLD: int = 18
+const STORM_LOSS_GOLD: int = 10
+const STORM_AMBUSH_BONUS: int = 10
+const STORM_SHELTER_GOLD: int = 3
+
+const NOMAD_SWAP_COST: int = 4
+const NOMAD_DUEL_BONUS: int = 14
+
+# Mercador de Relíquias / Obelisco / Forja das Dunas / Escriba / Oásis / Salteadores
+const RELIC_BUY_COST: int = 12
+const RELIC_SELL_GOLD: int = 10
+const OBELISK_PRAYER_GOLD: int = 6
+const KILN_HELP_GOLD: int = 5
+const SCRIBE_ALMS_GOLD: int = 5
+const OASIS_DRINK_CARD_CHANCE: float = 0.45
+const OASIS_FEVER_LOSS: int = 6
+const OASIS_WISH_COST: int = 5
+const OASIS_WISH_CHANCE: float = 0.5
+const OASIS_WISH_GOLD: int = 16
+const BANDITS_SEARCH_CHANCE: float = 0.6
+const BANDITS_SEARCH_AMBUSH_BONUS: int = 8
+const BANDITS_SETUP_BONUS: int = 14
+
 var hud_bar: HUDBar
 var inventory_ui: InventoryUI
 var card_tooltip: ActionCardTooltip
@@ -224,6 +271,112 @@ func _build_events() -> Array[Dictionary]:
 				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
 			]
 		},
+		# ---------------- Deserto das Torres ----------------
+		{
+			"id": "mirage", "biome": "deserto", "title": "MIRAGEM NO HORIZONTE",
+			"text": "Uma lagoa cristalina treme no horizonte, bonita demais para ser real. O vento seca a sua garganta enquanto você decide se confia nos próprios olhos.",
+			"choices": [
+				{"id": "run", "label": "CORRER ATÉ A LAGOA", "hint": "%d%%: 1 carta (oásis de verdade)  /  %d%%: -%d ouro (sede)  /  %d%%: +%d ouro (ruínas)" % [_pct(MIRAGE_OASIS_CHANCE), _pct(MIRAGE_THIRST_CHANCE), MIRAGE_THIRST_LOSS, _pct(1.0 - MIRAGE_OASIS_CHANCE - MIRAGE_THIRST_CHANCE), MIRAGE_RUIN_GOLD]},
+				{"id": "dig", "label": "CAVAR ONDE A MIRAGEM ACABA", "hint": "+%d ouro" % MIRAGE_DIG_GOLD},
+				{"id": "skip", "label": "SEGUIR EM FRENTE", "hint": "Nada acontece"},
+			]
+		},
+		{
+			"id": "sarcophagus", "biome": "deserto", "title": "SARCÓFAGO ENTREABERTO",
+			"text": "Um sarcófago de pedra jaz meio enterrado, a tampa deslocada. Do vão sai um frio estranho, e o brilho de ouro lá dentro faz sombra na areia.",
+			"choices": [
+				{"id": "open", "label": "ABRIR A TAMPA", "hint": "%d%%: carta rara ou melhor  /  %d%%: -%d ouro (maldição)  /  %d%%: EMBOSCADA" % [_pct(SARC_CARD_CHANCE), _pct(SARC_CURSE_CHANCE), SARC_CURSE_GOLD, _pct(1.0 - SARC_CARD_CHANCE - SARC_CURSE_CHANCE)]},
+				{"id": "loot", "label": "SAQUEAR AS OFERENDAS", "hint": "+%d ouro, sem tocar na tampa" % SARC_LOOT_GOLD},
+				{"id": "skip", "label": "RESPEITAR OS MORTOS", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "caravan", "biome": "deserto", "title": "CARAVANA À DERIVA",
+			"text": "Um comboio de camelos descansa sob uma tenda rasgada. O dono abre os baús: água, especiarias e uma ou outra carta que ele jura não ser roubada.",
+			"choices": [
+				{"id": "bread", "label": "ÁGUA E PÃO (%d ouro)" % CARAVAN_BREAD_COST, "hint": "Ganha 1 carta comum", "requires": "gold_%d" % CARAVAN_BREAD_COST},
+				{"id": "rare", "label": "O MELHOR PRODUTO (%d ouro)" % CARAVAN_RARE_COST, "hint": "Ganha 1 carta rara ou melhor", "requires": "gold_%d" % CARAVAN_RARE_COST},
+				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "sphinx", "biome": "deserto", "title": "ESFINGE DE PEDRA",
+			"text": "Uma esfinge de olhos vazios bloqueia a passagem. \"Três respostas, uma verdadeira\", sussurra a areia. Errar custa caro; acertar, mais ainda.",
+			"choices": [
+				{"id": "time", "label": "RESPONDER: O TEMPO", "hint": "%d%%: 1 Lei nova  /  %d%%: -%d ouro" % [_pct(SPHINX_LAW_CHANCE), _pct(1.0 - SPHINX_LAW_CHANCE), SPHINX_WRONG_LOSS]},
+				{"id": "shadow", "label": "RESPONDER: A SOMBRA", "hint": "%d%%: carta rara ou melhor  /  %d%%: EMBOSCADA (guardiões de pedra)" % [_pct(SPHINX_SHADOW_CARD_CHANCE), _pct(1.0 - SPHINX_SHADOW_CARD_CHANCE)]},
+				{"id": "silence", "label": "FICAR EM SILÊNCIO", "hint": "+%d ouro: ela ri e deixa você passar" % SPHINX_SILENCE_GOLD},
+			]
+		},
+		{
+			"id": "sandstorm", "biome": "deserto", "title": "TEMPESTADE DE AREIA",
+			"text": "O céu vira uma parede alaranjada. Há ruínas de uma torre a poucos passos, mas o vento pode desenterrar tesouros... ou enterrar você.",
+			"choices": [
+				{"id": "cross", "label": "ATRAVESSAR A TEMPESTADE", "hint": "%d%%: +%d ouro  /  %d%%: -%d ouro  /  %d%%: EMBOSCADA" % [_pct(STORM_WIN_CHANCE), STORM_WIN_GOLD, _pct(STORM_LOSS_CHANCE), STORM_LOSS_GOLD, _pct(1.0 - STORM_WIN_CHANCE - STORM_LOSS_CHANCE)]},
+				{"id": "shelter", "label": "ABRIGAR-SE NAS RUÍNAS", "hint": "+%d ouro" % STORM_SHELTER_GOLD},
+			]
+		},
+		{
+			"id": "nomad", "biome": "deserto", "title": "NÔMADE DAS DUNAS",
+			"text": "Um nômade de turbante azul gira uma moeda entre os dedos. Ele diz que troca cartas por um bom preço, e que respeita quem prova o próprio valor no tabuleiro.",
+			"choices": [
+				{"id": "swap", "label": "TROCAR UMA CARTA (%d ouro)" % NOMAD_SWAP_COST, "hint": "1 carta aleatória vira outra da mesma raridade", "requires": "swapcard_%d" % NOMAD_SWAP_COST},
+				{"id": "challenge", "label": "DESAFIAR PARA UM DUELO", "hint": "Duelo garantido. Vitória: +%d ouro" % NOMAD_DUEL_BONUS},
+				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "relics", "biome": "deserto", "title": "MERCADOR DE RELÍQUIAS",
+			"text": "Sob um toldo de linho, um velho vende amuletos e cartas desenterradas das tumbas. Ele também compra o que você tiver, sem perguntar de onde veio.",
+			"choices": [
+				{"id": "buy", "label": "COMPRAR (%d ouro)" % RELIC_BUY_COST, "hint": "Ganha 1 carta aleatória", "requires": "gold_%d" % RELIC_BUY_COST},
+				{"id": "sell", "label": "VENDER UMA CARTA", "hint": "Perde 1 carta aleatória do baralho e ganha +%d ouro" % RELIC_SELL_GOLD, "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "obelisk", "biome": "deserto", "title": "OBELISCO DAS LEIS",
+			"text": "Um obelisco coberto de hieróglifos pede uma oferenda aos pés. Em troca, uma Lei esquecida promete se gravar na pedra.",
+			"choices": [
+				{"id": "offer", "label": "OFERECER UMA CARTA", "hint": "Perde 1 carta aleatória e ganha 1 Lei aleatória", "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "pray", "label": "ORAR EM SILÊNCIO", "hint": "+%d ouro" % OBELISK_PRAYER_GOLD},
+			]
+		},
+		{
+			"id": "kiln", "biome": "deserto", "title": "FORJA DAS DUNAS",
+			"text": "Um ferreiro de pele curtida mantém um forno de barro aceso no meio do nada. O metal ali brilha mais do que deveria.",
+			"choices": [
+				{"id": "forge", "label": "FORJAR (%d ouro)" % FORGE_COST, "hint": "1 carta aleatória sobe de raridade", "requires": "upgradable_%d" % FORGE_COST},
+				{"id": "help", "label": "AJUDAR NO FORNO", "hint": "+%d ouro pelo trabalho" % KILN_HELP_GOLD},
+			]
+		},
+		{
+			"id": "scribe", "biome": "deserto", "title": "ESCRIBA DE PAPIRO",
+			"text": "Um escriba sentado sobre rolos de papiro ergue os olhos: \"As Leis que você carrega foram escritas às pressas. Posso reescrever uma, se o preço for justo.\"",
+			"choices": [
+				{"id": "swap", "label": "REESCREVER UMA LEI (%d ouro)" % MONK_SWAP_COST, "hint": "1 Lei aleatória sua é trocada por outra", "requires": "swaplaw_%d" % MONK_SWAP_COST},
+				{"id": "alms", "label": "DEIXAR UMA OFERENDA", "hint": "Ele retribui com +%d ouro" % SCRIBE_ALMS_GOLD},
+				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "oasis", "biome": "deserto", "title": "OÁSIS SAGRADO",
+			"text": "Entre palmeiras, uma lagoa tranquila reflete um céu mais azul que o de cima. Moedas e fitas de viajantes repousam na margem.",
+			"choices": [
+				{"id": "drink", "label": "BEBER DA LAGOA", "hint": "%d%%: 1 carta (comum ou rara)  /  %d%%: -%d ouro" % [_pct(OASIS_DRINK_CARD_CHANCE), _pct(1.0 - OASIS_DRINK_CARD_CHANCE), OASIS_FEVER_LOSS]},
+				{"id": "wish", "label": "FAZER UM PEDIDO (%d ouro)" % OASIS_WISH_COST, "hint": "%d%%: +%d ouro  /  %d%%: nada acontece" % [_pct(OASIS_WISH_CHANCE), OASIS_WISH_GOLD, _pct(1.0 - OASIS_WISH_CHANCE)], "requires": "gold_%d" % OASIS_WISH_COST},
+				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Nada acontece"},
+			]
+		},
+		{
+			"id": "bandits", "biome": "deserto", "title": "ACAMPAMENTO DE SALTEADORES",
+			"text": "Tendas rasgadas, fogueira apagada, camelos amarrados. Os donos saíram há pouco e deixaram os sacos abertos.",
+			"choices": [
+				{"id": "search", "label": "VASCULHAR AS TENDAS", "hint": "%d%%: 1 carta (comum ou rara)  /  %d%%: EMBOSCADA (+%d ouro se vencer)" % [_pct(BANDITS_SEARCH_CHANCE), _pct(1.0 - BANDITS_SEARCH_CHANCE), BANDITS_SEARCH_AMBUSH_BONUS]},
+				{"id": "setup", "label": "ESPERAR NA DUNA", "hint": "Duelo garantido, com o inimigo desprevenido (1 carta a menos). Vitória: +%d ouro" % BANDITS_SETUP_BONUS},
+				{"id": "skip", "label": "CONTORNAR", "hint": "Segue viagem"},
+			]
+		},
 	]
 
 func _pick_event() -> Dictionary:
@@ -232,11 +385,17 @@ func _pick_event() -> Dictionary:
 		for e in all:
 			if e["id"] == forced_event_id:
 				return e
+	# Cada bioma tem os seus eventos (a floresta é o padrão de quem não declara "biome").
+	var biome: String = RunManager.map_biome
+	var biome_events = all.filter(func(e): return String(e.get("biome", "floresta")) == biome)
+	if biome_events.is_empty():
+		biome_events = all
 	var seen: Array = RunManager.seen_event_ids
-	var pool = all.filter(func(e): return not seen.has(e["id"]))
+	var pool = biome_events.filter(func(e): return not seen.has(e["id"]))
 	if pool.is_empty():
-		seen.clear()
-		pool = all
+		for e in biome_events:
+			seen.erase(e["id"])
+		pool = biome_events
 	var chosen: Dictionary = pool[randi() % pool.size()]
 	seen.append(chosen["id"])
 	return chosen
@@ -285,6 +444,10 @@ const EVENT_TINTS := {
 	"forge": Color("#8a4a2a"), "library": Color("#4a5a7a"), "traveler": Color("#5a6a3a"),
 	"camp": Color("#6a3a3a"), "fountain": Color("#3a7a8a"), "mushrooms": Color("#8a3a4a"),
 	"hunter": Color("#4a6a3a"), "witch": Color("#5a3a7a"), "monk": Color("#7a6a3a"),
+	"mirage": Color("#3a8a9a"), "sarcophagus": Color("#8a7a3a"), "caravan": Color("#8a5a3a"),
+	"sphinx": Color("#9a8a5a"), "sandstorm": Color("#a86a3a"), "nomad": Color("#3a5a8a"),
+	"relics": Color("#7a5a8a"), "obelisk": Color("#8a8a5a"), "kiln": Color("#a8502a"),
+	"scribe": Color("#6a7a5a"), "oasis": Color("#2a8a7a"), "bandits": Color("#8a3a3a"),
 }
 
 func _setup_ui() -> void:
@@ -550,7 +713,7 @@ func _show_event() -> void:
 func _choice_color(choice_id: String) -> Color:
 	match choice_id:
 		"skip": return Color(0.45, 0.45, 0.5)
-		"pry", "tome", "rob", "search", "eat", "potion", "drink", "wish": return Color(0.9, 0.5, 0.3)
+		"pry", "tome", "rob", "search", "eat", "potion", "drink", "wish", "run", "open", "time", "shadow", "cross": return Color(0.9, 0.5, 0.3)
 		"setup", "challenge": return Color(0.85, 0.35, 0.35)
 		_: return Color(0.4, 0.85, 0.5)
 
@@ -611,6 +774,49 @@ func _luck_segments(event_id: String, choice_id: String) -> Array:
 				{"key": "card", "chance": WITCH_CARD_CHANCE, "label": "CARTA RARA", "kind": "good"},
 				{"key": "loss", "chance": WITCH_LOSS_CHANCE, "label": "PERDE CARTA", "kind": "bad"},
 				{"key": "gold", "chance": 1.0 - WITCH_CARD_CHANCE - WITCH_LOSS_CHANCE, "label": "+%d OURO" % WITCH_GOLD, "kind": "good"},
+			]
+		"mirage.run":
+			return [
+				{"key": "oasis", "chance": MIRAGE_OASIS_CHANCE, "label": "CARTA", "kind": "good"},
+				{"key": "thirst", "chance": MIRAGE_THIRST_CHANCE, "label": "-%d OURO" % MIRAGE_THIRST_LOSS, "kind": "bad"},
+				{"key": "ruin", "chance": 1.0 - MIRAGE_OASIS_CHANCE - MIRAGE_THIRST_CHANCE, "label": "+%d OURO" % MIRAGE_RUIN_GOLD, "kind": "good"},
+			]
+		"sarcophagus.open":
+			return [
+				{"key": "card", "chance": SARC_CARD_CHANCE, "label": "CARTA RARA", "kind": "good"},
+				{"key": "curse", "chance": SARC_CURSE_CHANCE, "label": "-%d OURO" % SARC_CURSE_GOLD, "kind": "bad"},
+				{"key": "ambush", "chance": 1.0 - SARC_CARD_CHANCE - SARC_CURSE_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
+			]
+		"sphinx.time":
+			return [
+				{"key": "law", "chance": SPHINX_LAW_CHANCE, "label": "NOVA LEI", "kind": "good"},
+				{"key": "wrong", "chance": 1.0 - SPHINX_LAW_CHANCE, "label": "-%d OURO" % SPHINX_WRONG_LOSS, "kind": "bad"},
+			]
+		"sphinx.shadow":
+			return [
+				{"key": "card", "chance": SPHINX_SHADOW_CARD_CHANCE, "label": "CARTA RARA", "kind": "good"},
+				{"key": "ambush", "chance": 1.0 - SPHINX_SHADOW_CARD_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
+			]
+		"oasis.drink":
+			return [
+				{"key": "card", "chance": OASIS_DRINK_CARD_CHANCE, "label": "CARTA", "kind": "good"},
+				{"key": "fever", "chance": 1.0 - OASIS_DRINK_CARD_CHANCE, "label": "-%d OURO" % OASIS_FEVER_LOSS, "kind": "bad"},
+			]
+		"oasis.wish":
+			return [
+				{"key": "win", "chance": OASIS_WISH_CHANCE, "label": "+%d OURO" % OASIS_WISH_GOLD, "kind": "good"},
+				{"key": "none", "chance": 1.0 - OASIS_WISH_CHANCE, "label": "NADA", "kind": "bad"},
+			]
+		"bandits.search":
+			return [
+				{"key": "card", "chance": BANDITS_SEARCH_CHANCE, "label": "CARTA", "kind": "good"},
+				{"key": "ambush", "chance": 1.0 - BANDITS_SEARCH_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
+			]
+		"sandstorm.cross":
+			return [
+				{"key": "win", "chance": STORM_WIN_CHANCE, "label": "+%d OURO" % STORM_WIN_GOLD, "kind": "good"},
+				{"key": "loss", "chance": STORM_LOSS_CHANCE, "label": "-%d OURO" % STORM_LOSS_GOLD, "kind": "bad"},
+				{"key": "ambush", "chance": 1.0 - STORM_WIN_CHANCE - STORM_LOSS_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
 			]
 	return []
 
@@ -819,6 +1025,100 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 				RunManager.add_gold(MONK_ALMS_GOLD)
 				return "O monge sorri e aponta uma trilha curta: +%d de ouro." % MONK_ALMS_GOLD
 			return _monk_swap_law()
+		"mirage":
+			if choice_id == "dig":
+				RunManager.add_gold(MIRAGE_DIG_GOLD)
+				return "Você cava onde a miragem termina e acha moedas enterradas: +%d de ouro." % MIRAGE_DIG_GOLD
+			if outcome == "oasis":
+				return "A lagoa era real! Você bebe, descansa e encontra algo na margem. %s" % _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
+			if outcome == "thirst":
+				return "Só areia quente. Você volta tonto e gasta %d de ouro em água." % _lose_gold(MIRAGE_THIRST_LOSS)
+			RunManager.add_gold(MIRAGE_RUIN_GOLD)
+			return "Não havia lagoa, mas sim as ruínas de um poço antigo: +%d de ouro." % MIRAGE_RUIN_GOLD
+		"sarcophagus":
+			if choice_id == "loot":
+				RunManager.add_gold(SARC_LOOT_GOLD)
+				return "Você pega as oferendas sem tocar na tampa: +%d de ouro." % SARC_LOOT_GOLD
+			if outcome == "card":
+				return "Dentro, entre bandagens douradas, repousa um tesouro. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "ENCONTRADA")
+			if outcome == "curse":
+				return "Um sopro frio sai do sarcófago. A maldição custa %d de ouro." % _lose_gold(SARC_CURSE_GOLD)
+			return _start_ambush("ambushed", SARC_AMBUSH_BONUS, "A tampa cai e as múmias se erguem das areias ao redor!")
+		"caravan":
+			if choice_id == "bread":
+				RunManager.spend_gold(CARAVAN_BREAD_COST)
+				return "Você paga %d de ouro por água e pão. %s" % [CARAVAN_BREAD_COST, _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "RECEBIDA")]
+			RunManager.spend_gold(CARAVAN_RARE_COST)
+			return "O dono sorri e abre o baú do fundo (-%d de ouro). %s" % [CARAVAN_RARE_COST, _give_card(_random_card(ActionCard.Rarity.RARE), "RECEBIDA")]
+		"sphinx":
+			if choice_id == "silence":
+				RunManager.add_gold(SPHINX_SILENCE_GOLD)
+				return "A esfinge ri de ver alguém tão calado e joga uma moeda: +%d de ouro." % SPHINX_SILENCE_GOLD
+			if choice_id == "time":
+				if outcome == "law":
+					return "\"Correto.\" A pedra se abre. %s" % _give_random_law()
+				return "\"Errado.\" A areia engole %d de ouro do seu bolso." % _lose_gold(SPHINX_WRONG_LOSS)
+			if outcome == "card":
+				return "\"Correto.\" Dos olhos vazios cai uma carta. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "RECEBIDA")
+			return _start_ambush("ambushed", SPHINX_AMBUSH_BONUS, "\"Errado.\" Guardiões de pedra emergem da areia ao lado dela!")
+		"sandstorm":
+			if choice_id == "shelter":
+				RunManager.add_gold(STORM_SHELTER_GOLD)
+				return "Você espera a tempestade passar e acha moedas soterradas no abrigo: +%d de ouro." % STORM_SHELTER_GOLD
+			if outcome == "win":
+				RunManager.add_gold(STORM_WIN_GOLD)
+				return "O vento varre uma duna e deixa um baú à mostra: +%d de ouro." % STORM_WIN_GOLD
+			if outcome == "loss":
+				return "A areia rasga a sua bolsa. Você perde %d de ouro no caminho." % _lose_gold(STORM_LOSS_GOLD)
+			return _start_ambush("ambushed", STORM_AMBUSH_BONUS, "Bandidos aproveitam a tempestade e saem da cortina de areia!")
+		"relics":
+			if choice_id == "buy":
+				RunManager.spend_gold(RELIC_BUY_COST)
+				return "Você paga %d de ouro. %s" % [RELIC_BUY_COST, _give_card(_random_card(ActionCard.Rarity.COMMON), "RECEBIDA")]
+			var sold = _take_random_card()
+			if sold != null:
+				RunManager.add_gold(RELIC_SELL_GOLD)
+				preview_hbox.add_child(_labeled_card_visual("VENDIDA", sold, Color(1.0, 0.6, 0.6, 0.8)))
+				return "O velho some com a carta num piscar: +%d de ouro." % RELIC_SELL_GOLD
+			return "O velho não se interessa por nada que você tem."
+		"obelisk":
+			if choice_id == "pray":
+				RunManager.add_gold(OBELISK_PRAYER_GOLD)
+				return "Os hieróglifos esquentam sob suas mãos: +%d de ouro." % OBELISK_PRAYER_GOLD
+			var given = _take_random_card()
+			if given != null:
+				preview_hbox.add_child(_labeled_card_visual("OFERECIDA", given, Color(1.0, 0.6, 0.6, 0.8)))
+			return "A areia engole a oferenda. %s" % _give_random_law()
+		"kiln":
+			if choice_id == "help":
+				RunManager.add_gold(KILN_HELP_GOLD)
+				return "Você bombeia o fole sob o sol por uma hora: +%d de ouro." % KILN_HELP_GOLD
+			return _forge_card()
+		"scribe":
+			if choice_id == "alms":
+				RunManager.add_gold(SCRIBE_ALMS_GOLD)
+				return "O escriba aceita a oferenda e te paga em tinta e moedas: +%d de ouro." % SCRIBE_ALMS_GOLD
+			return _monk_swap_law("O escriba")
+		"oasis":
+			if choice_id == "drink":
+				if outcome == "card":
+					return "A água é fria e doce. Algo brilha no fundo e vem até suas mãos. %s" % _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
+				return "Era água parada: a febre te derruba e você gasta %d de ouro em remédios." % _lose_gold(OASIS_FEVER_LOSS)
+			RunManager.spend_gold(OASIS_WISH_COST)
+			if outcome == "win":
+				RunManager.add_gold(OASIS_WISH_GOLD)
+				return "A lagoa brilha e devolve mais do que você deu: +%d de ouro." % OASIS_WISH_GOLD
+			return "A moeda afunda e a água volta a ficar parada. Nada acontece (-%d de ouro)." % OASIS_WISH_COST
+		"bandits":
+			if choice_id == "setup":
+				return _start_ambush("setup", BANDITS_SETUP_BONUS, "Você se deita atrás da duna. Quando o bando volta, é você quem ataca primeiro.")
+			if outcome == "card":
+				return _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
+			return _start_ambush("ambushed", BANDITS_SEARCH_AMBUSH_BONUS, "Um apito corta o ar: era armadilha! O bando surge das dunas.")
+		"nomad":
+			if choice_id == "challenge":
+				return _start_ambush("ambushed", NOMAD_DUEL_BONUS, "\"Sem rancor\", ele diz, e risca o tabuleiro na areia. O duelo começa.")
+			return _nomad_swap()
 	return ""
 
 # Marca o desfecho como duelo (o botão vira "LUTAR!"); devolve o texto da cena.
@@ -886,7 +1186,7 @@ func _forge_card() -> String:
 	return "A carta sai da forja transformada (-%d de ouro):" % FORGE_COST
 
 # Caçador: troca 1 carta aleatória do baralho por outra da MESMA raridade (outro id).
-func _hunter_swap() -> String:
+func _hunter_swap(cost: int = HUNTER_SWAP_COST) -> String:
 	if RunManager.player_deck.is_empty():
 		return "O caçador não vê nenhuma carta para trocar."
 	var old_card: ActionCard = RunManager.player_deck[randi() % RunManager.player_deck.size()]
@@ -895,7 +1195,7 @@ func _hunter_swap() -> String:
 		pool = LootTables.get_all_action_cards().filter(func(c: ActionCard): return c.rarity == old_card.rarity and c.id != old_card.id)
 	if pool.is_empty():
 		return "Ele balança a cabeça: não há troca justa para essa carta. Seu ouro fica com você."
-	RunManager.spend_gold(HUNTER_SWAP_COST)
+	RunManager.spend_gold(cost)
 	var new_card: ActionCard = LootTables.pick_weighted_actions(pool, 1)[0]
 	RunManager.player_deck[RunManager.player_deck.find(old_card)] = new_card
 	preview_hbox.add_child(_labeled_card_visual("ANTES", old_card, Color(1.0, 0.7, 0.7, 0.85)))
@@ -905,12 +1205,17 @@ func _hunter_swap() -> String:
 	arrow.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
 	preview_hbox.add_child(arrow)
 	preview_hbox.add_child(_labeled_card_visual("DEPOIS", new_card, Color(1.2, 1.15, 0.85)))
-	return "Negócio fechado (-%d de ouro):" % HUNTER_SWAP_COST
+	return "Negócio fechado (-%d de ouro):" % cost
+
+# Nômade: mesma troca do Caçador (mesma raridade), com o custo e a fala do deserto.
+func _nomad_swap() -> String:
+	var res: String = _hunter_swap(NOMAD_SWAP_COST)
+	return res
 
 # Monge: revoga 1 Lei aleatória e entrega outra que o jogador ainda não tem.
-func _monk_swap_law() -> String:
+func _monk_swap_law(who: String = "O monge") -> String:
 	if RunManager.active_rules.is_empty():
-		return "O monge não encontra nenhuma Lei sua para reescrever."
+		return "%s não encontra nenhuma Lei sua para reescrever." % who
 	var old_rule: RuleCard = RunManager.active_rules[randi() % RunManager.active_rules.size()]
 	var owned_ids: Array[String] = []
 	for r in RunManager.active_rules:
@@ -930,10 +1235,10 @@ func _monk_swap_law() -> String:
 			arrow.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
 			preview_hbox.add_child(arrow)
 			preview_hbox.add_child(_labeled_law_visual("NOVA LEI", cand, Color(1.2, 1.15, 0.85)))
-			return "O monge reescreve suas leis (-%d de ouro):" % MONK_SWAP_COST
+			return "%s reescreve suas leis (-%d de ouro):" % [who, MONK_SWAP_COST]
 	# Nenhuma serviu (todas incompatíveis ou sem opções): devolve a original.
 	RunManager.add_rule(old_rule)
-	return "O monge medita... mas não encontra uma Lei melhor para você. Seu ouro fica com você."
+	return "%s não encontra uma Lei melhor para você. Seu ouro fica com você." % who
 
 func _give_random_law() -> String:
 	var owned_ids: Array[String] = []

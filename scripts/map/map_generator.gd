@@ -22,7 +22,7 @@ const LAYER_ROLES: Dictionary = {
 }
 # Biomas cujos eventos "?" ainda não existem: ali o mapa não sorteia casas de
 # Evento (viram duelos). Tire o bioma da lista quando houver eventos dele.
-const BIOMES_WITHOUT_EVENTS: Array[String] = ["deserto"]
+const BIOMES_WITHOUT_EVENTS: Array[String] = []
 var biome: String = "floresta"
 
 # Largura sorteada das camadas intermediárias (nº de nós: peso).

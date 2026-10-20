@@ -52,7 +52,15 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 	var pos = Vector2i(col, row)
 	var effects: Array = []
 
-	if board.scorched_tiles.has(pos):
+	if board.scorched_tiles.has(pos) and board.sand_tiles.has(pos):
+		var sturns: int = board.scorched_tiles[pos]
+		effects.append({
+			"title": "AREIA SOTERRADA",
+			"desc": "Casa coberta de areia %s — nenhuma peça pode passar ou pousar aqui." % ("para sempre" if sturns > 500 else "por %d turno(s)" % sturns),
+			"affects": "both",
+			"title_color": Color(0.9, 0.75, 0.45)
+		})
+	elif board.scorched_tiles.has(pos):
 		var turns: int = board.scorched_tiles[pos]
 		effects.append({
 			"title": "FORTIFICAR",
@@ -67,6 +75,14 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 			"desc": "Em chamas por %d turno(s) — qualquer peca que POUSE aqui e destruida." % board.fire_tiles[pos],
 			"affects": "both",
 			"title_color": Color(1.0, 0.5, 0.15)
+		})
+
+	if board.quicksand_tiles.has(pos):
+		effects.append({
+			"title": "AREIA MOVEDIÇA",
+			"desc": "Quem POUSA aqui fica preso e perde a próxima jogada (peças suas e do chefe). Muda de lugar a cada 4 rodadas.",
+			"affects": "both",
+			"title_color": Color(0.85, 0.65, 0.35)
 		})
 
 	# Leis do Chefe da Floresta que vivem nas casas CLARAS.

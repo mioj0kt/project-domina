@@ -141,6 +141,9 @@ func _exit_tree() -> void:
 func _create_duel(node_type: int) -> DuelBase:
 	match node_type:
 		MapNode.NodeType.Chefe:
+			# Cada bioma tem o seu chefe (e o seu conjunto de leis).
+			if RunManager.map_biome == "deserto":
+				return DuelBossDesert.new()
 			return DuelBoss.new()
 		MapNode.NodeType.DueloForte:
 			return DuelHard.new()
@@ -189,7 +192,12 @@ func _setup_board(size: Vector2i, node_type: int) -> void:
 	if not TutorialManager.is_active and (node_type == MapNode.NodeType.Duelo or node_type == MapNode.NodeType.DueloForte) \
 			and RunManager.ambush_kind == "" and Board.LAYOUT_IDS.has(RunManager.current_board_layout):
 		board.layout_id = RunManager.current_board_layout
-	board.skin_id = BoardSkin.SKIN_TUTORIAL if TutorialManager.is_active else BoardSkin.SKIN_WOOD
+	if TutorialManager.is_active:
+		board.skin_id = BoardSkin.SKIN_TUTORIAL
+	elif RunManager.map_biome == "deserto":
+		board.skin_id = BoardSkin.SKIN_DESERT
+	else:
+		board.skin_id = BoardSkin.SKIN_WOOD
 	board.set_theme_for_duel(node_type == MapNode.NodeType.DueloForte or node_type == MapNode.NodeType.Chefe)
 	board.piece_destroyed.connect(_on_board_piece_destroyed)
 	board.capture_prevented.connect(_on_board_capture_prevented)

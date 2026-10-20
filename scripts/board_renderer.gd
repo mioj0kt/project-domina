@@ -54,8 +54,13 @@ func _draw() -> void:
 	if BoardSkin.has_sprite(board.skin_id):
 		# Sprite único 8x8 fatiado em código (moldura + 2 casinhas) e
 		# remontado pro tamanho real deste tabuleiro.
-		BoardSkin.draw_frame(self, board_offset, board.rows, board.cols, cell_size, board.frame_tint, board.skin_id)
-		BoardSkin.draw_tiles(self, board_offset, board.rows, board.cols, cell_size, board.light_tile_tint, board.dark_tile_tint, board.skin_id)
+		if BoardSkin.frame_over_tiles(board.skin_id):
+			# Deserto: a borda de areia/pedra cobre a beirada das casas (como no mapa).
+			BoardSkin.draw_tiles(self, board_offset, board.rows, board.cols, cell_size, board.light_tile_tint, board.dark_tile_tint, board.skin_id)
+			BoardSkin.draw_frame(self, board_offset, board.rows, board.cols, cell_size, board.frame_tint, board.skin_id)
+		else:
+			BoardSkin.draw_frame(self, board_offset, board.rows, board.cols, cell_size, board.frame_tint, board.skin_id)
+			BoardSkin.draw_tiles(self, board_offset, board.rows, board.cols, cell_size, board.light_tile_tint, board.dark_tile_tint, board.skin_id)
 	else:
 		for r in range(board.rows):
 			for c in range(board.cols):
@@ -66,10 +71,15 @@ func _draw() -> void:
 
 	for pos in board.scorched_tiles.keys():
 		var tile_rect = Rect2(board_offset.x + pos.x * cell_size, board_offset.y + pos.y * cell_size, cell_size, cell_size)
+		if board.sand_tiles.has(pos):
+			_draw_sand_cover(tile_rect, pos)
+			continue
 		draw_rect(tile_rect, Color(1.0, 0.3, 0.05, 0.5))
 		PixelRenderer.draw_pixel_corners(self, tile_rect, Color(1.0, 0.75, 0.1, 0.95), 8.0, 2.5)
 
 	_draw_fire_tiles(board, board_offset, cell_size)
+	_draw_quicksand_tiles(board, board_offset, cell_size)
+	_draw_desert_boss_telegraph(board_offset, cell_size)
 	_draw_light_tile_laws(board, board_offset, cell_size)
 
 	if board.rule_pipeline != null and (board.rule_pipeline.has_rule("sacred_zone") or board.rule_pipeline.has_rule("power_center")):
@@ -185,6 +195,55 @@ const FIRE_FRAMES: int = 8
 const FIRE_FRAME_PX: int = 64
 const FIRE_FPS: float = 8.0
 var _fire_tex: Texture2D = null
+
+# Areia soterrada (Tempestade de Areia / Ampulheta): casa coberta, bloqueada.
+func _draw_sand_cover(rect: Rect2, pos: Vector2i) -> void:
+	var t: float = Time.get_ticks_msec() / 1000.0
+	draw_rect(rect, Color(0.80, 0.64, 0.38, 0.93))
+	var u: float = rect.size.x / 100.0
+	for k in range(4):
+		var y: float = rect.position.y + rect.size.y * (0.18 + 0.22 * k)
+		var pts := PackedVector2Array()
+		for i in range(9):
+			var x: float = rect.position.x + rect.size.x * (float(i) / 8.0)
+			pts.append(Vector2(x, y + sin(t * 1.4 + float(i) * 0.9 + float(k) * 1.7 + pos.x + pos.y) * 3.0 * u))
+		draw_polyline(pts, Color(0.62, 0.46, 0.24, 0.8), maxf(2.0, 2.0 * u))
+	for k in range(5):
+		var gx: float = fposmod(float(k) * 37.0 + float(pos.x * 13 + pos.y * 7) + t * 14.0, 100.0)
+		var gy: float = fposmod(float(k) * 53.0 + float(pos.x * 5 + pos.y * 17), 100.0)
+		draw_rect(Rect2(rect.position + Vector2(gx, gy) * u, Vector2(3, 3) * u), Color(0.95, 0.85, 0.6, 0.85))
+	PixelRenderer.draw_pixel_corners(self, rect, Color(0.95, 0.8, 0.5, 0.95), 8.0, 2.0)
+
+# Areia Movediça: espiral escura que gira.
+func _draw_quicksand_tiles(board: Board, board_offset: Vector2, cell_size: float) -> void:
+	if board.quicksand_tiles.is_empty():
+		return
+	var t: float = Time.get_ticks_msec() / 1000.0
+	for pos in board.quicksand_tiles.keys():
+		var rect := Rect2(board_offset.x + pos.x * cell_size, board_offset.y + pos.y * cell_size, cell_size, cell_size)
+		draw_rect(rect, Color(0.36, 0.24, 0.12, 0.78))
+		var ctr: Vector2 = rect.get_center()
+		for k in range(4):
+			var rad: float = cell_size * (0.12 + 0.09 * float(k))
+			var a0: float = t * (1.6 - 0.3 * float(k)) + float(k) * 1.3
+			draw_arc(ctr, rad, a0, a0 + TAU * 0.72, 18, Color(0.85, 0.65, 0.35, 0.75), maxf(2.0, cell_size * 0.025))
+		draw_rect(Rect2(ctr - Vector2(2, 2), Vector2(4, 4)), Color(0.2, 0.12, 0.06, 0.95))
+		PixelRenderer.draw_pixel_corners(self, rect, Color(0.8, 0.55, 0.25, 0.9), 8.0, 2.0)
+
+# Casas que a lei do chefe do deserto vai afetar no próximo ciclo.
+func _draw_desert_boss_telegraph(board_offset: Vector2, cell_size: float) -> void:
+	if host == null or not (host.current_duel is DuelBossDesert):
+		return
+	var duel: DuelBossDesert = host.current_duel
+	if duel.telegraph_tiles.is_empty():
+		return
+	var pulse: float = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * 4.0)
+	var fill := Color(1.0, 0.45, 0.1, 0.10 + 0.14 * pulse) if duel.law_id == DuelBossDesert.LAW_SUN else Color(0.9, 0.72, 0.4, 0.10 + 0.14 * pulse)
+	var edge := Color(1.0, 0.6, 0.2, 0.9) if duel.law_id == DuelBossDesert.LAW_SUN else Color(0.95, 0.8, 0.5, 0.9)
+	for pos in duel.telegraph_tiles:
+		var rect := Rect2(board_offset.x + pos.x * cell_size, board_offset.y + pos.y * cell_size, cell_size, cell_size)
+		draw_rect(rect, fill)
+		PixelRenderer.draw_pixel_corners(self, rect, edge, 8.0, 2.0)
 
 func _draw_fire_tiles(board: Board, board_offset: Vector2, cell_size: float) -> void:
 	if _fire_tex == null and ResourceLoader.exists(FIRE_SHEET):

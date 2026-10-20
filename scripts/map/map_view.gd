@@ -134,8 +134,15 @@ func _input(event: InputEvent) -> void:
 			# DEBUG: abre um duelo de CHEFE direto, com a lei escolhida
 			# (1 Sapo, 2 Coruja, 3 Floresta, 4 Cipós, 5 Vaga-lumes, 6 Raízes).
 			var law_idx: int = event.keycode - KEY_1
-			if law_idx < DuelBoss.LAWS.size():
-				RunManager.forest_boss_law_id = DuelBoss.LAWS[law_idx]
+			var desert: bool = _current_biome() == "deserto"
+			var law_count: int = DuelBossDesert.DESERT_LAWS.size() if desert else DuelBoss.LAWS.size()
+			if law_idx < law_count:
+				# No deserto: 1 Sol, 2 Tempestade, 3 Areia Movediça, 4 Ampulheta, 5 Sarcófagos, 6 Cactos.
+				if desert:
+					RunManager.map_biome = "deserto"
+					RunManager.desert_boss_law_id = DuelBossDesert.DESERT_LAWS[law_idx]
+				else:
+					RunManager.forest_boss_law_id = DuelBoss.LAWS[law_idx]
 				RunManager.current_node_type = MapNode.NodeType.Chefe
 				RunManager.current_board_size = Vector2i(10, 10)
 				RunManager.current_board_layout = Board.LAYOUT_CLASSIC

@@ -22,6 +22,29 @@ class_name BoardSkin
 #    esparsas e nunca coladas ou repetidas por perto, ver _build_layout).
 const SKIN_WOOD := "wood"
 const SKIN_TUTORIAL := "tutorial"
+#  - SKIN_DESERT: duelos do bioma Deserto. Não usa um sprite 8x8: monta o
+#    tabuleiro com as MESMAS casas e a MESMA borda em folha do mapa do deserto
+#    (ForestBackground), em qualquer tamanho. A borda é desenhada POR CIMA das
+#    casas (areia/pedra acumulada), como no mapa.
+const SKIN_DESERT := "desert"
+
+const _DESERT_DIR := "res://assets/sprites/map/deserto/tabuleiro/"
+const _DESERT_LIGHT: Array[String] = [
+	"casa_clara_areia", "casa_clara_areia", "casa_clara_ondulada", "casa_clara_rachada",
+	"casa_clara_textura_1", "casa_clara_textura_2", "casa_clara_textura_3",
+	"casa_clara_textura_4", "casa_clara_textura_5", "casa_clara_textura_6",
+]
+const _DESERT_DARK: Array[String] = ["casa_escura", "casa_escura_2", "casa_escura_3"]
+const _DESERT_FRAME := "borda/borda_tabuleiro_13x12"
+# Medidas nativas (px) da folha da borda; iguais às de ForestBackground.
+const _D_TILE: float = 26.0
+const _D_COLS: int = 13
+const _D_ROWS: int = 12
+const _D_MARGIN_X: float = 8.0
+const _D_MARGIN_Y: float = 10.0
+const _D_SIDE_W: float = 22.0
+const _D_TOP_H: float = 22.0
+const _D_BOT_H: float = 26.0
 
 # path, moldura (fração do lado da imagem), grade de referência e se o
 # estilo usa defeitos esparsos.
@@ -197,7 +220,34 @@ static func _variant_index(r: int, c: int, count: int) -> int:
 		h = -h
 	return h % count
 
+static var _desert: Dictionary = {}
+
+static func _ensure_desert() -> void:
+	if not _desert.is_empty():
+		return
+	var light: Array = []
+	var dark: Array = []
+	for n in _DESERT_LIGHT:
+		var p: String = _DESERT_DIR + "casas/" + n + ".png"
+		if ResourceLoader.exists(p):
+			light.append(load(p))
+	for n in _DESERT_DARK:
+		var p2: String = _DESERT_DIR + "casas/" + n + ".png"
+		if ResourceLoader.exists(p2):
+			dark.append(load(p2))
+	var fp: String = _DESERT_DIR + _DESERT_FRAME + ".png"
+	var frame: Texture2D = load(fp) if ResourceLoader.exists(fp) else null
+	_desert = {"light": light, "dark": dark, "frame": frame, "ok": not light.is_empty() and not dark.is_empty() and frame != null}
+
+# A borda deste estilo cobre a beirada das casas: quem desenha deve chamar
+# draw_tiles ANTES de draw_frame.
+static func frame_over_tiles(skin_id: String) -> bool:
+	return skin_id == SKIN_DESERT
+
 static func has_sprite(skin_id: String = SKIN_WOOD) -> bool:
+	if skin_id == SKIN_DESERT:
+		_ensure_desert()
+		return _desert["ok"]
 	_ensure_loaded(skin_id)
 	return _skins[skin_id] != null
 
@@ -205,6 +255,8 @@ static func has_sprite(skin_id: String = SKIN_WOOD) -> bool:
 # quem centraliza o tabuleiro na viewport, já que a moldura cresce PRA
 # FORA do retângulo das casinhas (ver draw_frame).
 static func get_frame_px(cell_size: float, skin_id: String = SKIN_WOOD) -> float:
+	if skin_id == SKIN_DESERT:
+		return cell_size * (_D_MARGIN_Y / _D_TILE)
 	_ensure_loaded(skin_id)
 	var d = _skins[skin_id]
 	if d == null:
@@ -299,6 +351,9 @@ static func _vkey(is_light: bool, i: int) -> String:
 # (ver _build_layout). tint_light/tint_dark multiplicam a cor (branco = sem
 # alteração; usado pra rebater o tema difícil/chefe sem perder a textura).
 static func draw_tiles(canvas: CanvasItem, board_offset: Vector2, rows: int, cols: int, cell_size: float, tint_light: Color = Color.WHITE, tint_dark: Color = Color.WHITE, skin_id: String = SKIN_WOOD) -> void:
+	if skin_id == SKIN_DESERT:
+		_draw_desert_tiles(canvas, board_offset, rows, cols, cell_size, tint_light, tint_dark)
+		return
 	_ensure_loaded(skin_id)
 	var d = _skins[skin_id]
 	if d == null:
@@ -319,6 +374,9 @@ static func draw_tiles(canvas: CanvasItem, board_offset: Vector2, rows: int, col
 # esticar, pra não deformar o entalhe), e as 4 bordas esticam só no eixo
 # que acompanha o tamanho do tabuleiro.
 static func draw_frame(canvas: CanvasItem, board_offset: Vector2, rows: int, cols: int, cell_size: float, tint: Color = Color.WHITE, skin_id: String = SKIN_WOOD) -> void:
+	if skin_id == SKIN_DESERT:
+		_draw_desert_frame(canvas, board_offset, rows, cols, cell_size, tint)
+		return
 	_ensure_loaded(skin_id)
 	var d = _skins[skin_id]
 	if d == null:
@@ -390,3 +448,67 @@ static func _draw_segmented_edges(canvas: CanvasItem, d: Dictionary, outer_pos: 
 					dst = Rect2(outer_pos + Vector2(outer_size.x - frame_px, frame_px + i * cell_size), Vector2(frame_px, cell_size))
 					src = Rect2(w - m, along, m, tp)
 			canvas.draw_texture_rect_region(tex, dst, src, tint)
+
+
+# ---------------------------------------------------------------------------
+# Deserto: casas e borda do mapa do deserto
+# ---------------------------------------------------------------------------
+
+# Casas: sorteio determinístico por posição (não pisca entre redraws), sem
+# repetir a mesma arte na casa de cima nem na da esquerda da mesma cor.
+static func _desert_pick(r: int, c: int, is_light: bool, count: int) -> int:
+	var i: int = _variant_index(r + 3, c + 17, count)
+	var k := 0
+	while k < count:
+		var clash := false
+		for d in [Vector2i(-2, 0), Vector2i(0, -2)]:
+			var rr: int = r + d.y
+			var cc: int = c + d.x
+			if rr >= 0 and cc >= 0 and _variant_index(rr + 3, cc + 17, count) == i:
+				clash = true
+		if not clash:
+			break
+		i = (i + 1) % count
+		k += 1
+	return i
+
+static func _draw_desert_tiles(canvas: CanvasItem, board_offset: Vector2, rows: int, cols: int, cell_size: float, tint_light: Color, tint_dark: Color) -> void:
+	_ensure_desert()
+	if not _desert["ok"]:
+		return
+	for r in range(rows):
+		for c in range(cols):
+			var is_light: bool = (r + c) % 2 == 0
+			var pool: Array = _desert["light" if is_light else "dark"]
+			var tex: Texture2D = pool[_desert_pick(r, c, is_light, pool.size())]
+			var rect := Rect2(board_offset.x + c * cell_size, board_offset.y + r * cell_size, cell_size, cell_size)
+			canvas.draw_texture_rect(tex, rect, false, tint_light if is_light else tint_dark)
+
+# Mesma montagem de ForestBackground._draw_frame_sheet: 8 px (lados) e 10 px
+# (topo/base) nativos ficam FORA do tabuleiro; o resto da peça entra sobre as casas.
+static func _draw_desert_frame(canvas: CanvasItem, board_offset: Vector2, rows: int, cols: int, cell_size: float, tint: Color) -> void:
+	_ensure_desert()
+	if not _desert["ok"]:
+		return
+	var tex: Texture2D = _desert["frame"]
+	var S: float = cell_size / _D_TILE
+	var W: float = tex.get_width()
+	var H: float = tex.get_height()
+	var board_size := Vector2(cols * cell_size, rows * cell_size)
+	var outer := Rect2(board_offset - Vector2(_D_MARGIN_X, _D_MARGIN_Y) * S, board_size + Vector2(_D_MARGIN_X, _D_MARGIN_Y) * S * 2.0)
+	for i in range(cols):
+		var sx: float = _D_MARGIN_X + _D_TILE * float(i % _D_COLS)
+		var dx: float = board_offset.x + float(i) * cell_size
+		canvas.draw_texture_rect_region(tex, Rect2(dx, outer.position.y, cell_size, _D_TOP_H * S), Rect2(sx, 0, _D_TILE, _D_TOP_H), tint)
+		canvas.draw_texture_rect_region(tex, Rect2(dx, outer.end.y - _D_BOT_H * S, cell_size, _D_BOT_H * S), Rect2(sx, H - _D_BOT_H, _D_TILE, _D_BOT_H), tint)
+	for j in range(rows):
+		var sy: float = _D_MARGIN_Y + _D_TILE * float(j % _D_ROWS)
+		var dy: float = board_offset.y + float(j) * cell_size
+		canvas.draw_texture_rect_region(tex, Rect2(outer.position.x, dy, _D_SIDE_W * S, cell_size), Rect2(0, sy, _D_SIDE_W, _D_TILE), tint)
+		canvas.draw_texture_rect_region(tex, Rect2(outer.end.x - _D_SIDE_W * S, dy, _D_SIDE_W * S, cell_size), Rect2(W - _D_SIDE_W, sy, _D_SIDE_W, _D_TILE), tint)
+	var top_sz := Vector2(_D_SIDE_W, _D_TOP_H) * S
+	var bot_sz := Vector2(_D_SIDE_W, _D_BOT_H) * S
+	canvas.draw_texture_rect_region(tex, Rect2(outer.position, top_sz), Rect2(0, 0, _D_SIDE_W, _D_TOP_H), tint)
+	canvas.draw_texture_rect_region(tex, Rect2(Vector2(outer.end.x - top_sz.x, outer.position.y), top_sz), Rect2(W - _D_SIDE_W, 0, _D_SIDE_W, _D_TOP_H), tint)
+	canvas.draw_texture_rect_region(tex, Rect2(Vector2(outer.position.x, outer.end.y - bot_sz.y), bot_sz), Rect2(0, H - _D_BOT_H, _D_SIDE_W, _D_BOT_H), tint)
+	canvas.draw_texture_rect_region(tex, Rect2(outer.end - bot_sz, bot_sz), Rect2(W - _D_SIDE_W, H - _D_BOT_H, _D_SIDE_W, _D_BOT_H), tint)

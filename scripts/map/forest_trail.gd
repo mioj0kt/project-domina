@@ -44,15 +44,24 @@ const STATE_RAMPS: Dictionary = {
 	"percorrido": [Color("1b1514"), Color("5a4d44"), Color("9a8b78"), 1.0],
 	"bloqueado": [Color("3a3028"), Color("8a7a5e"), Color("c9b88c"), 0.55],
 }
+# Rampas próprias por bioma (sobrepõem STATE_RAMPS): no deserto o dourado do
+# trecho selecionado é mais fosco/dessaturado, para não gritar sobre a areia.
+const BIOME_STATE_RAMPS: Dictionary = {
+	"deserto": {
+		"selecionado": [Color("2a2316"), Color("8a6f3c"), Color("d9c48f"), 1.0],
+	},
+}
 static var _recolor_cache: Dictionary = {}
 
-static func _recolored(tex: Texture2D, st: String, key: String) -> Texture2D:
+static func _recolored(tex: Texture2D, st: String, key: String, biome_id: String = "") -> Texture2D:
 	if not STATE_RAMPS.has(st):
 		return tex
-	var ck := key + "|" + st
+	var ck := key + "|" + st + "|" + biome_id
 	if _recolor_cache.has(ck):
 		return _recolor_cache[ck]
 	var ramp: Array = STATE_RAMPS[st]
+	if BIOME_STATE_RAMPS.has(biome_id) and BIOME_STATE_RAMPS[biome_id].has(st):
+		ramp = BIOME_STATE_RAMPS[biome_id][st]
 	var img: Image = tex.get_image()
 	img.convert(Image.FORMAT_RGBA8)
 	for y in range(img.get_height()):
@@ -142,6 +151,6 @@ func set_state(new_state: String) -> void:
 		if tex == null:
 			var base: Texture2D = _texture(_names[i], "normal", _light[i], dir)
 			if base != null:
-				tex = _recolored(base, state, "%s|%s|%s" % [dir, _light[i], _names[i]])
+				tex = _recolored(base, state, "%s|%s|%s" % [dir, _light[i], _names[i]], biome)
 		_sprites[i].texture = tex
 		_sprites[i].modulate = tint

@@ -12,6 +12,12 @@ var color_override: Color = Color.TRANSPARENT
 # Árvore da floresta (chefe): peça neutra (owner_team = Board.NEUTRAL) que não
 # anda, bloqueia a casa e pode ser capturada por qualquer lado (opcionalmente).
 var is_tree: bool = false
+# Sarcófago do Deserto (chefe): é uma "árvore" (neutro, bloqueia, derrubável
+# pulando por cima) que, ao ser derrubada, libera uma múmia do chefe.
+var is_sarcophagus: bool = false
+# Cacto do Deserto (chefe): também é uma "árvore" neutra; quem o derruba pulando
+# por cima se espeta e perde a próxima jogada.
+var is_cactus: bool = false
 # Emboscada: turnos (do dono da peça) em que ela NÃO pode se mover/capturar.
 var rooted_turns: int = 0
 # Herdeiro: turnos (do dono) restantes como Dama temporária; 0 = Dama normal ou comum.
@@ -24,6 +30,18 @@ var sd_exempt: bool = false
 static func make_tree() -> BoardPiece:
 	var t = BoardPiece.new(Board.NEUTRAL, false)
 	t.is_tree = true
+	return t
+
+static func make_sarcophagus() -> BoardPiece:
+	var t = BoardPiece.new(Board.NEUTRAL, false)
+	t.is_tree = true
+	t.is_sarcophagus = true
+	return t
+
+static func make_cactus() -> BoardPiece:
+	var t = BoardPiece.new(Board.NEUTRAL, false)
+	t.is_tree = true
+	t.is_cactus = true
 	return t
 
 func _init(p_owner: int = Board.WHITE, p_is_king: bool = false) -> void:
@@ -41,6 +59,8 @@ func clone() -> BoardPiece:
 	var copy = BoardPiece.new(owner_team, is_king)
 	copy.color_override = color_override
 	copy.is_tree = is_tree
+	copy.is_sarcophagus = is_sarcophagus
+	copy.is_cactus = is_cactus
 	copy.rooted_turns = rooted_turns
 	copy.temp_king_turns = temp_king_turns
 	copy.shield_turns = shield_turns

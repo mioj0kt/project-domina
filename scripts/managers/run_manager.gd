@@ -70,6 +70,13 @@ var player_deck: Array[ActionCard] = []
 # Lei do chefe da floresta sorteada para ESTE run (id; "" = ainda não sorteada).
 # Fica fixa durante o run (derrota/retentativa enfrentam a mesma) e muda no próximo.
 var forest_boss_law_id: String = ""
+# Idem para o chefe do Deserto das Torres.
+var desert_boss_law_id: String = ""
+
+func get_desert_boss_law_id(options: Array) -> String:
+	if desert_boss_law_id == "" or not options.has(desert_boss_law_id):
+		desert_boss_law_id = options[randi() % options.size()]
+	return desert_boss_law_id
 
 func get_forest_boss_law_id(options: Array) -> String:
 	if forest_boss_law_id == "" or not options.has(forest_boss_law_id):
@@ -127,6 +134,7 @@ func start_new_run():
 	current_node = null
 	visited_connections = []
 	forest_boss_law_id = ""
+	desert_boss_law_id = ""
 	# DebugFlags.MAP_BIOME_OVERRIDE força o bioma inicial (mapa, fundos, transições).
 	map_biome = DebugFlags.MAP_BIOME_OVERRIDE if BIOME_ORDER.has(DebugFlags.MAP_BIOME_OVERRIDE) else "floresta"
 	biome_intro_pending = false

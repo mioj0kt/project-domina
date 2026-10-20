@@ -78,6 +78,17 @@ var firefly_tiles: Dictionary = {}
 # Raízes Famintas: time cujas peças ficam enraizadas (sem mover no próximo turno)
 # depois de capturar. 0 = lei inativa. _capturers guarda quem capturou no turno.
 var hungry_roots_team: int = 0
+# --- Leis do Chefe do Deserto ---
+# Areia (Tempestade/Ampulheta): marca VISUAL das casas em scorched_tiles que são
+# areia soterrada (o bloqueio em si vive em scorched_tiles).
+var sand_tiles: Dictionary = {}
+# Areia Movediça: Vector2i(col, row) -> true. Quem POUSA numa casa dessas fica
+# preso (rooted_turns) e perde a próxima jogada.
+var quicksand_tiles: Dictionary = {}
+# Sarcófagos: time do chefe (recebe as múmias) e casas de sarcófagos derrubados
+# esperando a múmia nascer (DuelBossDesert.advance_turn consome a lista).
+var mummy_team: int = 0
+var released_mummies: Array = []
 # Quantos turnos (do próprio time) a peça fica enraizada depois de capturar.
 const HUNGRY_ROOTS_TURNS: int = 2
 var _capturers: Array = []
@@ -120,6 +131,12 @@ func set_theme_for_duel(is_hard_or_boss: bool) -> void:
 		light_tile_tint = Color(0.85, 0.55, 0.55)
 		dark_tile_tint = Color(0.55, 0.30, 0.32)
 		frame_tint = Color(0.9, 0.65, 0.65)
+		if skin_id == BoardSkin.SKIN_DESERT:
+			# A areia clara tingida de vermelho vira rosa: no deserto o tom é
+			# só um leve escurecimento quente, sem lavar as casas de rosa.
+			light_tile_tint = Color(0.92, 0.80, 0.70)
+			dark_tile_tint = Color(0.72, 0.58, 0.58)
+			frame_tint = Color(0.95, 0.82, 0.78)
 	else:
 		light_tile_color = Color(0.90, 0.91, 0.94)
 		dark_tile_color = Color(0.16, 0.18, 0.24)
@@ -142,6 +159,10 @@ func clear_board() -> void:
 	vine_tiles.clear()
 	firefly_tiles.clear()
 	hungry_roots_team = 0
+	sand_tiles.clear()
+	quicksand_tiles.clear()
+	mummy_team = 0
+	released_mummies.clear()
 	_capturers.clear()
 
 # Concede à peça em `pos` a possibilidade de andar `distance` casas (caminho
@@ -717,6 +738,13 @@ func make_move(move_dict: Dictionary) -> bool:
 			# Árvore: cai sem Leis, sem eventos de captura e sem ouro.
 			grid[cap_pos.y][cap_pos.x] = EMPTY
 			piece_destroyed.emit(cap_pos, cap_piece)
+			if cap_piece.is_sarcophagus and not is_simulation and mummy_team != 0:
+				released_mummies.append(cap_pos)
+			if cap_piece.is_cactus:
+				# Espinhos: quem derruba o cacto fica preso (nunca sem nenhuma jogada).
+				piece.rooted_turns = HUNGRY_ROOTS_TURNS
+				if not is_simulation and get_all_valid_moves(piece.owner_team).is_empty():
+					piece.rooted_turns = 0
 		elif pipeline != null and pipeline.try_prevent_capture(cap_piece, human_team_color, self):
 			last_capture_prevented = true
 			_protected_piece = cap_piece
@@ -760,6 +788,13 @@ func make_move(move_dict: Dictionary) -> bool:
 		grid[to_pos.y][to_pos.x] = EMPTY
 		piece_destroyed.emit(to_pos, piece)
 		return false
+
+	# Areia Movediça: quem POUSA nela fica preso e perde a próxima jogada (nunca
+	# deixa o time sem nenhuma jogada, como as Raízes Famintas).
+	if quicksand_tiles.has(to_pos) and grid[to_pos.y][to_pos.x] == piece:
+		piece.rooted_turns = HUNGRY_ROOTS_TURNS
+		if not is_simulation and get_all_valid_moves(piece.owner_team).is_empty():
+			piece.rooted_turns = 0
 
 	# Herdeiro que chega ao fim do tabuleiro vira Dama de verdade.
 	if piece.is_king and piece.temp_king_turns > 0:
@@ -827,6 +862,8 @@ func clone() -> Board:
 	new_b.night_boost_team = night_boost_team
 	new_b.vine_tiles = vine_tiles.duplicate()
 	new_b.firefly_tiles = firefly_tiles.duplicate()
+	new_b.sand_tiles = sand_tiles.duplicate()
+	new_b.quicksand_tiles = quicksand_tiles.duplicate()
 	new_b.lit_tiles = lit_tiles.duplicate(true)
 
 	for r in range(rows):

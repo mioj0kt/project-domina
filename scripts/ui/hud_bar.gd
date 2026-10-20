@@ -184,6 +184,7 @@ func _build_side_panel() -> void:
 	draw_pile_widget = _create_pile_display("icone_deck")
 	draw_pile_widget.mouse_filter = Control.MOUSE_FILTER_STOP
 	draw_pile_widget.gui_input.connect(_on_draw_pile_gui_input)
+	_add_pile_hover(draw_pile_widget, true)
 	piles_hbox.add_child(draw_pile_widget)
 	draw_deck_stack = draw_pile_widget.get_node("StackContainer")
 
@@ -201,10 +202,19 @@ func _build_side_panel() -> void:
 	discard_pile_widget = _create_pile_display("icone_descarte")
 	# O selo do descarte só aparece quando há cartas na pilha.
 	discard_pile_widget.get_node("Badge").visible = false
+	_add_pile_hover(discard_pile_widget, false)
 	piles_hbox.add_child(discard_pile_widget)
 	discard_deck_stack = discard_pile_widget.get_node("StackContainer")
 
 	refresh_cards_inventory_count()
+
+# Hover das pilhas: clareia a pilha inteira; `clickable` troca o cursor pela mão.
+func _add_pile_hover(widget: Control, clickable: bool) -> void:
+	widget.mouse_filter = Control.MOUSE_FILTER_STOP
+	if clickable:
+		widget.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	widget.mouse_entered.connect(func(): widget.modulate = Color(1.12, 1.12, 1.12))
+	widget.mouse_exited.connect(func(): widget.modulate = Color.WHITE)
 
 func _create_pile_display(icon_file: String = "") -> Control:
 	var root = Control.new()

@@ -764,6 +764,35 @@ func _process_boss_law_events(boss_duel: DuelBoss) -> void:
 			"fireflies":
 				# Sem banner (acontece toda rodada): o renderer desliza as luzes.
 				host.board.rule_fired.emit("fireflies")
+			"sun":
+				host.rule_banner_view.pop_rule_trigger(center, "O SOL ESCALDA!", Color(1.0, 0.6, 0.2), "scorching_sun")
+				await get_tree().create_timer(0.7).timeout
+			"storm":
+				host.rule_banner_view.pop_rule_trigger(center, "TEMPESTADE DE AREIA!", Color(0.9, 0.75, 0.45), "sandstorm")
+				await get_tree().create_timer(0.7).timeout
+			"quicksand":
+				host.rule_banner_view.pop_rule_trigger(center, "A AREIA SE MOVE!", Color(0.85, 0.65, 0.35), "quicksand")
+				await get_tree().create_timer(0.5).timeout
+			"hourglass":
+				host.rule_banner_view.pop_rule_trigger(center, "A AREIA FECHA!", Color(0.9, 0.75, 0.45), "hourglass")
+				await get_tree().create_timer(0.7).timeout
+			"cactus":
+				host.rule_banner_view.pop_rule_trigger(center, "UM CACTO BROTA!", Color(0.5, 0.85, 0.4), "cacti")
+				var tw3 = create_tween().set_parallel(true)
+				for pos in ev["tiles"]:
+					host.piece_spawn_scales[pos] = 0.0
+					tw3.tween_method(func(v): host.piece_spawn_scales[pos] = v, 0.0, 1.0, 0.45)\
+						.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+				await tw3.finished
+			"sarcophagus", "mummy":
+				var is_mummy: bool = ev["type"] == "mummy"
+				host.rule_banner_view.pop_rule_trigger(center, "A MÚMIA DESPERTA!" if is_mummy else "UM SARCÓFAGO SURGE!", Color(0.8, 0.7, 0.4), "sarcophagi")
+				var tw2 = create_tween().set_parallel(true)
+				for pos in ev["tiles"]:
+					host.piece_spawn_scales[pos] = 0.0
+					tw2.tween_method(func(v): host.piece_spawn_scales[pos] = v, 0.0, 1.0, 0.45)\
+						.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+				await tw2.finished
 			"trees":
 				host.rule_banner_view.pop_rule_trigger(center, "A FLORESTA SE FECHA!", Color(0.45, 0.9, 0.4), "closing_forest")
 				var tw = create_tween().set_parallel(true)

@@ -15,8 +15,8 @@ const BIOMES: Dictionary = {
 		"top": Color("16201c"), "bottom": Color("221b2a"),
 		"line": Color("2a3a31"), "dot": Color("3a4f3f"), "fill": Color("1d2923"),
 		"patterns": ["losango", "xadrez", "escamas", "estrelas", "diagonal", "trama", "ondas", "chevron"],
-		"fireflies": Color("d9a441"), "n_fireflies": 30,
-		"leaves": [Color("5b8f4e"), Color("3f6b3a"), Color("d0802f")], "n_leaves": 100,
+		"fireflies": Color("d9a441"), "n_fireflies": 22,
+		"leaves": [Color("5b8f4e"), Color("3f6b3a"), Color("d0802f")], "n_leaves": 14,
 		"spores": Color("7fa874"), "n_spores": 46,
 		# Cores das transições de cena (SceneTransition): a, b, chefe, detalhe.
 		"trans_a": Color("16201c"), "trans_b": Color("2a3a31"), "trans_boss": Color("2a1418"), "trans_edge": Color("5b8f4e"),
@@ -28,8 +28,9 @@ const BIOMES: Dictionary = {
 		# Rajadas de vento com areia (fiapos que aceleram em ondas) e 2 ervas-
 		# rolantes cruzando a tela: o efeito único do deserto (como as folhas
 		# da floresta).
-		"wind": Color("ecd49a"), "n_wind": 50, "n_tumble": 10, "tumble": Color("a8854f"),
-		"fireflies": Color("f2cf6b"), "n_fireflies": 0,
+		"wind": Color("ecd49a"), "n_wind": 46, "n_tumble": 3, "tumble": Color("a8854f"),
+		# Brilhos de areia ao vento (no lugar dos vaga-lumes) e grãos subindo.
+		"fireflies": Color("f2cf6b"), "n_fireflies": 12,
 		"leaves": [Color("cdb078"), Color("a88a58"), Color("e3c98a")], "n_leaves": 0,
 		"spores": Color("d9bb82"), "n_spores": 64,
 		"trans_a": Color("2b2118"), "trans_b": Color("5a4530"), "trans_boss": Color("3a1a14"), "trans_edge": Color("a8854f"),
@@ -38,8 +39,8 @@ const BIOMES: Dictionary = {
 		"top": Color("231a2a"), "bottom": Color("1a1420"),
 		"line": Color("3a2b41"), "dot": Color("5a4561"), "fill": Color("2a2031"),
 		"patterns": ["losango", "xadrez", "escamas", "estrelas", "diagonal", "trama", "chevron"],
-		"fireflies": Color("efe6cf"), "n_fireflies": 0,
-		"leaves": [Color("7c6489"), Color("5a4561"), Color("d9a441")], "n_leaves": 0,
+		"fireflies": Color("efe6cf"), "n_fireflies": 18,
+		"leaves": [Color("7c6489"), Color("5a4561"), Color("d9a441")], "n_leaves": 0,   # sem folhas no tutorial
 		"spores": Color("a58bb3"), "n_spores": 40,
 		"trans_a": Color("231a2a"), "trans_b": Color("3a2b41"), "trans_boss": Color("2a1418"), "trans_edge": Color("d9a441"),
 	},
@@ -396,12 +397,12 @@ func _draw_tumbleweed(vp: Vector2, u: float, tb: Dictionary) -> void:
 		return
 	var cx: float = float(tb["x"])
 	var rad: float = float(tb["r"]) * u
-	var bounce: float = absf(sin(cx * 0.018 + float(tb["ph"]))) * rad * 6.0 * (1.0 + _gust)
+	var bounce: float = absf(sin(cx * 0.018 + float(tb["ph"]))) * rad * 1.8 * (1.0 + 0.4 * _gust)
 	var cy: float = float(tb["y"]) * vp.y - bounce
 	var ang0: float = cx * 0.03
 	var px: float = maxf(2.0, round(u * 0.9))
 	# Sombra no chão.
-	var shadow_w: float = rad * (1.6 - bounce / 120.0)
+	var shadow_w: float = rad * (1.6 - bounce / 60.0)
 	_canvas.draw_rect(Rect2(floorf(cx - shadow_w * 0.5), floorf(float(tb["y"]) * vp.y + rad * 0.9), shadow_w, px), Color(0, 0, 0, 0.22))
 	for k in range(14):
 		var a: float = ang0 + float(k) * TAU / 14.0

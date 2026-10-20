@@ -115,6 +115,14 @@ static func draw_piece(canvas: CanvasItem, piece_obj: BoardPiece, center: Vector
 	if piece_obj == null:
 		return
 
+	if piece_obj.is_cactus:
+		_draw_cactus(canvas, center, cell_size, scale_factor)
+		return
+
+	if piece_obj.is_sarcophagus:
+		_draw_sarcophagus(canvas, center, cell_size, scale_factor)
+		return
+
 	if piece_obj.is_tree:
 		var ttex: Texture2D = _get_tree_tex(piece_obj.get_instance_id())
 		if ttex != null:
@@ -171,6 +179,54 @@ static func _get_tree_tex(variant: int) -> Texture2D:
 		for path in _TREE_SPRITES:
 			_tree_tex.append(load(path) if ResourceLoader.exists(path) else null)
 	return _tree_tex[variant % _tree_tex.size()]
+
+# Cacto neutro do chefe do deserto (saguaro com espinhos), desenhado em código.
+static func _draw_cactus(canvas: CanvasItem, center: Vector2, cell_size: float, scale_factor: float) -> void:
+	var u: float = cell_size * scale_factor / 100.0
+	var green := Color(0.28, 0.58, 0.30)
+	var green_dark := Color(0.17, 0.40, 0.21)
+	var green_light := Color(0.45, 0.76, 0.40)
+	var line := Color(0.08, 0.22, 0.10)
+	canvas.draw_circle(center + Vector2(2, 34) * u, 22.0 * u, Color(0, 0, 0, 0.25))
+	# Braços (atrás do tronco), tronco e topo arredondado.
+	canvas.draw_rect(Rect2(center + Vector2(-30, -6) * u, Vector2(18, 9) * u), green_dark)
+	canvas.draw_rect(Rect2(center + Vector2(-30, -26) * u, Vector2(9, 28) * u), green_dark)
+	canvas.draw_rect(Rect2(center + Vector2(12, 4) * u, Vector2(18, 9) * u), green_dark)
+	canvas.draw_rect(Rect2(center + Vector2(21, -16) * u, Vector2(9, 28) * u), green_dark)
+	canvas.draw_rect(Rect2(center + Vector2(-12, -34) * u, Vector2(24, 70) * u), green)
+	canvas.draw_circle(center + Vector2(0, -34) * u, 12.0 * u, green)
+	canvas.draw_rect(Rect2(center + Vector2(-12, -34) * u, Vector2(6, 70) * u), green_light)
+	canvas.draw_rect(Rect2(center + Vector2(4, -34) * u, Vector2(3, 70) * u), green_dark)
+	for sp in [Vector2(-8, -20), Vector2(8, -8), Vector2(-8, 8), Vector2(8, 22), Vector2(-26, -20), Vector2(26, -10), Vector2(0, -42)]:
+		canvas.draw_rect(Rect2(center + sp * u, Vector2(3, 3) * u), Color(0.98, 0.95, 0.75))
+	canvas.draw_rect(Rect2(center + Vector2(-12, -34) * u, Vector2(24, 70) * u), line, false, maxf(2.0, 2.0 * u))
+
+# Sarcófago neutro do chefe do deserto, desenhado em código (arenito + máscara
+# dourada + faixas de lápis-lazúli).
+static func _draw_sarcophagus(canvas: CanvasItem, center: Vector2, cell_size: float, scale_factor: float) -> void:
+	var u: float = cell_size * scale_factor / 100.0
+	var sand := Color(0.80, 0.68, 0.44)
+	var sand_dark := Color(0.60, 0.48, 0.28)
+	var gold := Color(0.96, 0.78, 0.26)
+	var lapis := Color(0.20, 0.36, 0.62)
+	var line := Color(0.22, 0.15, 0.08)
+	canvas.draw_circle(center + Vector2(2, 34) * u, 24.0 * u, Color(0, 0, 0, 0.25))
+	var body := PackedVector2Array([
+		center + Vector2(-12, -40) * u, center + Vector2(12, -40) * u,
+		center + Vector2(21, -22) * u, center + Vector2(18, 34) * u,
+		center + Vector2(-18, 34) * u, center + Vector2(-21, -22) * u])
+	canvas.draw_colored_polygon(body, sand)
+	canvas.draw_colored_polygon(PackedVector2Array([
+		center + Vector2(4, -40) * u, center + Vector2(12, -40) * u, center + Vector2(21, -22) * u,
+		center + Vector2(18, 34) * u, center + Vector2(8, 34) * u]), sand_dark)
+	canvas.draw_rect(Rect2(center + Vector2(-19, -2) * u, Vector2(38, 6) * u), lapis)
+	canvas.draw_rect(Rect2(center + Vector2(-19, 12) * u, Vector2(38, 6) * u), gold)
+	canvas.draw_rect(Rect2(center + Vector2(-19, 24) * u, Vector2(38, 5) * u), lapis)
+	canvas.draw_circle(center + Vector2(0, -22) * u, 10.0 * u, gold)
+	canvas.draw_rect(Rect2(center + Vector2(-5, -25) * u, Vector2(3, 3) * u), line)
+	canvas.draw_rect(Rect2(center + Vector2(2, -25) * u, Vector2(3, 3) * u), line)
+	canvas.draw_rect(Rect2(center + Vector2(-2, -18) * u, Vector2(4, 2) * u), line)
+	canvas.draw_polyline(PackedVector2Array([body[0], body[1], body[2], body[3], body[4], body[5], body[0]]), line, maxf(2.0, 2.0 * u))
 
 # Reserva (sem sprite): árvore desenhada em código.
 static func _draw_tree(canvas: CanvasItem, center: Vector2, cell_size: float, scale_factor: float) -> void:
