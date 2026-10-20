@@ -127,7 +127,8 @@ func start_new_run():
 	current_node = null
 	visited_connections = []
 	forest_boss_law_id = ""
-	map_biome = "floresta"
+	# DebugFlags.MAP_BIOME_OVERRIDE força o bioma inicial (mapa, fundos, transições).
+	map_biome = DebugFlags.MAP_BIOME_OVERRIDE if BIOME_ORDER.has(DebugFlags.MAP_BIOME_OVERRIDE) else "floresta"
 	biome_intro_pending = false
 	clear_ambush()
 	seen_event_ids.clear()
@@ -153,9 +154,6 @@ func _init_default_deck() -> void:
 			# Debug ignora o limite de 20.
 			player_deck.append(card)
 		return
-	player_deck.append(CardSecondChance.new())
-	player_deck.append(CardLuckyDuel.new())
-	player_deck.append(CardCoinOfDestiny.new())
 	
 func add_gold(amount: int) -> void:
 	gold += amount

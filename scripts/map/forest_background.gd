@@ -302,6 +302,8 @@ func build(layers: Array, tile_px: float, sprite_scale: int, min_col: int, max_c
 							_decor.append([gt, gpos, gpos.y])
 
 	_decor.sort_custom(func(a, b): return a[2] < b[2])
+	if _th["frame"] == "bordas":
+		_clear_decor_from_frame_band()
 
 	for np in node_points:
 		var cname: String = String(_th["clearing_boss"] if np[1] else _th["clearing_node"])
@@ -336,6 +338,38 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 # Centro do sprite de uma árvore cuja base do tronco está em `ground`.
+# Deserto: a moldura de areia entra sobre as casas; sprites com base de areia
+# (monólitos, torres...) ou detalhes miúdos que PISAM nessa faixa batiam com a
+# areia da borda. Descarta a decoração cuja "pegada" (parte de baixo) toca a
+# faixa; a parte alta de um sprite alto pode passar por cima, sem problema.
+func _clear_decor_from_frame_band() -> void:
+	var S := float(_scale)
+	var inner := _board_rect
+	inner.position += Vector2(FRAME_BAND_SIDE, FRAME_BAND_TOP) * S
+	inner.size -= Vector2(FRAME_BAND_SIDE * 2.0, FRAME_BAND_TOP + FRAME_BAND_BOTTOM) * S
+	var kept: Array = []
+	var big_feet: Array[Rect2] = []   # pegadas dos sprites grandes já aceitos
+	for d in _decor:
+		var dtex: Texture2D = d[0]
+		var dsz := dtex.get_size() * S
+		var drect := Rect2(d[1] - dsz / 2.0, dsz)
+		var foot := Rect2(drect.position.x, drect.end.y - dsz.y * 0.35, dsz.x, dsz.y * 0.35)
+		if not inner.encloses(foot):
+			continue
+		# Sprites grandes (monólitos, torres, ruínas) trazem uma base de areia:
+		# duas bases não podem se sobrepor.
+		if dsz.x >= LARGE_DECOR_NATIVE * S:
+			var clash := false
+			for bf in big_feet:
+				if bf.intersects(foot.grow(8.0 * S)):
+					clash = true
+					break
+			if clash:
+				continue
+			big_feet.append(foot)
+		kept.append(d)
+	_decor = kept
+
 func _tree_center(tex: Texture2D, ground: Vector2) -> Vector2:
 	return _snap(ground + Vector2(0.0, (0.5 - float(_th["tree_ground_y"])) * tex.get_height() * float(_scale)))
 
@@ -403,6 +437,11 @@ func _draw() -> void:
 		draw_texture_rect(tex, Rect2(-half, rect.size), false)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
+	# Deserto: a areia acumulada da moldura entra 14 px (nativos) sobre as casas,
+	# então vai ANTES da decoração (nada do mapa pode ficar escondido por ela).
+	if _th["frame"] == "bordas":
+		_draw_frame_sheet()
+
 	for c in _clearings:
 		var ctex: Texture2D = c[0]
 		var sz = ctex.get_size() * float(_scale)
@@ -422,9 +461,7 @@ func _draw() -> void:
 				draw_texture_rect_region(dtex, clip, Rect2((clip.position - drect.position) * k, clip.size * k))
 
 	_draw_swirls()
-	if _th["frame"] == "bordas":
-		_draw_frame_sheet()
-	else:
+	if _th["frame"] != "bordas":
 		_draw_frame()
 
 # Redemoinhos: 4 quadros de 8x8 numa faixa; vagam devagar pelo tabuleiro.
@@ -453,6 +490,12 @@ const SHEET_MARGIN_Y: float = 10.0
 const SHEET_SIDE_W: float = 22.0
 const SHEET_TOP_H: float = 22.0
 const SHEET_BOT_H: float = 26.0
+# Quanto a moldura entra sobre as casas (px nativos, + 1 de folga): lados, topo, base.
+const FRAME_BAND_SIDE: float = 15.0
+const FRAME_BAND_TOP: float = 13.0
+const FRAME_BAND_BOTTOM: float = 17.0
+# Largura nativa a partir da qual um sprite conta como "grande" (tem base de areia).
+const LARGE_DECOR_NATIVE: float = 11.0
 func _draw_frame_sheet() -> void:
 	if _frame_tex == null:
 		return
