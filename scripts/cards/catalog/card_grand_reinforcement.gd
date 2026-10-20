@@ -4,7 +4,7 @@ extends ActionCard
 func _init() -> void:
 	id = "grand_reinforcement"
 	icon_path = "res://assets/sprites/cards/icons/grand_reinforcement.png"
-	name = "Grande Reforco"
+	name = "Grande Reforço"
 	description = "Se uma das 3 fileiras do seu lado estiver totalmente vazia (sem nenhuma peça), invoca uma peça comum em cada casa escura dessa fileira."
 	rarity = Rarity.LEGENDARY
 	target_type = TargetType.EMPTY_TILE

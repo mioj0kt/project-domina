@@ -4,7 +4,7 @@ extends ActionCard
 func _init() -> void:
 	id = "sacrifice"
 	icon_path = "res://assets/sprites/cards/icons/sacrifice.png"
-	name = "Sacrificio"
+	name = "Sacrifício"
 	description = "Remove voluntariamente uma peça sua do tabuleiro para ganhar +15 de Ouro e comprar 1 carta extra."
 	rarity = Rarity.RARE
 	target_type = TargetType.ALLY_PIECE

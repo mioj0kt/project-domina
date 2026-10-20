@@ -4,7 +4,7 @@ extends RuleCard
 func _init() -> void:
 	id = "soul_mirror"
 	name = "Espelho de Almas"
-	description = "Quando o inimigo coroa uma Dama, uma peca comum sua e coroada imediatamente."
+	description = "Quando o inimigo coroa uma Dama, uma peça comum sua e coroada imediatamente."
 	category = Category.PROMOTION
 	scope = Scope.PLAYER_ONLY
 	priority = 45

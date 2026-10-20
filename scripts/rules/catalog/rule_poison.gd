@@ -9,7 +9,7 @@ const FIRE_TURNS: int = 2
 func _init() -> void:
 	id = "poison"
 	name = "Lei do Veneno"
-	description = "[LEI INIMIGA] Quando voce captura uma peca inimiga nas fileiras do meio do tabuleiro, a casa dela pega fogo por 2 turnos: quem pousar ali e destruido."
+	description = "[LEI INIMIGA] Quando voce captura uma peça inimiga nas fileiras do meio do tabuleiro, a casa dela pega fogo por 2 turnos: quem pousar ali é destruído."
 	category = Category.BOARD
 	scope = Scope.AI_ONLY
 	priority = 45

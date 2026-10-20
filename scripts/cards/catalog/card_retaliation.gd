@@ -4,7 +4,7 @@ extends ActionCard
 func _init() -> void:
 	id = "retaliation"
 	icon_path = "res://assets/sprites/cards/icons/retaliation.png"
-	name = "Retaliacao"
+	name = "Retaliação"
 	description = "Só pode ser jogada se voce perdeu uma peça no último turno. Concede +10 de Ouro e coroa uma peça sua."
 	rarity = Rarity.EPIC
 	target_type = TargetType.ALLY_PIECE

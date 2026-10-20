@@ -4,7 +4,7 @@ extends RuleCard
 func _init() -> void:
 	id = "sacred_zone"
 	name = "Zona Sagrada"
-	description = "Suas pecas comuns tambem sao promovidas a Dama ao pisarem em uma das 4 casas centrais do tabuleiro."
+	description = "Suas peças comuns também são promovidas à Dama ao pisarem em uma das 4 casas centrais do tabuleiro."
 	category = Category.PROMOTION
 	scope = Scope.PLAYER_ONLY
 	rarity = Rarity.RARE

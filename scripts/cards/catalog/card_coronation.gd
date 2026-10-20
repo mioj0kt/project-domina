@@ -4,7 +4,7 @@ extends ActionCard
 func _init() -> void:
 	id = "coronation"
 	icon_path = "res://assets/sprites/cards/icons/coronation.png"
-	name = "Coroacao"
+	name = "Coroação"
 	description = "Promove imediatamente uma peça aliada comum para Dama."
 	rarity = Rarity.LEGENDARY
 	target_type = TargetType.ALLY_PIECE

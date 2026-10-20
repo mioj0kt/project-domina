@@ -4,7 +4,7 @@ extends ActionCard
 func _init() -> void:
 	id = "rebuild"
 	icon_path = "res://assets/sprites/cards/icons/rebuild.png"
-	name = "Reconstrucao"
+	name = "Reconstrução"
 	description = "Revive uma peça que foi capturada e a posiciona em uma casa vazia da sua primeira fileira."
 	rarity = Rarity.RARE
 	target_type = TargetType.EMPTY_TILE

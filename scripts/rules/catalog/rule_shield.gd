@@ -6,7 +6,7 @@ var shield_used: bool = false
 func _init() -> void:
 	id = "shield"
 	name = "Escudo"
-	description = "A primeira peca sua que seria capturada neste duelo sobrevive automaticamente, uma unica vez."
+	description = "A primeira peça sua que seria capturada neste duelo sobrevive automaticamente, uma única vez."
 	category = Category.BOARD
 	scope = Scope.PLAYER_ONLY
 	rarity = Rarity.EPIC
