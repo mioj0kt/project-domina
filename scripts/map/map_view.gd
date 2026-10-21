@@ -156,7 +156,8 @@ func _build_debug_hint() -> void:
 	layer.layer = 90
 	add_child(layer)
 	var lbl := Label.new()
-	lbl.text = "DEBUG  CHEFE: 1 Sapo  2 Coruja  3 Floresta  4 Cipós  5 Vaga-lumes  6 Raízes   |   B Apostas   E Evento"
+	var laws: String = "1 Sol  2 Tempestade  3 Areia Movediça  4 Ampulheta  5 Sarcófagos  6 Cactos" if _current_biome() == "deserto" else "1 Sapo  2 Coruja  3 Floresta  4 Cipós  5 Vaga-lumes  6 Raízes"
+	lbl.text = "DEBUG  CHEFE: " + laws + "   |   B Apostas   E Evento"
 	lbl.add_theme_font_size_override("font_size", 16)
 	lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
 	lbl.add_theme_color_override("font_outline_color", Color(0.05, 0.03, 0.08))

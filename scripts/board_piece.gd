@@ -5,6 +5,8 @@ const TEXTURE_WHITE_PATH: String = "res://assets/sprites/pieces/white.png"
 const TEXTURE_BLACK_PATH: String = "res://assets/sprites/pieces/black.png"
 const TEXTURE_WHITE_KING_PATH: String = "res://assets/sprites/pieces/white-king.png"
 const TEXTURE_BLACK_KING_PATH: String = "res://assets/sprites/pieces/black-king.png"
+const TEXTURE_MUMMY_PATH: String = "res://assets/sprites/pieces/mumia.png"
+const TEXTURE_MUMMY_KING_PATH: String = "res://assets/sprites/pieces/mumia-king.png"
 
 var owner_team: int = Board.WHITE
 var is_king: bool = false
@@ -18,6 +20,8 @@ var is_sarcophagus: bool = false
 # Cacto do Deserto (chefe): também é uma "árvore" neutra; quem o derruba pulando
 # por cima se espeta e perde a próxima jogada.
 var is_cactus: bool = false
+# Múmia (Sarcófagos): peça comum do chefe com sprite próprio.
+var is_mummy: bool = false
 # Emboscada: turnos (do dono da peça) em que ela NÃO pode se mover/capturar.
 var rooted_turns: int = 0
 # Herdeiro: turnos (do dono) restantes como Dama temporária; 0 = Dama normal ou comum.
@@ -49,6 +53,8 @@ func _init(p_owner: int = Board.WHITE, p_is_king: bool = false) -> void:
 	is_king = p_is_king
 
 func get_texture() -> String:
+	if is_mummy:
+		return TEXTURE_MUMMY_KING_PATH if is_king else TEXTURE_MUMMY_PATH
 	if owner_team == Board.WHITE:
 		return TEXTURE_WHITE_KING_PATH if is_king else TEXTURE_WHITE_PATH
 	elif owner_team == Board.BLACK:
@@ -61,6 +67,7 @@ func clone() -> BoardPiece:
 	copy.is_tree = is_tree
 	copy.is_sarcophagus = is_sarcophagus
 	copy.is_cactus = is_cactus
+	copy.is_mummy = is_mummy
 	copy.rooted_turns = rooted_turns
 	copy.temp_king_turns = temp_king_turns
 	copy.shield_turns = shield_turns

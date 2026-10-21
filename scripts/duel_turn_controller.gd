@@ -339,11 +339,15 @@ func handle_cell_click(pos: Vector2i) -> void:
 func _show_rule_move_banner(piece: BoardPiece, from_pos: Vector2i, to_pos: Vector2i, was_capture: bool, screen_pos: Vector2) -> void:
 	if _host.board.rule_pipeline == null:
 		return
+	# TODAS as Leis que agiram neste movimento acendem (antes só a primeira da
+	# lista: com Movimento Reverso junto, o Salto Camarada nunca brilhava).
+	# Os banners empilham para cima, um acima do outro.
+	var shown: int = 0
 	for r in _host.board.rule_pipeline.active_rules:
 		var banner = r.get_move_trigger_banner(piece, from_pos, to_pos, was_capture)
 		if not banner.is_empty():
-			_host.rule_banner_view.pop_rule_trigger(screen_pos, banner["text"], banner["color"], r.id)
-			return
+			_host.rule_banner_view.pop_rule_trigger(screen_pos - Vector2(0.0, 34.0 * shown), banner["text"], banner["color"], r.id)
+			shown += 1
 
 # Mesma ideia, para o momento de promoção a Dama.
 func _show_rule_promotion_banner(to_pos: Vector2i, screen_pos: Vector2) -> void:

@@ -196,8 +196,32 @@ const FIRE_FRAME_PX: int = 64
 const FIRE_FPS: float = 8.0
 var _fire_tex: Texture2D = null
 
+# Sprites dos efeitos do chefe do deserto (se faltar um arquivo, vale o desenho em código).
+const BOSS_FX_DIR: String = "res://assets/sprites/board/deserto_boss/"
+const BOSS_FX_FPS: float = 5.0
+const BOSS_FX_FRAME: int = 26
+var _boss_fx_cache: Dictionary = {}
+
+func _boss_fx(rel: String) -> Texture2D:
+	if not _boss_fx_cache.has(rel):
+		var p: String = BOSS_FX_DIR + rel
+		_boss_fx_cache[rel] = load(p) if ResourceLoader.exists(p) else null
+	return _boss_fx_cache[rel]
+
+# Desenha um quadro (26x26) de uma folha horizontal de animação.
+func _draw_fx_frame(tex: Texture2D, rect: Rect2, pos: Vector2i, fps: float) -> void:
+	var frames: int = maxi(1, int(tex.get_width() / BOSS_FX_FRAME))
+	var f: int = (int(Time.get_ticks_msec() / 1000.0 * fps) + pos.x * 3 + pos.y * 5) % frames
+	draw_texture_rect_region(tex, rect, Rect2(f * BOSS_FX_FRAME, 0, BOSS_FX_FRAME, BOSS_FX_FRAME))
+
 # Areia soterrada (Tempestade de Areia / Ampulheta): casa coberta, bloqueada.
+# Tempestade (tipo 1) usa a duna com borda; Ampulheta (tipo 2) a duna contínua.
 func _draw_sand_cover(rect: Rect2, pos: Vector2i) -> void:
+	var kind: int = int(host.board.sand_tiles.get(pos, 1)) if host != null and host.board != null else 1
+	var dune: Texture2D = _boss_fx("duna/duna_%s%s.png" % [["a", "b", "c"][(pos.x * 7 + pos.y * 3) % 3], "_borda" if kind == 1 else ""])
+	if dune != null:
+		draw_texture_rect(dune, rect, false)
+		return
 	var t: float = Time.get_ticks_msec() / 1000.0
 	draw_rect(rect, Color(0.80, 0.64, 0.38, 0.93))
 	var u: float = rect.size.x / 100.0
@@ -219,8 +243,12 @@ func _draw_quicksand_tiles(board: Board, board_offset: Vector2, cell_size: float
 	if board.quicksand_tiles.is_empty():
 		return
 	var t: float = Time.get_ticks_msec() / 1000.0
+	var sheet: Texture2D = _boss_fx("areia_movedica/areia_movedica_sheet.png")
 	for pos in board.quicksand_tiles.keys():
 		var rect := Rect2(board_offset.x + pos.x * cell_size, board_offset.y + pos.y * cell_size, cell_size, cell_size)
+		if sheet != null:
+			_draw_fx_frame(sheet, rect, pos, BOSS_FX_FPS)
+			continue
 		draw_rect(rect, Color(0.36, 0.24, 0.12, 0.78))
 		var ctr: Vector2 = rect.get_center()
 		for k in range(4):
@@ -238,6 +266,13 @@ func _draw_desert_boss_telegraph(board_offset: Vector2, cell_size: float) -> voi
 	if duel.telegraph_tiles.is_empty():
 		return
 	var pulse: float = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * 4.0)
+	var warn: Texture2D = _boss_fx("alerta/alerta_a_sol.png" if duel.law_id == DuelBossDesert.LAW_SUN else "alerta/alerta_b_ampulheta.png")
+	if warn != null:
+		for wpos in duel.telegraph_tiles:
+			var wrect := Rect2(board_offset.x + wpos.x * cell_size, board_offset.y + wpos.y * cell_size, cell_size, cell_size)
+			draw_rect(wrect, Color(1.0, 0.5, 0.15, 0.08 + 0.10 * pulse) if duel.law_id == DuelBossDesert.LAW_SUN else Color(0.9, 0.75, 0.45, 0.08 + 0.10 * pulse))
+			draw_texture_rect(warn, wrect, false, Color(1, 1, 1, 0.75 + 0.25 * pulse))
+		return
 	var fill := Color(1.0, 0.45, 0.1, 0.10 + 0.14 * pulse) if duel.law_id == DuelBossDesert.LAW_SUN else Color(0.9, 0.72, 0.4, 0.10 + 0.14 * pulse)
 	var edge := Color(1.0, 0.6, 0.2, 0.9) if duel.law_id == DuelBossDesert.LAW_SUN else Color(0.95, 0.8, 0.5, 0.9)
 	for pos in duel.telegraph_tiles:
@@ -249,8 +284,13 @@ func _draw_fire_tiles(board: Board, board_offset: Vector2, cell_size: float) -> 
 	if _fire_tex == null and ResourceLoader.exists(FIRE_SHEET):
 		_fire_tex = load(FIRE_SHEET)
 	var t = Time.get_ticks_msec() / 1000.0
+	var sun_sheet: Texture2D = _boss_fx("chao_escaldante/chao_escaldante_sheet.png") if not board.sun_tiles.is_empty() else null
 	for pos in board.fire_tiles.keys():
 		var rect = Rect2(board_offset.x + pos.x * cell_size, board_offset.y + pos.y * cell_size, cell_size, cell_size)
+		if sun_sheet != null and board.sun_tiles.has(pos):
+			# Sol Escaldante: chão rachado em brasa (arte própria) no lugar das chamas.
+			_draw_fx_frame(sun_sheet, rect, pos, BOSS_FX_FPS)
+			continue
 		# Brasa escura sob as chamas: a casa fica avermelhada e legível.
 		draw_rect(rect, Color(0.45, 0.1, 0.08, 0.5 + 0.06 * sin(t * 6.0 + pos.x + pos.y)))
 		if _fire_tex != null:

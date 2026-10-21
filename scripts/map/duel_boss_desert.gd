@@ -36,7 +36,7 @@ const CACTUS_START := 3
 var telegraph_tiles: Array = []
 var _desert_ply: int = 0
 var _buried_per_side: int = 0
-var _last_sun_row: int = -1
+var _last_sun_key: String = ""
 
 func _init() -> void:
 	if RunManager != null:
@@ -47,7 +47,7 @@ func setup(p_board: Board, p_human_team: int, p_ai_team: int, p_sudden_death_mgr
 	telegraph_tiles = []
 	_desert_ply = 0
 	_buried_per_side = 0
-	_last_sun_row = -1
+	_last_sun_key = ""
 
 func apply_board_modifiers() -> void:
 	board.night_boost_team = 0
@@ -91,16 +91,20 @@ func get_enemy_fixed_rules() -> Array[RuleCard]:
 func advance_turn() -> Array:
 	var events: Array = []
 	_desert_ply += 1
+	for sp in board.sun_tiles.keys():
+		if not board.fire_tiles.has(sp):
+			board.sun_tiles.erase(sp)
 	match law_id:
 		LAW_SUN:
 			if _desert_ply % SUN_INTERVAL_PLIES == 0:
 				for pos in telegraph_tiles:
 					board.fire_tiles[pos] = SUN_BURN_TURNS
+					board.sun_tiles[pos] = true
 				events.append({"type": "sun", "tiles": telegraph_tiles.duplicate()})
 				telegraph_tiles = _plan_sun_row()
 		LAW_STORM:
 			if _desert_ply % STORM_INTERVAL_PLIES == 0:
-				var covered: Array = _bury(telegraph_tiles, STORM_TURNS)
+				var covered: Array = _bury(telegraph_tiles, STORM_TURNS, 1)
 				if not covered.is_empty():
 					events.append({"type": "storm", "tiles": covered})
 				telegraph_tiles = _pick_empty_dark_tiles(STORM_COUNT)
@@ -117,7 +121,7 @@ func advance_turn() -> Array:
 			var late: Array = []
 			for k in range(_buried_per_side):
 				late.append_array(_buried_tiles_for(k))
-			var closed: Array = _bury(late, HOURGLASS_FOREVER)
+			var closed: Array = _bury(late, HOURGLASS_FOREVER, 2)
 			if not new_tiles.is_empty():
 				events.append({"type": "hourglass", "tiles": closed})
 				telegraph_tiles = _next_hourglass_tiles()
@@ -130,7 +134,9 @@ func advance_turn() -> Array:
 			var born: Array = []
 			for pos2 in board.released_mummies:
 				if board.grid[pos2.y][pos2.x] == Board.EMPTY and not board.scorched_tiles.has(pos2):
-					board.grid[pos2.y][pos2.x] = BoardPiece.new(ai_team, false)
+					var mummy := BoardPiece.new(ai_team, false)
+					mummy.is_mummy = true
+					board.grid[pos2.y][pos2.x] = mummy
 					born.append(pos2)
 			board.released_mummies.clear()
 			if not born.is_empty():
@@ -169,60 +175,110 @@ func get_status_text() -> String:
 
 # --- Ajudantes de casas ---------------------------------------------------
 
-# Faixa de fileiras "do meio" (fora das fileiras de formação).
-func _mid_rows() -> Vector2i:
-	var deploy: int = board.get_max_deployment_rows()
-	var lo: int = deploy
-	var hi: int = board.rows - 1 - deploy
-	if lo > hi:
-		lo = 1
-		hi = board.rows - 2
-	return Vector2i(lo, hi)
-
 func _is_free_dark(pos: Vector2i) -> bool:
 	return (pos.x + pos.y) % 2 == 1 and board.grid[pos.y][pos.x] == Board.EMPTY \
 		and not board.scorched_tiles.has(pos) and not board.fire_tiles.has(pos) and not board.quicksand_tiles.has(pos)
 
-func _pick_empty_dark_tiles(count: int) -> Array:
-	var span: Vector2i = _mid_rows()
+# Casas escuras vazias das fileiras jogáveis (1..rows-2), no tabuleiro todo.
+func _free_dark_cells() -> Array:
 	var cands: Array = []
-	for r in range(span.x, span.y + 1):
+	for r in range(1, board.rows - 1):
 		for c in range(board.cols):
 			var p := Vector2i(c, r)
 			if _is_free_dark(p):
 				cands.append(p)
-	cands.shuffle()
-	return cands.slice(0, mini(count, cands.size()))
+	return cands
 
-# Sol: uma fileira do meio inteira (casas escuras), diferente da última.
-func _plan_sun_row() -> Array:
-	var span: Vector2i = _mid_rows()
-	var rows_ok: Array = []
-	for r in range(span.x, span.y + 1):
-		if r != _last_sun_row:
-			rows_ok.append(r)
-	if rows_ok.is_empty():
-		rows_ok.append(span.x)
-	_last_sun_row = rows_ok[randi() % rows_ok.size()]
+# Tudo que já "ocupa" o tabuleiro com perigo: neutros, brasas, areias e marcações.
+func _hazard_cells() -> Array:
 	var out: Array = []
+	for r in range(board.rows):
+		for c in range(board.cols):
+			var p: BoardPiece = board.grid[r][c]
+			if p != Board.EMPTY and (p.is_cactus or p.is_sarcophagus):
+				out.append(Vector2i(c, r))
+	out.append_array(board.fire_tiles.keys())
+	out.append_array(board.quicksand_tiles.keys())
+	out.append_array(board.scorched_tiles.keys())
+	out.append_array(telegraph_tiles)
+	return out
+
+# Sorteio ESPALHADO: a cada escolha prefere a casa mais longe de tudo que já
+# tem perigo (fileira pesa mais que coluna), com um pouco de acaso. Assim os
+# efeitos não se amontoam nas duas fileiras do meio nem todos juntos.
+func _pick_spread(cands: Array, count: int, extra_avoid: Array = []) -> Array:
+	var avoid: Array = _hazard_cells()
+	avoid.append_array(extra_avoid)
+	var pool: Array = cands.duplicate()
+	var chosen: Array = []
+	while chosen.size() < count and not pool.is_empty():
+		var best: Vector2i = pool[0]
+		var best_score: float = -1.0
+		for p in pool:
+			var d: float = 99.0
+			for a in avoid:
+				d = minf(d, absf(p.x - a.x) + 1.5 * absf(p.y - a.y))
+			var score: float = d + randf() * 1.6
+			if score > best_score:
+				best_score = score
+				best = p
+		chosen.append(best)
+		avoid.append(best)
+		pool.erase(best)
+	return chosen
+
+func _pick_empty_dark_tiles(count: int) -> Array:
+	return _pick_spread(_free_dark_cells(), count)
+
+# Sol: uma linha do tabuleiro (fileira, coluna ou diagonal, só casas escuras e
+# fora das fileiras das pontas), diferente da última.
+func _plan_sun_row() -> Array:
+	var lines: Array = []
+	for r in range(1, board.rows - 1):
+		lines.append(["r%d" % r, _line_cells(func(p): return p.y == r)])
 	for c in range(board.cols):
-		if (c + _last_sun_row) % 2 == 1:
-			out.append(Vector2i(c, _last_sun_row))
+		lines.append(["c%d" % c, _line_cells(func(p): return p.x == c)])
+	for k in range(-board.cols, board.cols + board.rows):
+		if abs(k) % 2 == 1:
+			lines.append(["d%d" % k, _line_cells(func(p): return p.x - p.y == k)])
+			lines.append(["a%d" % k, _line_cells(func(p): return p.x + p.y == k)])
+	var ok: Array = lines.filter(func(l): return l[1].size() >= 4 and l[0] != _last_sun_key)
+	if ok.is_empty():
+		return []
+	var pick: Array = ok[randi() % ok.size()]
+	_last_sun_key = pick[0]
+	return pick[1]
+
+func _line_cells(pred: Callable) -> Array:
+	var out: Array = []
+	for r in range(1, board.rows - 1):
+		for c in range(board.cols):
+			var p := Vector2i(c, r)
+			if (c + r) % 2 == 1 and pred.call(p):
+				out.append(p)
 	return out
 
 func _roll_quicksand() -> void:
 	board.quicksand_tiles.clear()
-	for pos in _pick_empty_dark_tiles(QUICKSAND_COUNT):
+	# Vale qualquer casa escura jogável (até sob peças: só prende quem POUSA).
+	var cands: Array = []
+	for r in range(1, board.rows - 1):
+		for c in range(board.cols):
+			var p := Vector2i(c, r)
+			if (c + r) % 2 == 1 and not board.scorched_tiles.has(p) and not board.fire_tiles.has(p) \
+					and not (board.grid[r][c] != Board.EMPTY and (board.grid[r][c].is_cactus or board.grid[r][c].is_sarcophagus)):
+				cands.append(p)
+	for pos in _pick_spread(cands, QUICKSAND_COUNT):
 		board.quicksand_tiles[pos] = true
 
 # Cobre de areia as casas VAZIAS dadas (bloqueio em scorched_tiles + marca visual).
 # Desfaz tudo se algum lado ficasse sem jogada. Devolve as casas cobertas agora.
-func _bury(tiles: Array, turns: int) -> Array:
+func _bury(tiles: Array, turns: int, kind: int = 1) -> Array:
 	var applied: Array = []
 	for pos in tiles:
 		if board.grid[pos.y][pos.x] == Board.EMPTY and not board.scorched_tiles.has(pos):
 			board.scorched_tiles[pos] = turns
-			board.sand_tiles[pos] = true
+			board.sand_tiles[pos] = kind
 			applied.append(pos)
 	if applied.is_empty():
 		return applied
@@ -281,17 +337,11 @@ func _spawn_neutral(initial: bool, cactus: bool) -> Vector2i:
 		return Vector2i(-1, -1)
 	if not cactus and count_sarcophagi() >= SARCOPHAGUS_MAX:
 		return Vector2i(-1, -1)
-	var span: Vector2i = _mid_rows()
-	var r_min: int = span.x if initial else 1
-	var r_max: int = span.y if initial else board.rows - 2
-	var cands: Array = []
-	for r in range(r_min, r_max + 1):
-		for c in range(board.cols):
-			var p := Vector2i(c, r)
-			if (c + r) % 2 == 1 and board.grid[r][c] == Board.EMPTY and not board.scorched_tiles.has(p) and not board.fire_tiles.has(p):
-				cands.append(p)
-	cands.shuffle()
-	for pos in cands:
+	# Casas vazias do tabuleiro todo; no começo só sobram as do meio (as
+	# fileiras de formação estão cheias), então aí o espalhamento é por coluna.
+	var cands: Array = _free_dark_cells().filter(func(p): return not board.scorched_tiles.has(p) and not board.fire_tiles.has(p))
+	var order: Array = _pick_spread(cands, cands.size())
+	for pos in order:
 		board.grid[pos.y][pos.x] = BoardPiece.make_cactus() if cactus else BoardPiece.make_sarcophagus()
 		if not board.get_all_valid_moves(human_team).is_empty() and not board.get_all_valid_moves(ai_team).is_empty():
 			return pos

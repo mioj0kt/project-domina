@@ -81,7 +81,10 @@ var hungry_roots_team: int = 0
 # --- Leis do Chefe do Deserto ---
 # Areia (Tempestade/Ampulheta): marca VISUAL das casas em scorched_tiles que são
 # areia soterrada (o bloqueio em si vive em scorched_tiles).
+# Valor = tipo: 1 duna isolada (Tempestade), 2 duna contínua (Ampulheta).
 var sand_tiles: Dictionary = {}
+# Sol Escaldante: marca VISUAL das casas de fire_tiles que são chão escaldante.
+var sun_tiles: Dictionary = {}
 # Areia Movediça: Vector2i(col, row) -> true. Quem POUSA numa casa dessas fica
 # preso (rooted_turns) e perde a próxima jogada.
 var quicksand_tiles: Dictionary = {}
@@ -160,6 +163,7 @@ func clear_board() -> void:
 	firefly_tiles.clear()
 	hungry_roots_team = 0
 	sand_tiles.clear()
+	sun_tiles.clear()
 	quicksand_tiles.clear()
 	mummy_team = 0
 	released_mummies.clear()
@@ -741,10 +745,11 @@ func make_move(move_dict: Dictionary) -> bool:
 			if cap_piece.is_sarcophagus and not is_simulation and mummy_team != 0:
 				released_mummies.append(cap_pos)
 			if cap_piece.is_cactus:
-				# Espinhos: quem derruba o cacto fica preso (nunca sem nenhuma jogada).
-				piece.rooted_turns = HUNGRY_ROOTS_TURNS
-				if not is_simulation and get_all_valid_moves(piece.owner_team).is_empty():
-					piece.rooted_turns = 0
+				# Espinhos: quem derruba o cacto morre no pouso (mesmo caminho da
+				# Terra Queimada: a peça some e o movimento não segue para promoção).
+				grid[to_pos.y][to_pos.x] = EMPTY
+				piece_destroyed.emit(to_pos, piece)
+				return false
 		elif pipeline != null and pipeline.try_prevent_capture(cap_piece, human_team_color, self):
 			last_capture_prevented = true
 			_protected_piece = cap_piece
@@ -863,6 +868,7 @@ func clone() -> Board:
 	new_b.vine_tiles = vine_tiles.duplicate()
 	new_b.firefly_tiles = firefly_tiles.duplicate()
 	new_b.sand_tiles = sand_tiles.duplicate()
+	new_b.sun_tiles = sun_tiles.duplicate()
 	new_b.quicksand_tiles = quicksand_tiles.duplicate()
 	new_b.lit_tiles = lit_tiles.duplicate(true)
 

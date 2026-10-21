@@ -116,11 +116,13 @@ static func draw_piece(canvas: CanvasItem, piece_obj: BoardPiece, center: Vector
 		return
 
 	if piece_obj.is_cactus:
-		_draw_cactus(canvas, center, cell_size, scale_factor)
+		if not _draw_boss_sprite(canvas, _CACTUS_SPRITES, piece_obj, center, cell_size, scale_factor):
+			_draw_cactus(canvas, center, cell_size, scale_factor)
 		return
 
 	if piece_obj.is_sarcophagus:
-		_draw_sarcophagus(canvas, center, cell_size, scale_factor)
+		if not _draw_boss_sprite(canvas, _SARCOPHAGUS_SPRITES, piece_obj, center, cell_size, scale_factor):
+			_draw_sarcophagus(canvas, center, cell_size, scale_factor)
 		return
 
 	if piece_obj.is_tree:
@@ -179,6 +181,27 @@ static func _get_tree_tex(variant: int) -> Texture2D:
 		for path in _TREE_SPRITES:
 			_tree_tex.append(load(path) if ResourceLoader.exists(path) else null)
 	return _tree_tex[variant % _tree_tex.size()]
+
+# Sprites 26x30 dos neutros do chefe do deserto (variante fixa por peça). Escala
+# inteira de pixel, base apoiada no pé da casa. Devolve false se faltar arte.
+const _BOSS_SPRITE_DIR := "res://assets/sprites/board/deserto_boss/"
+const _CACTUS_SPRITES: Array[String] = ["cacto/cacto_dois_bracos", "cacto/cacto_um_braco", "cacto/cacto_barril"]
+const _SARCOPHAGUS_SPRITES: Array[String] = ["sarcofago/sarcofago_intacto", "sarcofago/sarcofago_tampa_rachada", "sarcofago/sarcofago_inclinado"]
+static var _boss_sprite_cache: Dictionary = {}
+
+static func _draw_boss_sprite(canvas: CanvasItem, names: Array[String], piece_obj: BoardPiece, center: Vector2, cell_size: float, scale_factor: float) -> bool:
+	var name: String = names[piece_obj.get_instance_id() % names.size()]
+	if not _boss_sprite_cache.has(name):
+		var p: String = _BOSS_SPRITE_DIR + name + ".png"
+		_boss_sprite_cache[name] = load(p) if ResourceLoader.exists(p) else null
+	var tex: Texture2D = _boss_sprite_cache[name]
+	if tex == null:
+		return false
+	var k: float = maxf(1.0, floorf(cell_size * scale_factor / 26.0 + 0.35))
+	var dsz: Vector2 = tex.get_size() * k
+	var foot: Vector2 = center + Vector2(0.0, cell_size * scale_factor * 0.46)
+	canvas.draw_texture_rect(tex, Rect2((foot - Vector2(dsz.x / 2.0, dsz.y)).round(), dsz), false)
+	return true
 
 # Cacto neutro do chefe do deserto (saguaro com espinhos), desenhado em código.
 static func _draw_cactus(canvas: CanvasItem, center: Vector2, cell_size: float, scale_factor: float) -> void:
