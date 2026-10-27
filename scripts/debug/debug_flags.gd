@@ -19,4 +19,4 @@ const SHORTCUTS: bool = true
 # Pré-visualização de bioma do mapa: "" = segue o RunManager (floresta);
 # "deserto" força o Deserto das Torres em qualquer run NOVA (mapa, fundos dos
 # duelos/loja/aposta e cores das transições). Deixe "" na build final.
-const MAP_BIOME_OVERRIDE: String = "deserto"
+const MAP_BIOME_OVERRIDE: String = ""

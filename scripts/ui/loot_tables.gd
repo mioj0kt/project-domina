@@ -54,6 +54,8 @@ static func get_all_action_cards() -> Array[ActionCard]:
 		CardCorrupt.new(),
 		CardFortify.new(),
 		CardHeroicAdvance.new(),
+		CardVerticalBridge.new(),
+		CardLateralBridge.new(),
 		CardProphecy.new(),
 		CardGrandReinforcement.new(),
 		CardCoinOfDestiny.new(),

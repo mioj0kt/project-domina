@@ -72,6 +72,10 @@ var bonus_moves: Dictionary = {}
 # Cipós: Vector2i(col, row) -> true. Uma peça ao lado de um cipó pode atravessá-lo
 # (2 casas em linha reta) até a casa escura do outro lado, se estiver livre.
 var vine_tiles: Dictionary = {}
+# Pontes das cartas Ponte Vertical/Lateral: Vector2i(col, row) da casa CLARA ->
+# {"team": time que construiu, "vertical": bool, "turns": rodadas restantes}. As peças
+# dos DOIS lados atravessam (2 casas em linha reta, no eixo da ponte), como no cipó.
+var bridge_tiles: Dictionary = {}
 # Vaga-lumes: Vector2i(col, row) -> true. Peças nas 4 casas vizinhas (lados) de
 # um vaga-lume não podem ser capturadas.
 var firefly_tiles: Dictionary = {}
@@ -160,6 +164,7 @@ func clear_board() -> void:
 	bonus_moves.clear()
 	night_boost_team = 0
 	vine_tiles.clear()
+	bridge_tiles.clear()
 	firefly_tiles.clear()
 	hungry_roots_team = 0
 	sand_tiles.clear()
@@ -192,6 +197,14 @@ func tick_scorched_tiles() -> void:
 		lit_tiles[pos]["turns"] -= 1
 		if lit_tiles[pos]["turns"] <= 0:
 			lit_tiles.erase(pos)
+	for pos in bridge_tiles.keys():
+		bridge_tiles[pos]["turns"] -= 1
+		if bridge_tiles[pos]["turns"] <= 0:
+			bridge_tiles.erase(pos)
+
+# Constrói uma ponte na casa clara `pos` para o time `team`.
+func build_bridge(pos: Vector2i, team: int, vertical: bool, turns: int) -> void:
+	bridge_tiles[pos] = {"team": team, "vertical": vertical, "turns": turns}
 
 # Chamado ao fim do turno de `team`: desconta os efeitos temporários DAS PEÇAS
 # DELE (Emboscada, Herdeiro). Devolve eventos [{"type", "pos"}] pra a UI avisar.
@@ -602,6 +615,7 @@ func get_piece_moves(r: int, c: int) -> Array:
 				})
 				dist += 1
 		_append_vine_moves(r, c, piece_obj, directions, moves)
+		_append_bridge_moves(r, c, piece_obj, directions, moves)
 		return moves
 
 	var step_dist: int = 1
@@ -625,6 +639,7 @@ func get_piece_moves(r: int, c: int) -> Array:
 
 	_append_bonus_moves(r, c, moves)
 	_append_vine_moves(r, c, piece_obj, directions, moves)
+	_append_bridge_moves(r, c, piece_obj, directions, moves)
 	return moves
 
 # Cipós: a peça ao lado de um cipó (casa clara) atravessa em linha reta até a casa
@@ -657,6 +672,40 @@ func _append_vine_moves(r: int, c: int, piece_obj: BoardPiece, dirs: Array, move
 		if listed:
 			continue
 		moves.append({"from": Vector2i(c, r), "to": dest, "is_capture": false, "captured": Vector2i(-1, -1), "via_vine": true})
+
+# Pontes (cartas): qualquer peça (dos dois lados) ao lado de uma ponte atravessa em linha reta,
+# no eixo dela (vertical = cima/baixo, lateral = esquerda/direita), até a casa escura
+# do outro lado, se estiver livre. Recuar numa ponte vertical segue a regra do cipó
+# (só quem pode andar para trás).
+func _append_bridge_moves(r: int, c: int, piece_obj: BoardPiece, dirs: Array, moves: Array) -> void:
+	if bridge_tiles.is_empty():
+		return
+	var forward_dy: int = -1 if piece_obj.owner_team == human_team_color else 1
+	var can_go_back: bool = piece_obj.is_king
+	if not can_go_back:
+		for d in dirs:
+			if d.y == -forward_dy:
+				can_go_back = true
+				break
+	for od in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var br = bridge_tiles.get(Vector2i(c + od.x, r + od.y))
+		if br == null:
+			continue
+		if br["vertical"] != (od.x == 0):
+			continue
+		if od.y == -forward_dy and not can_go_back:
+			continue
+		var dest := Vector2i(c + od.x * 2, r + od.y * 2)
+		if not is_valid_pos(dest.y, dest.x) or grid[dest.y][dest.x] != EMPTY or scorched_tiles.has(dest):
+			continue
+		var listed := false
+		for m in moves:
+			if m["to"] == dest:
+				listed = true
+				break
+		if listed:
+			continue
+		moves.append({"from": Vector2i(c, r), "to": dest, "is_capture": false, "captured": Vector2i(-1, -1), "via_bridge": true})
 
 # Passo duplo (Noite da Coruja): 2 casas na diagonal com as duas livres.
 func _append_double_steps(r: int, c: int, dirs: Array[Vector2i], moves: Array) -> void:
@@ -866,6 +915,7 @@ func clone() -> Board:
 	new_b.bonus_moves = bonus_moves.duplicate(true)
 	new_b.night_boost_team = night_boost_team
 	new_b.vine_tiles = vine_tiles.duplicate()
+	new_b.bridge_tiles = bridge_tiles.duplicate(true)
 	new_b.firefly_tiles = firefly_tiles.duplicate()
 	new_b.sand_tiles = sand_tiles.duplicate()
 	new_b.sun_tiles = sun_tiles.duplicate()

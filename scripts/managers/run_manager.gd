@@ -142,6 +142,7 @@ func start_new_run():
 	seen_event_ids.clear()
 	rule_pipeline.clear_rules()
 	_init_default_deck()
+	player_deck.assign([CardLateralBridge.new(), CardVerticalBridge.new()])
 	MetaProgress.reset_run_stats()
 	# A mochila do Grimório é entregue só pelo botão JOGAR (MetaProgress.consume_bag_into_run).
 	

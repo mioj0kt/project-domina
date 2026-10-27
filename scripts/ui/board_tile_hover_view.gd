@@ -93,6 +93,14 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 			"affects": "both",
 			"title_color": Color(0.45, 0.9, 0.4)
 		})
+	if board.bridge_tiles.has(pos):
+		var br: Dictionary = board.bridge_tiles[pos]
+		effects.append({
+			"title": "PONTE %s" % ("VERTICAL" if br["vertical"] else "LATERAL"),
+			"desc": "As pecas dos dois lados ao lado da ponte atravessam para o outro lado: andam 2 casas em linha reta (%s), se a casa de destino estiver livre. Some em %d rodada(s)." % ["cima/baixo" if br["vertical"] else "esquerda/direita", br["turns"]],
+			"affects": "both",
+			"title_color": Color(0.85, 0.63, 0.25)
+		})
 	if board.lit_tiles.has(pos):
 		effects.append({
 			"title": "CASA ACESA",

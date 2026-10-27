@@ -51,7 +51,33 @@ static func draw_pixel_selected_tile(canvas: CanvasItem, tile_rect: Rect2, pulse
 	draw_pixel_corners(canvas, inner_rect, Color(0.8, 1.0, 0.85, 1.0), corner_len, 3.0)
 
 # 2. VISUAL DOS PONTOS INDICADORES DE MOVIMENTO E CAPTURA
+# Arte própria: folhas de 4 quadros 26x26 (fx/mover_sheet.png e fx/captura_sheet.png),
+# em loop. Se o arquivo faltar, vale o desenho em código logo abaixo.
+const _MARKER_MOVE: String = "res://assets/sprites/fx/mover_sheet.png"
+const _MARKER_CAPTURE: String = "res://assets/sprites/fx/captura_sheet.png"
+const _MARKER_FRAME_PX: int = 26
+const _MARKER_FPS: float = 5.0
+const _MARKER_MARGIN_PX: int = 4
+static var _marker_cache: Dictionary = {}
+
+static func _draw_move_marker_sprite(canvas: CanvasItem, dest_rect: Rect2, is_capture: bool) -> bool:
+	var path: String = _MARKER_CAPTURE if is_capture else _MARKER_MOVE
+	if not _marker_cache.has(path):
+		_marker_cache[path] = load(path) if ResourceLoader.exists(path) else null
+	var tex: Texture2D = _marker_cache[path]
+	if tex == null:
+		return false
+	var frames: int = maxi(1, int(tex.get_width() / _MARKER_FRAME_PX))
+	var f: int = int(Time.get_ticks_msec() / 1000.0 * _MARKER_FPS) % frames
+	# A arte tem ~3 px de margem transparente por lado: corta a margem pra o
+	# marcador cobrir a casa inteira (o pulso entre os quadros continua).
+	var m: int = _MARKER_MARGIN_PX
+	canvas.draw_texture_rect_region(tex, dest_rect, Rect2(f * _MARKER_FRAME_PX + m, m, _MARKER_FRAME_PX - m * 2, _MARKER_FRAME_PX - m * 2))
+	return true
+
 static func draw_pixel_move_target(canvas: CanvasItem, dest_rect: Rect2, is_capture: bool, pulse: float) -> void:
+	if _draw_move_marker_sprite(canvas, dest_rect, is_capture):
+		return
 	var center = dest_rect.position + (dest_rect.size / 2.0)
 	var pad = 4.0
 	var inner_tile = Rect2(dest_rect.position.x + pad, dest_rect.position.y + pad, dest_rect.size.x - pad * 2, dest_rect.size.y - pad * 2)

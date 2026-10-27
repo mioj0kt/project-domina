@@ -196,6 +196,17 @@ const FIRE_FRAME_PX: int = 64
 const FIRE_FPS: float = 8.0
 var _fire_tex: Texture2D = null
 
+# Ponte (sprite 26x26) sobre a casa clara de um salto das cartas de ponte.
+const BRIDGE_VERTICAL: String = "res://assets/sprites/board/ponte/ponte_vertical.png"
+const BRIDGE_LATERAL: String = "res://assets/sprites/board/ponte/ponte_lateral.png"
+var _bridge_cache: Dictionary = {}
+
+func _bridge_tex(vertical: bool) -> Texture2D:
+	var p: String = BRIDGE_VERTICAL if vertical else BRIDGE_LATERAL
+	if not _bridge_cache.has(p):
+		_bridge_cache[p] = load(p) if ResourceLoader.exists(p) else null
+	return _bridge_cache[p]
+
 # Sprites dos efeitos do chefe do deserto (se faltar um arquivo, vale o desenho em código).
 const BOSS_FX_DIR: String = "res://assets/sprites/board/deserto_boss/"
 const BOSS_FX_FPS: float = 5.0
@@ -389,6 +400,14 @@ func _draw_light_tile_laws(board: Board, board_offset: Vector2, cell_size: float
 	var t: float = Time.get_ticks_msec() / 1000.0
 	for pos in board.vine_tiles.keys():
 		_draw_vine(Rect2(board_offset.x + pos.x * cell_size, board_offset.y + pos.y * cell_size, cell_size, cell_size), t, pos)
+	# Pontes das cartas (sprite 26x26 sobre a casa clara); na última rodada piscam.
+	for pos in board.bridge_tiles.keys():
+		var br: Dictionary = board.bridge_tiles[pos]
+		var bridge: Texture2D = _bridge_tex(bool(br["vertical"]))
+		if bridge == null:
+			continue
+		var fade: float = 1.0 if int(br["turns"]) > 1 else 0.65 + 0.35 * (0.5 + 0.5 * sin(t * 6.0))
+		draw_texture_rect(bridge, Rect2(board_offset.x + pos.x * cell_size, board_offset.y + pos.y * cell_size, cell_size, cell_size), false, Color(1, 1, 1, fade))
 	_draw_lit_tiles(board, board_offset, cell_size, t)
 	if board.firefly_tiles.is_empty():
 		return
