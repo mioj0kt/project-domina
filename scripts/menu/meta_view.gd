@@ -2,17 +2,14 @@ class_name MetaView
 extends Control
 # GRIMÓRIO: tela de meta-progressão (menu principal → GRIMÓRIO).
 # Gasta COROAS em: desbloquear Leis/Cartas na loot pool, LEVAR itens na mochila
-# da próxima run (preço por item, sobe a cada item levado) e
-# Kits prontos. Tudo vive em MetaProgress (autoload); aqui é só a interface.
+# da próxima run (preço por item, sobe a cada item levado).
+# Tudo vive em MetaProgress (autoload); aqui é só a interface.
 
 const MAIN_MENU_PATH: String = "res://main_menu.tscn"
-const PILE_DIR: String = "res://assets/sprites/grimorio/"
 const RULE_COLS: int = 4
 const CARD_COLS: int = 6
 const RULE_SCALE: float = 0.9
 const CARD_SCALE: float = 1.25
-const KIT_RULE_SCALE: float = 0.55
-const KIT_CARD_SCALE: float = 0.8
 
 const C_GOLD := Color(0.85, 0.64, 0.25)
 const C_CREAM := Color(0.94, 0.9, 0.81)
@@ -23,7 +20,7 @@ const RARITY_COLORS: Array[Color] = [
 	Color(0.81, 0.76, 0.65), Color(0.25, 0.5, 0.6), Color(0.54, 0.36, 0.75), Color(0.85, 0.64, 0.25)]
 const RARITY_NAMES: Array[String] = ["COMUM", "RARA", "ÉPICA", "LENDÁRIA"]
 
-enum Tab { LEIS, CARTAS, KITS }
+enum Tab { LEIS, CARTAS }
 var _tab: int = Tab.LEIS
 
 var _coroas_label: Label
@@ -95,7 +92,7 @@ func _ready() -> void:
 	_tabs_row = tabs
 	tabs.add_theme_constant_override("separation", 10)
 	v.add_child(tabs)
-	var names := ["LEIS", "CARTAS", "KITS"]
+	var names := ["LEIS", "CARTAS"]
 	for i in range(names.size()):
 		var b := _btn(names[i], Color.WHITE, Vector2(200, 48), 22)
 		b.pressed.connect(_set_tab.bind(i))
@@ -120,7 +117,7 @@ func _ready() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	PixelUI.style_scrollbar(scroll)
-	# Janela de fundo (mesmo estilo do painel da mochila) atrás de leis/cartas/kits.
+	# Janela de fundo (mesmo estilo do painel da mochila) atrás de leis/cartas.
 	var window := PanelContainer.new()
 	window.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	window.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -191,7 +188,6 @@ func _refresh() -> void:
 	match _tab:
 		Tab.LEIS: _build_rules()
 		Tab.CARTAS: _build_cards()
-		Tab.KITS: _build_kits()
 	_build_side()
 
 func _new_grid(cols: int) -> GridContainer:
@@ -271,71 +267,104 @@ func _section_title(t: String) -> Label:
 	l.add_theme_color_override("font_color", C_GOLD)
 	return l
 
-# Monte virado: pilha de versos + restantes + botão de abrir (preço c/ Coroa).
-func _make_pile(tex_path: String, fallback_path: String, label: String, label_color: Color, remaining: int, price: int, on_open: Callable) -> Control:
-	var wrap := VBoxContainer.new()
-	wrap.add_theme_constant_override("separation", 6)
-	wrap.alignment = BoxContainer.ALIGNMENT_BEGIN
-	var path := tex_path if ResourceLoader.exists(tex_path) else fallback_path
-	var tex: Texture2D = load(path) if ResourceLoader.exists(path) else null
-	var tsize := Vector2(160, 224) if tex == null else tex.get_size()
-	var layers := mini(maxi(remaining, 1), 3)
-	var stack := Control.new()
-	stack.custom_minimum_size = tsize + Vector2(16.0, 16.0)   # sempre espaço p/ 3 camadas: alinha os montes
-	stack.mouse_filter = Control.MOUSE_FILTER_STOP
-	stack.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if remaining > 0 else Control.CURSOR_ARROW
-	wrap.add_child(stack)
-	for i in range(layers):
-		var tr := TextureRect.new()
-		tr.texture = tex
-		tr.size = tsize
-		tr.position = Vector2(8.0 * i, 8.0 * (2 - i))
-		tr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		if remaining <= 0:
-			tr.modulate = Color(0.35, 0.33, 0.4)
-		stack.add_child(tr)
+# ---- Baú (gacha) ----
+var _chest_ref: Control = null   # painel do baú atual (alvo do guia)
+
+# Painel do baú: baú animado (clicável) + chances por raridade + botão de abrir.
+func _make_chest_panel(is_rule: bool) -> Control:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.12, 0.08, 0.15, 0.97), C_GOLD, 14))
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 28)
+	panel.add_child(h)
+	var remaining: int = MetaProgress.chest_remaining(is_rule)
+	var price: int = MetaProgress.chest_price(is_rule)
+
+	var fx := ChestFx.new()
+	fx.kind = "leis" if is_rule else "cartas"
+	fx.chest_scale = 1.0
+	fx.custom_minimum_size = Vector2(330, 270)
+	h.add_child(fx)
+	if remaining <= 0:
+		fx.modulate = Color(0.4, 0.38, 0.45)
+		fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var info := VBoxContainer.new()
+	info.add_theme_constant_override("separation", 10)
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_child(info)
 	var nm := Label.new()
-	nm.text = label
-	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	nm.add_theme_font_size_override("font_size", 22)
-	nm.add_theme_color_override("font_color", label_color)
-	wrap.add_child(nm)
+	nm.text = "BAÚ DE LEIS" if is_rule else "BAÚ DE CARTAS"
+	nm.add_theme_font_size_override("font_size", 34)
+	nm.add_theme_color_override("font_color", C_GOLD)
+	info.add_child(nm)
+	var ds := Label.new()
+	ds.text = ("Abra e descubra uma LEI nova!" if is_rule else "Abra e descubra uma CARTA nova. A raridade é sorteada!")
+	ds.add_theme_font_size_override("font_size", 20)
+	ds.add_theme_color_override("font_color", C_CREAM)
+	ds.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.add_child(ds)
+
+	# Chances efetivas (só entram as raridades que ainda têm algo bloqueado). Leis não mostram raridade (não é visível ao jogador).
+	if not is_rule:
+		var total_w := 0
+		for r in range(4):
+			if not MetaProgress.locked_of(is_rule, r).is_empty():
+				total_w += MetaProgress.CHEST_ODDS[r]
+		var chips := HBoxContainer.new()
+		chips.add_theme_constant_override("separation", 10)
+		info.add_child(chips)
+		for r in range(4):
+			var left: int = MetaProgress.locked_of(is_rule, r).size()
+			var pct: float = 0.0 if left == 0 or total_w == 0 else 100.0 * float(MetaProgress.CHEST_ODDS[r]) / float(total_w)
+			var chip := PanelContainer.new()
+			var col: Color = RARITY_COLORS[r] if left > 0 else Color(0.3, 0.28, 0.33)
+			chip.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.08, 0.06, 0.1, 0.95), col, 6))
+			chips.add_child(chip)
+			var cv := VBoxContainer.new()
+			cv.add_theme_constant_override("separation", 0)
+			chip.add_child(cv)
+			var l1 := Label.new()
+			l1.text = RARITY_NAMES[r]
+			l1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			l1.add_theme_font_size_override("font_size", 15)
+			l1.add_theme_color_override("font_color", col)
+			cv.add_child(l1)
+			var l2 := Label.new()
+			l2.text = ("%s%%" % _fmt_pct(pct)) if left > 0 else "—"
+			l2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			l2.add_theme_font_size_override("font_size", 22)
+			l2.add_theme_color_override("font_color", C_CREAM if left > 0 else C_DIM)
+			cv.add_child(l2)
+			var l3 := Label.new()
+			l3.text = "faltam %d" % left
+			l3.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			l3.add_theme_font_size_override("font_size", 13)
+			l3.add_theme_color_override("font_color", C_DIM)
+			cv.add_child(l3)
+
 	var cnt := Label.new()
-	cnt.text = "%d restante%s" % [remaining, "" if remaining == 1 else "s"] if remaining > 0 else "ESGOTADO"
-	cnt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cnt.text = ("%d %s ainda bloqueada%s" % [remaining, "Leis" if is_rule else "Cartas", "" if remaining == 1 else "s"]) if remaining > 0 else "TUDO DESBLOQUEADO!"
 	cnt.add_theme_font_size_override("font_size", 18)
-	cnt.add_theme_color_override("font_color", Color(0.6, 0.55, 0.65))
-	wrap.add_child(cnt)
+	cnt.add_theme_color_override("font_color", C_DIM if remaining > 0 else C_GREEN)
+	info.add_child(cnt)
 	if remaining > 0:
-		var b := _price_btn("ABRIR  %d" % price, maxf(tsize.x, 150.0), Color(0.3, 0.9, 0.4), MetaProgress.coroas < price)
-		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		b.pressed.connect(on_open)
-		wrap.add_child(b)
-		stack.gui_input.connect(func(ev):
-			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
-				on_open.call())
-	return wrap
+		var b := _price_btn("ABRIR  %d" % price, 220.0, Color(0.3, 0.9, 0.4), MetaProgress.coroas < price)
+		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		b.pressed.connect(_on_open_chest.bind(is_rule))
+		info.add_child(b)
+		fx.pressed.connect(_on_open_chest.bind(is_rule))
+	_chest_ref = panel
+	_grid_holder.add_child(panel)
+	return panel
 
-var _piles_row_ref: HBoxContainer = null   # fileira de montes atual (alvo do guia)
-
-func _piles_row() -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	_grid_holder.add_child(row)
-	_piles_row_ref = row
-	return row
+func _fmt_pct(p: float) -> String:
+	return str(int(round(p))) if absf(p - round(p)) < 0.05 else "%.1f" % p
 
 func _build_rules() -> void:
-	_grid_holder.add_child(_section_title("MONTES DE LEIS  (pague para virar uma Lei bloqueada da categoria)"))
-	var row := _piles_row()
-	for cat in [RuleCard.Category.MOVEMENT, RuleCard.Category.CAPTURE, RuleCard.Category.PROMOTION,
-			RuleCard.Category.TURN, RuleCard.Category.BOARD, RuleCard.Category.COMBO]:
-		var left := MetaProgress.locked_rules(cat).size()
-		var slug := RuleCard.get_category_slug(cat)
-		row.add_child(_make_pile("%smonte_lei_%s.png" % [PILE_DIR, slug], "res://assets/sprites/rules/back_%s.png" % slug,
-			RuleCard.get_category_name(cat), RuleCard.get_category_color(cat), left, MetaProgress.rule_pile_price(cat),
-			_on_open_rule_pile.bind(cat)))
+	_grid_holder.add_child(_section_title("BAÚ DE LEIS  (pague para sortear uma Lei bloqueada)"))
+	_make_chest_panel(true)
 	_grid_holder.add_child(_spacer(18))
 	_grid_holder.add_child(_section_title("LEIS LIBERADAS"))
 	var g := _new_grid(RULE_COLS)
@@ -348,13 +377,8 @@ func _build_rules() -> void:
 		g.add_child(_item_tile(r, true, RULE_SCALE, RuleCardVisual.CARD_SIZE * RULE_SCALE))
 
 func _build_cards() -> void:
-	_grid_holder.add_child(_section_title("MONTES DE CARTAS  (pague para virar uma Carta bloqueada da raridade)"))
-	var row := _piles_row()
-	var slugs := ["common", "rare", "epic", "legendary"]
-	for r in range(4):
-		var left := MetaProgress.locked_cards(r).size()
-		row.add_child(_make_pile("%smonte_carta_%s.png" % [PILE_DIR, slugs[r]], "res://assets/sprites/cards/back_%s.png" % slugs[r],
-			RARITY_NAMES[r], RARITY_COLORS[r], left, MetaProgress.card_pile_price(r), _on_open_card_pile.bind(r)))
+	_grid_holder.add_child(_section_title("BAÚ DE CARTAS  (pague para sortear uma Carta bloqueada)"))
+	_make_chest_panel(false)
 	_grid_holder.add_child(_spacer(18))
 	_grid_holder.add_child(_section_title("CARTAS LIBERADAS"))
 	var g := _new_grid(CARD_COLS)
@@ -371,52 +395,81 @@ func _spacer(h: float) -> Control:
 	c.custom_minimum_size = Vector2(0, h)
 	return c
 
-func _on_open_rule_pile(cat: int) -> void:
-	var id := MetaProgress.draw_rule_pile(cat)
-	if id == "":
-		_say("Coroas insuficientes.")
-		return
-	_show_reveal(id, true)
-
-func _on_open_card_pile(rarity: int) -> void:
-	var id := MetaProgress.draw_card_pile(rarity)
-	if id == "":
-		_say("Coroas insuficientes.")
-		return
-	_show_reveal(id, false)
-
-# Revela a peça sorteada: carta virando de costas para a frente, em destaque.
-func _show_reveal(id: String, is_rule: bool) -> void:
+func _on_open_chest(is_rule: bool) -> void:
 	if _reveal != null:
-		_reveal.queue_free()
+		return
+	var res: Dictionary = MetaProgress.draw_chest(is_rule)
+	if res.is_empty():
+		_say("Coroas insuficientes.")
+		return
+	_show_chest_opening(String(res["id"]), is_rule, int(res["rarity"]))
+
+# Sequência de abertura (baú + efeitos em código) e, no fim, a carta virando.
+func _show_chest_opening(id: String, is_rule: bool, rarity: int) -> void:
 	var layer := Control.new()
 	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	layer.mouse_filter = Control.MOUSE_FILTER_STOP
 	_reveal = layer
 	_canvas.add_child(layer)
 	var dim := ColorRect.new()
-	dim.color = Color(0.03, 0.02, 0.05, 0.82)
+	dim.color = Color(0.03, 0.02, 0.05, 0.88)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(dim)
+	var fx := ChestFx.new()
+	fx.idle_mode = false
+	fx.kind = "leis" if is_rule else "cartas"
+	fx.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(fx)
+	# cores de raridade do jogo são sóbrias; para os efeitos usa versões mais vivas
+	# Leis: raridade invisível ao jogador -> efeitos dourados e de intensidade fixa.
+	if is_rule:
+		fx.play(1, _fx_color(3))
+	else:
+		fx.play(rarity, _fx_color(rarity))
+	fx.opened.connect(func():
+		await get_tree().create_timer(0.35).timeout
+		if is_instance_valid(layer):
+			_build_reveal_content(layer, id, is_rule, rarity))
+
+func _fx_color(rarity: int) -> Color:
+	match rarity:
+		0: return Color(0.92, 0.88, 0.75)
+		1: return Color(0.3, 0.7, 0.95)
+		2: return Color(0.72, 0.4, 1.0)
+		_: return Color(1.0, 0.8, 0.25)
+
+func _build_reveal_content(layer: Control, id: String, is_rule: bool, rarity: int) -> void:
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(center)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 20)
+	v.add_theme_constant_override("separation", 12)
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	center.add_child(v)
+	var fxc: Color = _fx_color(rarity)
+	var rl := Label.new()
+	rl.visible = not is_rule
+	rl.text = RARITY_NAMES[rarity] + ("!" if rarity > 0 else "")
+	rl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rl.add_theme_font_size_override("font_size", 40 + 8 * rarity)
+	rl.add_theme_color_override("font_color", fxc)
+	rl.add_theme_color_override("font_outline_color", Color(0.05, 0.03, 0.07))
+	rl.add_theme_constant_override("outline_size", 10)
+	rl.pivot_offset = Vector2(160.0, 30.0)
+	rl.scale = Vector2(0.2, 0.2)
+	v.add_child(rl)
 	var t := Label.new()
 	t.text = "NOVA LEI DESBLOQUEADA!" if is_rule else "NOVA CARTA DESBLOQUEADA!"
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	t.add_theme_font_size_override("font_size", 44)
+	t.add_theme_font_size_override("font_size", 30)
 	t.add_theme_color_override("font_color", C_GOLD)
 	t.add_theme_color_override("font_outline_color", Color(0.05, 0.03, 0.07))
 	t.add_theme_constant_override("outline_size", 8)
 	v.add_child(t)
 	var holder := CenterContainer.new()
-	holder.custom_minimum_size = Vector2(416, 416) if is_rule else Vector2(300, 428)
+	holder.custom_minimum_size = Vector2(416, 400) if is_rule else Vector2(300, 428)
 	v.add_child(holder)
 	var vis: Control
 	if is_rule:
@@ -431,9 +484,11 @@ func _show_reveal(id: String, is_rule: bool) -> void:
 	hint.add_theme_color_override("font_color", C_DIM)
 	hint.modulate.a = 0.0
 	v.add_child(hint)
-	vis.play_flip_reveal(0.4)
+	vis.play_flip_reveal(0.15)
+	var pop := create_tween()
+	pop.tween_property(rl, "scale", Vector2(1.0, 1.0), 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	var tw := create_tween()
-	tw.tween_interval(1.2)
+	tw.tween_interval(1.0)
 	tw.tween_property(hint, "modulate:a", 1.0, 0.3)
 	var armed := [false]
 	tw.tween_callback(func(): armed[0] = true)
@@ -441,71 +496,6 @@ func _show_reveal(id: String, is_rule: bool) -> void:
 		if armed[0] and ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
 			layer.queue_free()
 			_reveal = null)
-
-func _build_kits() -> void:
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 16)
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_grid_holder.add_child(col)
-	for k in MetaProgress.KITS:
-		var owned: bool = MetaProgress.owned_kits.has(k["id"])
-		var eq: bool = MetaProgress.equipped_kit == k["id"]
-		var panel := PanelContainer.new()
-		var border := C_GREEN if eq else (RARITY_COLORS[1] if owned else C_GOLD)
-		panel.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.14, 0.1, 0.17, 0.97), border, 14))
-		col.add_child(panel)
-		var h := HBoxContainer.new()
-		h.add_theme_constant_override("separation", 24)
-		panel.add_child(h)
-		var info := VBoxContainer.new()
-		info.custom_minimum_size = Vector2(300, 0)
-		info.add_theme_constant_override("separation", 10)
-		h.add_child(info)
-		var nm := Label.new()
-		nm.text = k["name"]
-		nm.add_theme_font_size_override("font_size", 34)
-		nm.add_theme_color_override("font_color", C_GOLD)
-		info.add_child(nm)
-		var ds := Label.new()
-		ds.text = k["desc"]
-		ds.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		ds.add_theme_font_size_override("font_size", 20)
-		ds.add_theme_color_override("font_color", C_CREAM)
-		ds.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		info.add_child(ds)
-		var btn: Button
-		if not owned:
-			btn = _price_btn("COMPRAR KIT  %d" % int(k["cost"]), 300, Color(0.3, 0.9, 0.4), MetaProgress.coroas < int(k["cost"]))
-		elif eq:
-			btn = _price_btn("NA MOCHILA", 300, C_GREEN, false, false)
-		else:
-			var kp: int = MetaProgress.kit_carry_price(k["id"])
-			btn = _price_btn("LEVAR KIT  %d" % kp, 300, Color(0.85, 0.64, 0.25), MetaProgress.coroas < kp)
-		btn.pressed.connect(_on_kit_pressed.bind(k["id"], owned))
-		info.add_child(btn)
-		var items := HBoxContainer.new()
-		items.add_theme_constant_override("separation", 14)
-		items.alignment = BoxContainer.ALIGNMENT_END
-		items.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(items)
-		for rid in k["rules"]:
-			var rule := _find_rule(rid)
-			if rule != null:
-				items.add_child(_make_visual(rule, true, KIT_RULE_SCALE))
-		for cid in k["cards"]:
-			var card := _find_card(cid)
-			if card != null:
-				items.add_child(_make_visual(card, false, KIT_CARD_SCALE))
-
-func _on_kit_pressed(id: String, owned: bool) -> void:
-	if not owned:
-		_say("Kit comprado! Suas peças já entram na loot pool." if MetaProgress.buy_kit(id) else "Coroas insuficientes.")
-	else:
-		var was_eq: bool = MetaProgress.equipped_kit == id
-		if not MetaProgress.toggle_kit(id):
-			_say("Coroas insuficientes ou mochila cheia.")
-		elif was_eq:
-			_say("Kit removido da mochila. Coroas devolvidas.")
 
 func _find_rule(id: String) -> RuleCard:
 	for r in LootTables.get_all_rules():
@@ -653,9 +643,8 @@ func _tour_target(id: String) -> Rect2:
 		"grid": c = _scroll
 		"side": c = _side_panel
 		"piles":
-			# Só os montes (largura do conteúdo), não a fileira/quadro inteiro.
-			if _piles_row_ref != null and is_instance_valid(_piles_row_ref) and _piles_row_ref.is_inside_tree():
-				return Rect2(_piles_row_ref.global_position, _piles_row_ref.get_combined_minimum_size())
+			if _chest_ref != null and is_instance_valid(_chest_ref) and _chest_ref.is_inside_tree():
+				return _chest_ref.get_global_rect()
 	return c.get_global_rect() if c != null else Rect2()
 
 func _on_tour_finished() -> void:

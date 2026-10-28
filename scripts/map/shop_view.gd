@@ -381,6 +381,10 @@ func _on_buy_law_pressed(index: int) -> void:
 		RunManager.register_shop_purchase()
 		laws_for_sale.remove_at(index)
 		TutorialManager.report_event("shop_buy_law")
+		if TutorialManager.is_active and hud_bar != null and hud_bar.is_laws_collapsed():
+			_refresh_store_state()
+			_tutorial_reveal_law_board()
+			return
 	_refresh_store_state()
 
 func _on_law_replaced(_old: RuleCard, new_rule: RuleCard) -> void:
@@ -405,6 +409,8 @@ func _on_buy_action_card_pressed(index: int) -> void:
 		RunManager.register_shop_purchase()
 		cards_for_sale.remove_at(index)
 		TutorialManager.report_event("shop_buy_card")
+		if TutorialManager.is_active and hud_bar != null:
+			hud_bar.tutorial_reveal_piles()
 	_refresh_store_state()
 
 func _refresh_store_state() -> void:
@@ -555,7 +561,7 @@ func _create_remove_card_slot(card: ActionCard, deck_idx: int) -> Control:
 	return wrapper
 
 func _toggle_inventory() -> void:
-	if tutorial_intro_playing:
+	if tutorial_intro_playing or (TutorialManager.is_active and hud_bar != null and hud_bar.is_laws_collapsed()):
 		return
 	if inventory_ui:
 		inventory_ui.toggle_visibility()
@@ -596,6 +602,8 @@ func _setup_tutorial() -> void:
 	TutorialManager.objectives_completed.connect(_on_tutorial_objectives_completed)
 	# Só dá para sair da Loja depois de cumprir os objetivos da lição.
 	leave_btn.disabled = true
+	# HUD enxuta: só o ouro. O quadro de Leis desce depois da 1ª Lei comprada.
+	hud_bar.tutorial_collapse()
 	# Mantém a altura da fileira de Leis mesmo depois de comprar (o layout
 	# não "pula" e os destaques do Guia continuam no lugar).
 	laws_container.custom_minimum_size = Vector2(0, RuleCardVisual.CARD_SIZE * SHOP_CARD_SCALE + 62.0)
@@ -613,6 +621,16 @@ func _run_tutorial_intro() -> void:
 	await tutorial_guide_view.play_sequence(TutorialManager.get_shop_lines())
 	tutorial_intro_playing = false
 	TutorialManager.begin_objectives()
+
+# Depois da 1ª Lei comprada: o quadro de Leis desce do alto da tela e o Guia
+# explica. A Loja fica travada enquanto isso.
+func _tutorial_reveal_law_board() -> void:
+	tutorial_intro_playing = true
+	await get_tree().create_timer(0.8).timeout   # dá tempo de ver o ouro diminuir
+	await hud_bar.tutorial_reveal_laws()
+	await get_tree().create_timer(0.25).timeout
+	await tutorial_guide_view.play_sequence(TutorialManager.get_shop_law_board_lines())
+	tutorial_intro_playing = false
 
 func _on_tutorial_inventory_visibility() -> void:
 	if inventory_ui.visible:
@@ -632,6 +650,9 @@ func _tutorial_spot_rect(id: String) -> Rect2:
 			# Painel inteiro do ouro (cresceu junto com a HUD).
 			if hud_bar != null and hud_bar.gold_panel_ctrl != null:
 				return hud_bar.gold_panel_ctrl.get_global_rect().grow(4.0)
+		"law_board":
+			if hud_bar != null and hud_bar.law_board != null:
+				return Rect2(hud_bar.law_board.global_position, hud_bar.law_board.size)
 		"laws_btn":
 			if hud_bar != null and hud_bar.laws_btn != null:
 				return hud_bar.laws_btn.get_global_rect().grow(4.0)

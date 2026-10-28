@@ -10,7 +10,13 @@ const FRAME_COUNT := 8
 const TEXTURES := {
 	"guide": "res://assets/sprites/guide/guide_talk.png",
 	"evil": "res://assets/sprites/guide/evil_talk.png",
+	# Chefes: se o sprite próprio (tira 8x 32x32, igual aos acima) ainda não existir,
+	# usa o rosto do Irmão com a cor do bioma (tint) como provisório.
+	"boss_floresta": "res://assets/sprites/guide/boss_floresta_talk.png",
+	"boss_deserto": "res://assets/sprites/guide/boss_deserto_talk.png",
 }
+var fallback_tint: Color = Color.WHITE
+const FALLBACK_PATH := "res://assets/sprites/guide/evil_talk.png"
 const TALK_FPS := 11.0
 
 var who: String = "guide"
@@ -63,7 +69,11 @@ func texture_for(p_who: String, frame: int = 0) -> Texture2D:
 
 func _draw() -> void:
 	var path: String = TEXTURES.get(who, TEXTURES["guide"])
+	var tint: Color = Color.WHITE
 	if not ResourceLoader.exists(path):
-		return
+		if not who.begins_with("boss_") or not ResourceLoader.exists(FALLBACK_PATH):
+			return
+		path = FALLBACK_PATH
+		tint = fallback_tint
 	var side: float = min(size.x, size.y)
-	draw_texture_rect(_frame_texture(path, _frame_index()), Rect2((size - Vector2(side, side)) / 2.0, Vector2(side, side)), false)
+	draw_texture_rect(_frame_texture(path, _frame_index()), Rect2((size - Vector2(side, side)) / 2.0, Vector2(side, side)), false, tint)

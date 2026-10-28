@@ -24,6 +24,7 @@ var _total_row: Control
 var _tour: MetaTour
 var _skip: bool = false
 var _done: bool = false
+var _fx: VictoryFx
 
 func _ready() -> void:
 	_summary = MetaProgress.last_summary.duplicate()
@@ -37,6 +38,9 @@ func _ready() -> void:
 func _build_ui() -> void:
 	var canvas := CanvasLayer.new()
 	add_child(canvas)
+	# Comemoração por código por trás do painel (vitória da run = Chefe caiu).
+	_fx = VictoryFx.new()
+	canvas.add_child(_fx)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	canvas.add_child(center)
@@ -60,6 +64,13 @@ func _build_ui() -> void:
 	title.add_theme_color_override("font_outline_color", Color(0.05, 0.03, 0.07))
 	title.add_theme_constant_override("outline_size", 8)
 	v.add_child(title)
+	title.pivot_offset = Vector2(490.0, 30.0)
+	title.scale = Vector2(0.4, 0.4)
+	var title_tw := create_tween()
+	title_tw.tween_property(title, "scale", Vector2(1.12, 1.12) if won else Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	title_tw.tween_property(title, "scale", Vector2.ONE, 0.2)
+	if won:
+		_fx.start(true, Vector2(get_viewport_rect().size.x * 0.5, 120.0))
 
 	var sub := Label.new()
 	# Só a vitória tem subtítulo; na derrota o texto foi removido (e o espaço some junto).
@@ -275,6 +286,8 @@ func _run_tally() -> void:
 			if not _skip:
 				_pulse_total()
 				await get_tree().create_timer(delay).timeout
+				if is_instance_valid(_total_label):
+					_fx.pop_at(_total_label.global_position + Vector2(_total_label.size.x * 0.5, _total_label.size.y * 0.3), 1)
 				delay = maxf(0.03, delay * 0.9)
 		await _wait(0.2)
 
@@ -285,7 +298,12 @@ func _run_tally() -> void:
 	if total == 0:
 		_msg_label.text = "Nenhuma Coroa desta vez. Vença duelos para ganhar Coroas!"
 	else:
-		_msg_label.text = "Gaste suas Coroas no Grimório para desbloquear Leis, Cartas e Kits."
+		_msg_label.text = "Gaste suas Coroas no Grimório para desbloquear Leis e Cartas."
+	if total > 0:
+		_total_label.pivot_offset = _total_label.size / 2.0
+		_total_label.scale = Vector2(1.4, 1.4)
+		create_tween().tween_property(_total_label, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_fx.pop_at(_total_label.global_position + _total_label.size * 0.5, 12 if bool(_summary["won"]) else 8)
 	_done = true
 	_menu_btn.disabled = false
 	_meta_btn.disabled = false
@@ -311,7 +329,7 @@ func _start_tour() -> void:
 			"target": "total", "place": "below", "tab": -1},
 		{"text": "Você ganha Coroas jogando: %d por duelo vencido, %d por duelo forte e %d ao derrotar o Chefe. Elas valem mesmo se você perder ou desistir da run." % [MetaProgress.COROAS_PER_DUEL, MetaProgress.COROAS_PER_STRONG, MetaProgress.COROAS_BOSS_WIN],
 			"target": "rows", "place": "below", "tab": -1},
-		{"text": "No GRIMÓRIO você gasta as Coroas para desbloquear CARTAS e LEIS novas, que passam a aparecer nas suas próximas runs, e para montar kits e levar peças já na largada. Dê uma passada por lá!",
+		{"text": "No GRIMÓRIO você gasta as Coroas para desbloquear CARTAS e LEIS novas, que passam a aparecer nas suas próximas runs, e para levar peças já na largada. Dê uma passada por lá!",
 			"target": "meta", "place": "above", "tab": -1},
 	]
 	_tour.target_provider = _tour_target

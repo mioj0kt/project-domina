@@ -255,6 +255,7 @@ func _create_card_widget(card: ActionCard, idx: int) -> Control:
 
 	var visual = ActionCardVisual.new(card, true, EXPANDED_SCALE)
 	container.add_child(visual)
+	CardVisualBase.bind_tilt(container, visual)
 
 	# Moldura de seleção: mesmo tamanho da carta, adicionada DEPOIS (desenha
 	# por cima). Como o preenchimento é transparente, só a linha da borda

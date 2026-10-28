@@ -142,7 +142,7 @@ func _add_version_label(canvas: CanvasLayer) -> void:
 
 # Apagar progresso: botão discreto no canto inferior esquerdo. Dois cliques (o
 # primeiro pede confirmação e desarma sozinho depois de alguns segundos). Zera
-# TUDO do Grimório (coroas, desbloqueios, kits, mochila, guias vistos) e recarrega
+# TUDO do Grimório (coroas, desbloqueios, mochila, guias vistos) e recarrega
 # o menu. Mantém as configurações de tela (user://settings.cfg).
 var _reset_btn: Button = null
 var _reset_armed: bool = false

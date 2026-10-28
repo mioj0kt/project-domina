@@ -14,6 +14,7 @@ var total_label: Label
 var confirm_btn: Button
 
 var reward_data: Dictionary = {}
+var victory_fx: VictoryFx
 
 func _ready() -> void:
 	layer = 100
@@ -25,6 +26,10 @@ func _build_ui() -> void:
 	bg_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg_overlay.color = Color(0.02, 0.03, 0.05, 0.82)
 	add_child(bg_overlay)
+
+	# Comemoração por código (por trás do painel).
+	victory_fx = VictoryFx.new()
+	add_child(victory_fx)
 
 	var center = CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -95,8 +100,12 @@ func show_game_over(won: bool, rewards: Dictionary = {}, custom_title: String = 
 		confirm_btn.disabled = true
 		total_label.text = ""
 
+		var is_boss: bool = not TutorialManager.is_active and RunManager != null and RunManager.current_node_type == MapNode.NodeType.Chefe
+		victory_fx.start(is_boss)
+		_pop_in(is_boss)
 		_run_rewards_animation()
 	else:
+		victory_fx.stop()
 		var title_txt = custom_title if custom_title != "" else "DERROTA NO DUELO!"
 		title_label.text = title_txt
 		title_label.add_theme_color_override("font_color", Color(0.95, 0.2, 0.25))
@@ -116,6 +125,21 @@ func show_game_over(won: bool, rewards: Dictionary = {}, custom_title: String = 
 		confirm_btn.text = "VER RESUMO DA RUN"
 		PixelUI.skin_button(confirm_btn, Color(0.9, 0.25, 0.3))
 		confirm_btn.disabled = false
+
+# Entrada do painel e do título com "pop" (maior no Chefe).
+func _pop_in(big: bool) -> void:
+	modal_panel.pivot_offset = modal_panel.custom_minimum_size * 0.5
+	modal_panel.scale = Vector2(0.6, 0.6)
+	modal_panel.modulate.a = 0.0
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(modal_panel, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(modal_panel, "modulate:a", 1.0, 0.2)
+	title_label.pivot_offset = Vector2(modal_panel.custom_minimum_size.x * 0.5 - 28.0, 20.0)
+	title_label.scale = Vector2(0.4, 0.4)
+	var tt := create_tween()
+	tt.tween_interval(0.25)
+	tt.tween_property(title_label, "scale", Vector2(1.18 if big else 1.1, 1.18 if big else 1.1), 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tt.tween_property(title_label, "scale", Vector2.ONE, 0.2)
 
 func _input(event: InputEvent) -> void:
 	if not visible or not is_won_state:
@@ -175,6 +199,8 @@ func _run_rewards_animation() -> void:
 				t.tween_property(coin, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 				await get_tree().create_timer(current_delay).timeout
+				if is_instance_valid(coin):
+					victory_fx.pop_at(coin.global_position + coin.size * 0.5, 1)
 				current_delay = max(0.02, current_delay * 0.88)
 			else:
 				coin.scale = Vector2.ONE
@@ -188,6 +214,11 @@ func _run_rewards_animation() -> void:
 	total_label.text = "TOTAL RECEBIDO: +%d OURO" % reward_data.get("total", total_gold_accum)
 	if int(reward_data.get("coroas", 0)) > 0:
 		total_label.text += "\n+%d COROAS (META)" % int(reward_data["coroas"])
+	# fecha com um estouro de moedas no total
+	total_label.pivot_offset = total_label.size * 0.5
+	total_label.scale = Vector2(1.25, 1.25)
+	create_tween().tween_property(total_label, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	victory_fx.pop_at(total_label.global_position + total_label.size * 0.5, 8)
 	is_counting = false
 	confirm_btn.disabled = false
 

@@ -107,6 +107,9 @@ func on_coin_flip_completed(player_won_white: bool) -> void:
 	_on_battle_started()
 
 func _on_battle_started() -> void:
+	if _host.boss_banter != null and is_instance_valid(_host.boss_banter):
+		await _host.boss_banter.play_intro()
+		_host.boss_banter.react("start", true)
 	if RunManager.is_ambush_pending() and not TutorialManager.is_active:
 		var ambush_center = _host.board_offset + Vector2(_host.board.cols * _host.cell_size / 2.0, _host.board.rows * _host.cell_size / 2.0)
 		if RunManager.ambush_kind == "setup":
@@ -258,6 +261,7 @@ func handle_cell_click(pos: Vector2i) -> void:
 				host.hud_bar.update_gold()
 
 			if promoted:
+				host.boss_say("promote_player")
 				var promo_piece: BoardPiece = board.grid[pos.y][pos.x]
 				if promo_piece != Board.EMPTY:
 					var center = host.board_offset + Vector2(pos.x * host.cell_size + host.cell_size / 2.0, pos.y * host.cell_size + host.cell_size / 2.0)
@@ -508,6 +512,7 @@ func _ai_execute_move_chain(ai_move: Dictionary) -> Vector2i:
 		host.current_duel.on_turn_end(board)
 
 		if promoted:
+			host.boss_say("promote_boss")
 			var piece: BoardPiece = board.grid[target_pos.y][target_pos.x]
 			if piece != Board.EMPTY:
 				var center = host.board_offset + Vector2(target_pos.x * host.cell_size + host.cell_size / 2.0, target_pos.y * host.cell_size + host.cell_size / 2.0)
@@ -755,6 +760,8 @@ func _process_boss_law_events(boss_duel: DuelBoss) -> void:
 	var host = _host
 	var center = host.board_offset + Vector2(host.board.cols * host.cell_size / 2.0, host.board.rows * host.cell_size / 2.0)
 	for ev in boss_duel.advance_turn():
+		if ev["type"] != "fireflies":
+			host.boss_say("law_" + str(ev["type"]))
 		match ev["type"]:
 			"night":
 				host.rule_banner_view.pop_rule_trigger(center, "A NOITE CAI!", Color(0.65, 0.55, 1.0), "owl_night")
@@ -901,6 +908,7 @@ func trigger_game_over(won: bool, rewards: Dictionary = {}, custom_title: String
 	# Meta-progressão: conta a vitória (as Coroas são pagas no fim da run).
 	if not TutorialManager.is_active and won:
 		MetaProgress.register_duel_win(RunManager.current_node_type)
+	host.boss_say("win" if won else "lose")
 	host.game_over_modal.show_game_over(won, rewards, custom_title, defeat_message)
 
 # Cartas (e outros efeitos fora de jogada) podem tirar a ÚLTIMA peça de um lado.

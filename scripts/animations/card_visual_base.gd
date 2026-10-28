@@ -39,6 +39,144 @@ func _setup_card_root(card_size: Vector2) -> void:
 	card_root.pivot_offset = Vector2.ZERO
 	card_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(card_root)
+	set_process(idle_float)
+	mouse_entered.connect(tilt_begin)
+	mouse_exited.connect(tilt_end)
+	gui_input.connect(_tilt_on_gui_input)
+
+# ---------------------------------------------------------------------
+# Hover "afundando": a carta inclina como se o mouse estivesse apertando a
+# região onde está — o lado do mouse afunda (fica menor/mais escuro) e o lado
+# oposto levanta (maior/mais claro), em perspectiva.
+# Como funciona: enquanto o mouse está em cima, o card_root é movido para dentro
+# de um CanvasGroup (renderiza a carta num buffer) com um shader que remapeia
+# o buffer em perspectiva. Ao terminar de assentar, tudo volta ao normal (zero
+# custo em repouso). Funciona sozinho em cartas que recebem mouse; cartas cujo
+# pai trata o mouse podem chamar tilt_begin() / tilt_update() / tilt_end().
+const _TILT_SHADER_CODE := """
+shader_type canvas_item;
+uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_linear;
+uniform vec2 center_uv = vec2(0.5);
+uniform vec2 size_uv = vec2(0.1);
+uniform vec2 tilt = vec2(0.0);
+uniform float depth = 0.055;
+uniform float zoom = 1.03;
+uniform float shade = 0.10;
+void fragment() {
+	vec2 q = (SCREEN_UV - center_uv) / size_uv;
+	float side = clamp(dot(tilt, q) * 2.0, -1.0, 1.0);
+	float w = max(1.0 - depth * dot(tilt, q) * 2.0, 0.4);
+	vec2 p = q / (w * zoom);
+	vec4 c = texture(screen_texture, center_uv + p * size_uv);
+	c.rgb *= 1.0 - shade * side * step(0.001, c.a);
+	COLOR = c;
+}
+"""
+static var _tilt_shader: Shader = null
+
+var _tilt_group: CanvasGroup = null
+var _tilt_mat: ShaderMaterial = null
+var _tilt_hover: bool = false
+var _tilt_target: Vector2 = Vector2.ZERO    # -1..1 : posição do mouse relativa ao centro
+var _tilt_cur: Vector2 = Vector2.ZERO
+var _tilt_amp: float = 0.0
+
+# Para cartas cujo mouse é tratado pelo pai (mão, botões de escolha): faz o `host`
+# dirigir o hover "afundando" da carta.
+static func bind_tilt(host: Control, visual: CardVisualBase) -> void:
+	host.mouse_entered.connect(func():
+		if is_instance_valid(visual): visual.tilt_begin())
+	host.mouse_exited.connect(func():
+		if is_instance_valid(visual): visual.tilt_end())
+	host.gui_input.connect(func(ev):
+		if ev is InputEventMouseMotion and is_instance_valid(visual):
+			visual.tilt_update(visual.get_global_transform_with_canvas().affine_inverse() * host.get_global_transform_with_canvas() * host.get_local_mouse_position()))
+
+func tilt_begin() -> void:
+	if card_root == null or not is_face_up:
+		return
+	_tilt_hover = true
+	if _tilt_group == null:
+		if _tilt_shader == null:
+			_tilt_shader = Shader.new()
+			_tilt_shader.code = _TILT_SHADER_CODE
+		_tilt_mat = ShaderMaterial.new()
+		_tilt_mat.shader = _tilt_shader
+		_tilt_group = CanvasGroup.new()
+		_tilt_group.fit_margin = maxf(_card_size.x, _card_size.y) * 0.3
+		_tilt_group.material = _tilt_mat
+		add_child(_tilt_group)
+		card_root.reparent(_tilt_group, false)
+	set_process(true)
+
+# local_pos: posição do mouse em coordenadas locais da carta (0..size).
+func tilt_update(local_pos: Vector2) -> void:
+	if not _tilt_hover:
+		return
+	var n: Vector2 = local_pos / Vector2(maxf(_card_size.x, 1.0), maxf(_card_size.y, 1.0)) - Vector2(0.5, 0.5)
+	_tilt_target = (n * 2.0).clamp(Vector2(-1, -1), Vector2(1, 1))
+
+func tilt_end() -> void:
+	_tilt_hover = false
+	_tilt_target = Vector2.ZERO
+
+func _tilt_on_gui_input(ev: InputEvent) -> void:
+	if ev is InputEventMouseMotion:
+		tilt_update(get_local_mouse_position())
+
+# Flutuação idle (estilo Balatro): a carta balança de leve, cada uma com a sua
+# fase. Só em cartas grandes e viradas para cima; calma um pouco no hover.
+var idle_float: bool = true
+var _idle_phase: float = randf() * TAU
+
+func _idle_active() -> bool:
+	return idle_float and is_face_up and card_root != null and _card_size.x >= 140.0 \
+		and not (flip_tween != null and flip_tween.is_valid() and flip_tween.is_running())
+
+func _apply_idle() -> void:
+	# Só TRANSLAÇÃO em pixels inteiros: girar pixel art deixa os pixels
+	# serrilhados/quebrados, então nada de rotação na flutuação.
+	var k: float = _card_size.x / 150.0
+	var calm: float = 1.0 - 0.6 * _tilt_amp
+	var t: float = Time.get_ticks_msec() / 1000.0
+	var bob: float = sin(t * 1.7 + _idle_phase) * 3.5 * k * calm
+	var sway: float = sin(t * 1.1 + _idle_phase * 1.7) * 2.0 * k * calm
+	card_root.position = (_card_size * 0.5 + Vector2(round(sway), round(bob))).round()
+	card_root.rotation = 0.0
+
+func _process(delta: float) -> void:
+	if _idle_active():
+		_apply_idle()
+	elif card_root != null and idle_float and _tilt_group == null and not (flip_tween != null and flip_tween.is_valid() and flip_tween.is_running()):
+		card_root.position = _card_size * 0.5
+		card_root.rotation = 0.0
+	if _tilt_group == null:
+		if not idle_float:
+			set_process(false)
+		return
+	var k: float = 1.0 - exp(-delta * 14.0)
+	_tilt_amp = lerpf(_tilt_amp, 1.0 if (_tilt_hover and is_face_up) else 0.0, k)
+	_tilt_cur = _tilt_cur.lerp(_tilt_target, k)
+	var vsize: Vector2 = get_viewport().get_visible_rect().size
+	var ct: Transform2D = get_global_transform_with_canvas()
+	var c: Vector2 = ct * (_card_size * 0.5)
+	var sz: Vector2 = ct.basis_xform(_card_size)
+	_tilt_mat.set_shader_parameter("center_uv", c / vsize)
+	_tilt_mat.set_shader_parameter("size_uv", sz / vsize)
+	_tilt_mat.set_shader_parameter("tilt", _tilt_cur * _tilt_amp)
+	_tilt_mat.set_shader_parameter("zoom", 1.0 + 0.012 * _tilt_amp)
+	var glow: float = 1.0 + 0.05 * _tilt_amp
+	card_root.modulate = Color(glow, glow, glow, 1.0)
+	if not _tilt_hover and _tilt_amp < 0.01:
+		card_root.reparent(self, false)
+		card_root.modulate = Color.WHITE
+		_tilt_group.queue_free()
+		_tilt_group = null
+		_tilt_mat = null
+		_tilt_amp = 0.0
+		_tilt_cur = Vector2.ZERO
+		if not idle_float:
+			set_process(false)
 
 # Carrega a textura em tex_path se ela existir no projeto; caso contrário,
 # chama fallback_builder() (Callable sem argumentos) para montar um Control

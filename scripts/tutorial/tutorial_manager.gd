@@ -235,6 +235,9 @@ func get_shop_intro_lines() -> Array:
 func get_shop_lines() -> Array:
 	return TutorialDialogue.get_shop_lines()
 
+func get_shop_law_board_lines() -> Array:
+	return TutorialDialogue.get_shop_law_board_lines()
+
 func get_shop_done_lines() -> Array:
 	return TutorialDialogue.get_shop_done_lines()
 

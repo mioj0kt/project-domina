@@ -132,9 +132,12 @@ func _draw() -> void:
 					var must_rect = Rect2(board_offset.x + from_pos.x * cell_size, board_offset.y + from_pos.y * cell_size, cell_size, cell_size)
 					PixelRenderer.draw_pixel_corners(self, must_rect, Color(1.0, 0.65, 0.05, pulse_alpha), 12.0, 4.0)
 
+	# Casa sob o mouse: só nela o marcador mostra o símbolo (losango / X).
+	var mouse_cell: Vector2 = (get_local_mouse_position() - board_offset) / cell_size
+	var hover_cell := Vector2i(floori(mouse_cell.x), floori(mouse_cell.y))
 	for m in host.valid_moves_for_selected:
 		var target_rect = Rect2(board_offset.x + m["to"].x * cell_size, board_offset.y + m["to"].y * cell_size, cell_size, cell_size)
-		PixelRenderer.draw_pixel_move_target(self, target_rect, m["is_capture"], host.selection_pulse)
+		PixelRenderer.draw_pixel_move_target(self, target_rect, m["is_capture"], host.selection_pulse, m["to"] == hover_cell)
 
 	if host.show_enemy_threats:
 		var enemy_moves = board.get_all_valid_moves(host.ai_team)

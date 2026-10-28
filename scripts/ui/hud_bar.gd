@@ -22,6 +22,10 @@ var rule_tooltip: RuleCardTooltip
 var side_container: VBoxContainer
 var slot_containers: Array[Control] = []
 var law_board: LawBoard
+var _board_row: HBoxContainer
+var _piles_row: HBoxContainer
+var _laws_collapsed: bool = false   # tutorial: quadro de Leis ainda "fora da tela"
+var _piles_collapsed: bool = false
 var _current_rules: Array[RuleCard] = []
 
 # Indicador da Moeda Viciada / Lei da Moeda Fiel: aparece enquanto existe uma
@@ -151,6 +155,7 @@ func _build_side_panel() -> void:
 	# igual ao espelho do lado inimigo (enemy_hud_bar.gd).
 	# -------------------------------------------------------------------
 	var board_row = HBoxContainer.new()
+	_board_row = board_row
 	board_row.custom_minimum_size = Vector2(PANEL_W, DECK_PANEL_H)
 	board_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	board_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -175,6 +180,7 @@ func _build_side_panel() -> void:
 	# ativo (ver refresh_cards_inventory_count()).
 	# -------------------------------------------------------------------
 	var piles_hbox = HBoxContainer.new()
+	_piles_row = piles_hbox
 	piles_hbox.custom_minimum_size = Vector2(PANEL_W, 140)
 	piles_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	piles_hbox.add_theme_constant_override("separation", 16)
@@ -207,6 +213,60 @@ func _build_side_panel() -> void:
 	discard_deck_stack = discard_pile_widget.get_node("StackContainer")
 
 	refresh_cards_inventory_count()
+
+# ---------------------------------------------------------------------
+# TUTORIAL: HUD recolhida. Na Loja do tutorial só o OURO aparece no começo; o
+# quadro de Leis (e o botão LEIS) só chegam depois da 1ª Lei comprada — o
+# quadro DESCE de fora da tela pelo topo —, e as pilhas de Cartas depois da 1ª
+# Carta. O espaço de cada peça é mantido (nada "pula" de lugar).
+# ---------------------------------------------------------------------
+func tutorial_collapse() -> void:
+	_laws_collapsed = true
+	_piles_collapsed = true
+	law_board.visible = false
+	laws_btn.modulate.a = 0.0
+	laws_btn.disabled = true
+	_piles_row.modulate.a = 0.0
+	_set_piles_clickable(false)
+
+func is_laws_collapsed() -> bool:
+	return _laws_collapsed
+
+func _set_piles_clickable(on: bool) -> void:
+	draw_pile_widget.mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
+	discard_pile_widget.mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
+
+# O quadro de Leis desce do topo (quicando de leve ao pousar); o botão LEIS
+# aparece com um "pop". Aguardável: termina quando o quadro pousou.
+func tutorial_reveal_laws() -> void:
+	if not _laws_collapsed:
+		return
+	_laws_collapsed = false
+	law_board.visible = true
+	await get_tree().process_frame
+	var target: Vector2 = law_board.global_position
+	var h: float = maxf(law_board.size.y, DECK_PANEL_H)
+	law_board.top_level = true
+	law_board.global_position = Vector2(target.x, -h - 40.0)
+	var tw := create_tween()
+	tw.tween_property(law_board, "global_position:y", target.y, 0.85).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	await tw.finished
+	law_board.top_level = false
+	_board_row.queue_sort()
+	laws_btn.disabled = false
+	laws_btn.pivot_offset = laws_btn.size / 2.0
+	laws_btn.scale = Vector2(1.25, 1.25)
+	var tb := create_tween().set_parallel(true)
+	tb.tween_property(laws_btn, "modulate:a", 1.0, 0.25)
+	tb.tween_property(laws_btn, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	await tb.finished
+
+func tutorial_reveal_piles() -> void:
+	if not _piles_collapsed:
+		return
+	_piles_collapsed = false
+	_set_piles_clickable(true)
+	create_tween().tween_property(_piles_row, "modulate:a", 1.0, 0.4)
 
 # Hover das pilhas: clareia a pilha inteira; `clickable` troca o cursor pela mão.
 func _add_pile_hover(widget: Control, clickable: bool) -> void:

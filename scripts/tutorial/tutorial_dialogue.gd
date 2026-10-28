@@ -66,7 +66,7 @@ static func get_objectives(step: int) -> Array:
 			return [
 				{"event": "shop_buy_law", "text": "Compre a Lei Segundo Movimento",
 				"spot": "shop_buy_law", "caption": "COMPRE A LEI",
-				"done_tip": "Comprada! Agora ela vale em todos os seus duelos. Veja seu ouro diminuir."},
+				"done_tip": ""},
 				{"event": "shop_buy_card", "text": "Compre pelo menos uma Carta",
 				"spot": "shop_buy_card", "caption": "COMPRE UMA CARTA",
 				"done_tip": "Boa! Essa Carta já está no seu baralho."},
@@ -161,6 +161,14 @@ static func get_shop_lines() -> Array:
 		{"t": "REROLL troca as Cartas à venda (as Leis não mudam). REMOVER tira uma Carta do seu baralho — útil para deixá-lo mais afiado.", "spot": "shop_tools"},
 		"Você pode ter até 6 Leis ao mesmo tempo. Com o quadro cheio, comprar outra pede que você escolha uma para descartar.",
 		"Hora de comprar! Primeiro a Lei Segundo Movimento, depois pelo menos uma Carta. Vamos usá-las no próximo duelo.",
+	]
+
+# Logo depois da 1ª Lei comprada: o quadro de Leis acaba de descer do topo.
+static func get_shop_law_board_lines() -> Array:
+	return [
+		{"t": "Comprada! Veja: a Lei foi direto para o seu QUADRO DE LEIS, que acabou de aparecer ali.", "spot": "law_board", "caption": "SEU QUADRO DE LEIS"},
+		{"t": "Cada Lei ocupa um espaço, e cabem seis. Elas ficam sempre ligadas: durante os duelos esse quadro fica à esquerda, mostrando o que está valendo.", "spot": "law_board", "caption": "SEIS ESPAÇOS"},
+		"Agora escolha uma CARTA, lá embaixo!",
 	]
 
 static func get_shop_done_lines() -> Array:

@@ -22,6 +22,11 @@ enum StakeType { GOLD, CARD, LAW }
 var hud_bar: HUDBar
 var inventory_ui: InventoryUI
 var coin_flip_view: CoinFlipView
+var casino_fx: CasinoFx
+var table_panel: PanelContainer
+var outer_box_ref: VBoxContainer
+var header_ref: Label
+var _time: float = 0.0
 var card_tooltip: ActionCardTooltip
 var rule_tooltip: RuleCardTooltip
 var discard_modal: RuleDiscardModal
@@ -100,8 +105,10 @@ func _setup_ui() -> void:
 	outer_box.grow_vertical = Control.GROW_DIRECTION_BOTH
 	outer_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	canvas.add_child(outer_box)
+	outer_box_ref = outer_box
 
 	var panel = PanelContainer.new()
+	table_panel = panel
 	panel.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.09, 0.1, 0.14, 0.97), Color(0.85, 0.68, 0.25), 22))
 	outer_box.add_child(panel)
 
@@ -118,6 +125,7 @@ func _setup_ui() -> void:
 	header.add_theme_color_override("font_outline_color", Color(0.05, 0.05, 0.08, 1.0))
 	header.add_theme_constant_override("outline_size", 8)
 	content_box.add_child(header)
+	header_ref = header
 
 	# Trilha de 3 passos: deixa claro onde o jogador está e o que vem depois.
 	var steps_row = HBoxContainer.new()
@@ -306,6 +314,12 @@ func _setup_ui() -> void:
 	leave_btn.pressed.connect(_on_leave_pressed)
 	content_box.add_child(leave_btn)
 
+	# Efeitos de cassino (letreiro, holofote, celebração) — por baixo da moeda.
+	casino_fx = CasinoFx.new()
+	casino_fx.frame_target = table_panel
+	casino_fx.spot_target = coin_spacer
+	canvas.add_child(casino_fx)
+
 	coin_flip_view = CoinFlipView.new()
 	coin_flip_view.win_text = "BRANCA!"
 	coin_flip_view.lose_text = "PRETA!"
@@ -318,6 +332,32 @@ func _setup_ui() -> void:
 	_refresh_gold_label()
 	_update_stake_buttons_state()
 	_set_step(0)
+
+func _process(delta: float) -> void:
+	_time += delta
+	if header_ref != null:
+		# letreiro neon: pulsa de leve
+		var k: float = 0.86 + 0.14 * sin(_time * 3.0)
+		header_ref.modulate = Color(k, k, k)
+	if casino_fx != null:
+		casino_fx.spinning = is_flipping
+
+func _shake_table() -> void:
+	if outer_box_ref == null:
+		return
+	var base: Vector2 = outer_box_ref.position
+	var tw := create_tween()
+	for i in range(7):
+		var amp: float = 14.0 * (1.0 - float(i) / 7.0)
+		tw.tween_property(outer_box_ref, "position:x", base.x + (amp if i % 2 == 0 else -amp), 0.045)
+	tw.tween_property(outer_box_ref, "position:x", base.x, 0.05)
+
+func _pop_status(won: bool) -> void:
+	status_label.pivot_offset = status_label.size * 0.5
+	status_label.scale = Vector2(0.6, 0.6)
+	status_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.35) if won else Color(1.0, 0.5, 0.5))
+	var tw := create_tween()
+	tw.tween_property(status_label, "scale", Vector2(1.0, 1.0), 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _refresh_gold_label() -> void:
 	var current_gold = RunManager.gold if RunManager != null else 0
@@ -358,6 +398,7 @@ func _build_card_picker_item(card: ActionCard) -> Control:
 	btn.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 	btn.add_theme_stylebox_override("hover", PixelUI.make_bevel_card(Color(1, 1, 1, 0.08), Color(1.0, 0.85, 0.3)))
 	btn.add_child(visual)
+	CardVisualBase.bind_tilt(btn, visual)
 	btn.pressed.connect(_on_card_picked.bind(card))
 	btn.mouse_entered.connect(func():
 		if card_tooltip:
@@ -401,6 +442,7 @@ func _build_law_picker_item(rule: RuleCard) -> Control:
 	btn.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 	btn.add_theme_stylebox_override("hover", PixelUI.make_bevel_card(Color(1, 1, 1, 0.08), Color(1.0, 0.85, 0.3)))
 	btn.add_child(visual)
+	CardVisualBase.bind_tilt(btn, visual)
 	btn.pressed.connect(_on_law_picked.bind(rule))
 	btn.mouse_entered.connect(func():
 		if rule_tooltip:
@@ -529,6 +571,10 @@ func _on_call_selected(called_white: bool) -> void:
 	# Offset extra pra baixo — o espaço reservado (coin_spacer) fica logo
 	# abaixo do ouro atual, mas a moeda parecia alta demais ali; descendo
 	# mais ela fica com mais respiro visual antes do texto de status.
+	# Esconder os botões de chamada muda o tamanho do painel (e ele recentraliza):
+	# espera o layout assentar para a moeda cair EXATAMENTE no centro do holofote.
+	await get_tree().process_frame
+	await get_tree().process_frame
 	var coin_center = coin_spacer.global_position + coin_spacer.size / 2.0 + Vector2(0.0, 10.0)
 	coin_flip_view.play_toss(coin_center, COIN_RADIUS)
 
@@ -616,6 +662,11 @@ func _on_flip_completed(landed_white: bool) -> void:
 	if hud_bar != null:
 		hud_bar.update_gold()
 	_refresh_gold_label()
+	if casino_fx != null:
+		casino_fx.celebrate(coin_spacer.global_position + coin_spacer.size / 2.0 + Vector2(0.0, 10.0), bet_won)
+	_pop_status(bet_won)
+	if not bet_won:
+		_shake_table()
 
 	current_staked_card = null
 	current_staked_rule = null

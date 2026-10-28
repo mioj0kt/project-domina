@@ -18,24 +18,22 @@ const ARROW: float = 22.0
 const GAP: float = 30.0
 
 # target: "coroas" | "tabs" | "grid" | "side" | "" ; place: onde fica a caixa em relação ao alvo
-# ("below" | "left" | "inside" | "center"); tab: -1 mantém, 0 Leis, 1 Cartas, 2 Kits
+# ("below" | "left" | "inside" | "center"); tab: -1 mantém, 0 Leis, 1 Cartas
 const STEPS: Array[Dictionary] = [
 	{"text": "Bem-vindo ao GRIMÓRIO! Aqui você usa as COROAS para desbloquear Leis e Cartas novas, que passam a poder aparecer nas suas próximas runs.",
 		"target": "", "place": "center", "tab": 0},
 	{"text": "Estas são as suas COROAS. Você ganha Coroas vencendo duelos, e mesmo que perca a run, as que ganhou continuam com você.",
 		"target": "coroas", "place": "below", "tab": 0},
-	{"text": "Esta aba guarda as LEIS. Cada monte de cartas virado para baixo esconde uma Lei que você ainda não conhece.",
+	{"text": "Esta aba guarda as LEIS. O BAÚ DE LEIS guarda Leis que você ainda não conhece.",
 		"target": "piles", "place": "below", "tab": 0},
-	{"text": "Para abrir um monte, clique nele e pague com Coroas. A Lei que sair fica desbloqueada para sempre e passa a poder aparecer nas suas runs.",
+	{"text": "Clique no baú e pague com Coroas para abrir: a Lei é sorteada entre as que você ainda não tem. Ela fica desbloqueada para sempre e nunca repete.",
 		"target": "piles", "place": "below", "tab": 0},
-	{"text": "A aba de CARTAS funciona do mesmo jeito, mas cada monte é de uma raridade: comum, rara, épica ou lendária. Quanto mais rara, mais Coroas ela custa.",
+	{"text": "A aba de CARTAS tem o seu próprio baú e funciona do mesmo jeito. Comum, rara, épica ou lendária: quanto mais rara, mais difícil de sair!",
 		"target": "piles", "place": "below", "tab": 1},
 	{"text": "Depois de desbloquear algo, você pode LEVAR para a MOCHILA. O que estiver na mochila já começa a próxima run com você.",
 		"target": "side", "place": "left", "tab": 1},
 	{"text": "Levar custa Coroas a cada run, e cada item na mochila deixa o próximo mais caro. Escolha com cuidado o que vale a pena levar.",
 		"target": "side", "place": "left", "tab": 1},
-	{"text": "Na aba de KITS ficam conjuntos prontos de itens, com preço menor do que comprar tudo separado.",
-		"target": "grid", "place": "inside", "tab": 2},
 	{"text": "É isso! Se quiser rever este guia depois, clique no botão \"?\" do Grimório.",
 		"target": "", "place": "center", "tab": -1},
 ]

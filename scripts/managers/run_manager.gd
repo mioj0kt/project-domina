@@ -125,7 +125,7 @@ func remove_rule(rule_id: String) -> void:
 	rules_updated.emit()
 
 func start_new_run():
-	gold = 0
+	gold = 10000
 	shop_purchases = 0
 	current_board_size = Vector2i(8, 8)
 	current_board_layout = Board.LAYOUT_CLASSIC

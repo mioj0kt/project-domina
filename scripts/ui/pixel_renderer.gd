@@ -55,16 +55,27 @@ static func draw_pixel_selected_tile(canvas: CanvasItem, tile_rect: Rect2, pulse
 # em loop. Se o arquivo faltar, vale o desenho em código logo abaixo.
 const _MARKER_MOVE: String = "res://assets/sprites/fx/mover_sheet.png"
 const _MARKER_CAPTURE: String = "res://assets/sprites/fx/captura_sheet.png"
+# Só o quadrado (sem losango/X): é o que aparece em toda casa válida; o símbolo
+# (folhas acima) só entra quando o mouse está sobre a casa.
+const _MARKER_MOVE_BASE: String = "res://assets/sprites/fx/mover_base_sheet.png"
+const _MARKER_CAPTURE_BASE: String = "res://assets/sprites/fx/captura_base_sheet.png"
 const _MARKER_FRAME_PX: int = 26
 const _MARKER_FPS: float = 5.0
 const _MARKER_MARGIN_PX: int = 4
 static var _marker_cache: Dictionary = {}
 
-static func _draw_move_marker_sprite(canvas: CanvasItem, dest_rect: Rect2, is_capture: bool) -> bool:
-	var path: String = _MARKER_CAPTURE if is_capture else _MARKER_MOVE
+static func _marker_tex(path: String) -> Texture2D:
 	if not _marker_cache.has(path):
 		_marker_cache[path] = load(path) if ResourceLoader.exists(path) else null
-	var tex: Texture2D = _marker_cache[path]
+	return _marker_cache[path]
+
+static func _draw_move_marker_sprite(canvas: CanvasItem, dest_rect: Rect2, is_capture: bool, hovered: bool = false) -> bool:
+	var full: Texture2D = _marker_tex(_MARKER_CAPTURE if is_capture else _MARKER_MOVE)
+	var tex: Texture2D = full
+	if not hovered:
+		var base: Texture2D = _marker_tex(_MARKER_CAPTURE_BASE if is_capture else _MARKER_MOVE_BASE)
+		if base != null:
+			tex = base
 	if tex == null:
 		return false
 	var frames: int = maxi(1, int(tex.get_width() / _MARKER_FRAME_PX))
@@ -75,8 +86,8 @@ static func _draw_move_marker_sprite(canvas: CanvasItem, dest_rect: Rect2, is_ca
 	canvas.draw_texture_rect_region(tex, dest_rect, Rect2(f * _MARKER_FRAME_PX + m, m, _MARKER_FRAME_PX - m * 2, _MARKER_FRAME_PX - m * 2))
 	return true
 
-static func draw_pixel_move_target(canvas: CanvasItem, dest_rect: Rect2, is_capture: bool, pulse: float) -> void:
-	if _draw_move_marker_sprite(canvas, dest_rect, is_capture):
+static func draw_pixel_move_target(canvas: CanvasItem, dest_rect: Rect2, is_capture: bool, pulse: float, hovered: bool = false) -> void:
+	if _draw_move_marker_sprite(canvas, dest_rect, is_capture, hovered):
 		return
 	var center = dest_rect.position + (dest_rect.size / 2.0)
 	var pad = 4.0

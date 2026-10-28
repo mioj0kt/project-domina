@@ -54,7 +54,6 @@ func _init(p_rule: RuleCard, p_tooltip: RuleCardTooltip = null, start_face_up: b
 	_build_card()
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
-	set_process(false)
 
 func _art_scale() -> float:
 	return (CARD_SIZE * _display_scale) / _BODY.size.x
@@ -254,7 +253,6 @@ func play_flip_reveal(delay: float = 0.0) -> void:
 	_play_flip_reveal(delay, 0.18, 0.22)
 
 func _on_mouse_entered() -> void:
-	_hover_juice(true)
 	if not is_face_up or tooltip_ref == null or rule == null:
 		return
 	# "size" já inclui o display_scale (CardVisualBase monta o card_root no
@@ -264,62 +262,5 @@ func _on_mouse_entered() -> void:
 	tooltip_ref.show_tooltip(rule, screen_pos)
 
 func _on_mouse_exited() -> void:
-	_hover_juice(false)
 	if tooltip_ref != null:
 		tooltip_ref.hide_tooltip()
-
-# Juice de hover: mola suave (movida no _process, independente de tween) que
-# sobe, cresce e inclina a carta a partir do CENTRO, seguindo o mouse nos dois
-# eixos, com leve brilho. Ao sair, tudo volta suavemente ao repouso. Só mexe em
-# posição/escala/rotação/modulate do card_root quando a carta está virada; o
-# flip (scale:x) continua mandando enquanto roda.
-const _HOVER_SCALE := 1.08
-const _HOVER_LIFT := 0.05
-const _HOVER_TILT := 0.12
-const _HOVER_SHIFT := 0.025
-const _HOVER_GLOW := 1.10
-var _hovered := false
-var _hover_target_rot := 0.0
-var _hover_target_shift := Vector2.ZERO
-var _hover_settled := true
-
-func _hover_juice(entered: bool) -> void:
-	if card_root == null:
-		return
-	_hovered = entered and is_face_up
-	if not entered:
-		_hover_target_rot = 0.0
-		_hover_target_shift = Vector2.ZERO
-	_hover_settled = false
-	set_process(true)
-
-func _process(delta: float) -> void:
-	if card_root == null or not is_face_up:
-		return
-	if flip_tween != null and flip_tween.is_valid() and flip_tween.is_running():
-		return
-	var t: float = 1.0 - exp(-delta * 16.0)
-	var half: Vector2 = _card_size / 2.0
-	var lift: float = _card_size.y * _HOVER_LIFT if _hovered else 0.0
-	var tgt_pos: Vector2 = half + _hover_target_shift + Vector2(0.0, -lift)
-	var tgt_scale: Vector2 = Vector2.ONE * (_HOVER_SCALE if _hovered else 1.0)
-	var tgt_mod: Color = Color(_HOVER_GLOW, _HOVER_GLOW, _HOVER_GLOW, 1.0) if _hovered else Color.WHITE
-	card_root.position = card_root.position.lerp(tgt_pos, t)
-	card_root.scale = card_root.scale.lerp(tgt_scale, t)
-	card_root.rotation = lerpf(card_root.rotation, _hover_target_rot, t)
-	card_root.modulate = card_root.modulate.lerp(tgt_mod, t)
-	if not _hovered and card_root.position.distance_to(half) < 0.05 and absf(card_root.rotation) < 0.001 and card_root.scale.distance_to(Vector2.ONE) < 0.001:
-		card_root.position = half
-		card_root.rotation = 0.0
-		card_root.scale = Vector2.ONE
-		card_root.modulate = Color.WHITE
-		_hover_settled = true
-		set_process(false)
-
-func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion and _hovered and card_root != null:
-		var n: Vector2 = get_local_mouse_position() / Vector2(maxf(size.x, 1.0), maxf(size.y, 1.0)) - Vector2(0.5, 0.5)
-		n = n.clamp(Vector2(-0.5, -0.5), Vector2(0.5, 0.5))
-		_hover_target_rot = n.x * _HOVER_TILT * 2.0
-		# Parallax: a carta desliza um pouco para o lado do mouse.
-		_hover_target_shift = Vector2(n.x, n.y) * _card_size * _HOVER_SHIFT * 2.0

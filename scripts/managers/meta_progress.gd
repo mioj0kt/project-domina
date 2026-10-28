@@ -31,8 +31,6 @@ const RULE_CARRY_COST: Array[int] = [4, 7, 11, 16]
 # Cada item JÁ na mochila encarece o próximo em +35% do preço base.
 const CARRY_ESCALATION: float = 0.35
 const BAG_MAX: int = 8
-# Kit equipado: as peças dele entram com esse desconto (ainda sobe a escalada).
-const KIT_CARRY_DISCOUNT: float = 0.75
 
 # Conjunto INICIAL (já liberado). O resto se desbloqueia nos montes.
 const STARTER_CARDS: Array[String] = [
@@ -43,26 +41,10 @@ const STARTER_RULES: Array[String] = [
 # Monte de Leis: o preço é a MÉDIA do custo de desbloqueio do que ainda resta
 # no monte (o sorteio é uniforme), então um monte com peças raras sai mais caro.
 
-# Kits prontos: comprados uma vez, depois equipados (um por run). Comprar um
-# Kit também desbloqueia as peças dele na loot pool.
-const KITS: Array[Dictionary] = [
-	{"id": "estrategista", "name": "ESTRATEGISTA", "cost": 45,
-		"desc": "Enxergue o jogo antes do inimigo.",
-		"rules": ["second_move"], "cards": ["vision", "prophecy"]},
-	{"id": "massacre", "name": "MASSACRE", "cost": 55,
-		"desc": "Capturas em cadeia e avanços violentos.",
-		"rules": ["carnage"], "cards": ["heroic_advance", "retaliation"]},
-	{"id": "fortaleza", "name": "FORTALEZA", "cost": 60,
-		"desc": "Peças difíceis de derrubar.",
-		"rules": ["shield"], "cards": ["fortify", "rebuild"]},
-]
-
 var coroas: int = 0
 var unlocked_rules: Array[String] = []
 var unlocked_cards: Array[String] = []
-var owned_kits: Array[String] = []
-var equipped_kit: String = ""
-# Mochila da próxima run: [{"t": "card"|"rule", "id", "paid": int, "kit": String}]
+# Mochila da próxima run: [{"t": "card"|"rule", "id", "paid": int}]
 var bag: Array[Dictionary] = []
 var oficina_tour_seen: bool = false   # guia do Grimório já exibido
 var run_over_tour_seen: bool = false   # mini guia das Coroas (1ª tela de fim de run) já exibido
@@ -92,14 +74,12 @@ func load_data() -> void:
 	coroas = int(cfg.get_value("meta", "coroas", cfg.get_value("meta", "selos", 0)))
 	unlocked_rules = _to_str_array(cfg.get_value("meta", "unlocked_rules", []))
 	unlocked_cards = _to_str_array(cfg.get_value("meta", "unlocked_cards", []))
-	owned_kits = _to_str_array(cfg.get_value("meta", "owned_kits", []))
-	equipped_kit = str(cfg.get_value("meta", "equipped_kit", ""))
 	bag.clear()
 	var raw = cfg.get_value("meta", "bag", [])
 	if raw is Array:
 		for e in raw:
 			if e is Dictionary and e.has("id") and e.has("t"):
-				bag.append({"t": str(e["t"]), "id": str(e["id"]), "paid": int(e.get("paid", 0)), "kit": str(e.get("kit", ""))})
+				bag.append({"t": str(e["t"]), "id": str(e["id"]), "paid": int(e.get("paid", 0))})
 	oficina_tour_seen = bool(cfg.get_value("meta", "oficina_tour_seen", false))
 	tutorial_done = bool(cfg.get_value("meta", "tutorial_done", false))
 	run_over_tour_seen = bool(cfg.get_value("meta", "run_over_tour_seen", false))
@@ -112,8 +92,6 @@ func save_data() -> void:
 	cfg.set_value("meta", "coroas", coroas)
 	cfg.set_value("meta", "unlocked_rules", unlocked_rules)
 	cfg.set_value("meta", "unlocked_cards", unlocked_cards)
-	cfg.set_value("meta", "owned_kits", owned_kits)
-	cfg.set_value("meta", "equipped_kit", equipped_kit)
 	cfg.set_value("meta", "bag", bag)
 	cfg.set_value("meta", "oficina_tour_seen", oficina_tour_seen)
 	cfg.set_value("meta", "tutorial_done", tutorial_done)
@@ -129,11 +107,9 @@ func _to_str_array(v) -> Array[String]:
 			out.append(str(x))
 	return out
 
-# Tira da mochila o que não está mais desbloqueado e confere o kit equipado.
+# Tira da mochila o que não está mais desbloqueado.
 func _sanitize() -> void:
 	bag = bag.filter(func(e): return (is_rule_unlocked(e["id"]) if e["t"] == "rule" else is_card_unlocked(e["id"])))
-	if equipped_kit != "" and (not owned_kits.has(equipped_kit) or not bag.any(func(e): return e["kit"] == equipped_kit)):
-		equipped_kit = ""
 
 func mark_oficina_tour_seen() -> void:
 	if not oficina_tour_seen:
@@ -164,8 +140,6 @@ func reset_all() -> void:
 	coroas = 0
 	unlocked_rules.clear()
 	unlocked_cards.clear()
-	owned_kits.clear()
-	equipped_kit = ""
 	bag.clear()
 	oficina_tour_seen = false
 	tutorial_done = false
@@ -208,52 +182,79 @@ func locked_rules(category: int) -> Array[RuleCard]:
 			out.append(r)
 	return out
 
-func card_pile_price(rarity: int) -> int:
-	return CARD_UNLOCK_COST[clampi(rarity, 0, 3)]
+# ---- Baús (gacha) ----
+# Dois baús: Cartas e Leis. A raridade é sorteada por chance; o item é sorteado
+# entre os AINDA BLOQUEADOS dessa raridade (nunca repete). Se a raridade
+# sorteada estiver esgotada, cai para a mais próxima que ainda tenha itens.
+const CHEST_ODDS: Array[int] = [60, 28, 10, 2]   # comum, rara, épica, lendária (pesos)
+const CARD_CHEST_PRICE: int = 10
+const RULE_CHEST_PRICE: int = 14
 
-func rule_pile_price(category: int) -> int:
-	var items := locked_rules(category)
-	if items.is_empty():
-		return 0
-	var sum := 0
-	for r in items:
-		sum += rule_unlock_cost(r)
-	return int(round(float(sum) / float(items.size())))
+func locked_rules_of_rarity(rarity: int) -> Array[RuleCard]:
+	var out: Array[RuleCard] = []
+	for r in LootTables.get_all_rules():
+		if int(r.rarity) == rarity and not is_rule_unlocked(r.id):
+			out.append(r)
+	return out
 
-# Compra o monte e devolve o id sorteado ("" = falhou: sem Coroas ou monte vazio).
-func draw_card_pile(rarity: int) -> String:
-	var items := locked_cards(rarity)
-	var price := card_pile_price(rarity)
-	if items.is_empty() or coroas < price:
-		return ""
-	var pick: ActionCard = items[randi() % items.size()]
+func locked_of(is_rule: bool, rarity: int) -> Array:
+	return locked_rules_of_rarity(rarity) if is_rule else locked_cards(rarity)
+
+func chest_price(is_rule: bool) -> int:
+	return RULE_CHEST_PRICE if is_rule else CARD_CHEST_PRICE
+
+# Quantos itens ainda faltam desbloquear naquele baú.
+func chest_remaining(is_rule: bool) -> int:
+	var n := 0
+	for r in range(4):
+		n += locked_of(is_rule, r).size()
+	return n
+
+# Sorteia a raridade com pesos; raridade esgotada -> a mais próxima disponível.
+# roll: número em [0, total) opcional (para testes determinísticos); -1 = aleatório.
+func roll_chest_rarity(is_rule: bool, roll: int = -1) -> int:
+	var total := 0
+	for r in range(4):
+		total += CHEST_ODDS[r]
+	var x: int = randi() % total if roll < 0 else roll
+	var rolled := 3
+	var acc := 0
+	for r in range(4):
+		acc += CHEST_ODDS[r]
+		if x < acc:
+			rolled = r
+			break
+	if not locked_of(is_rule, rolled).is_empty():
+		return rolled
+	# fallback: raridade disponível mais próxima (empate -> a mais comum)
+	for d in range(1, 4):
+		for cand in [rolled - d, rolled + d]:
+			if cand >= 0 and cand < 4 and not locked_of(is_rule, cand).is_empty():
+				return cand
+	return -1
+
+# Abre o baú. Devolve {"id": String, "rarity": int}; vazio = falhou (sem Coroas ou esgotado).
+func draw_chest(is_rule: bool, roll: int = -1) -> Dictionary:
+	var price := chest_price(is_rule)
+	if coroas < price:
+		return {}
+	var rarity := roll_chest_rarity(is_rule, roll)
+	if rarity < 0:
+		return {}
+	var items := locked_of(is_rule, rarity)
+	var pick = items[randi() % items.size()]
 	coroas -= price
-	unlocked_cards.append(pick.id)
+	if is_rule:
+		unlocked_rules.append(pick.id)
+	else:
+		unlocked_cards.append(pick.id)
 	save_data()
 	changed.emit()
-	return pick.id
-
-func draw_rule_pile(category: int) -> String:
-	var items := locked_rules(category)
-	var price := rule_pile_price(category)
-	if items.is_empty() or coroas < price:
-		return ""
-	var pick: RuleCard = items[randi() % items.size()]
-	coroas -= price
-	unlocked_rules.append(pick.id)
-	save_data()
-	changed.emit()
-	return pick.id
+	return {"id": pick.id, "rarity": rarity}
 
 # ---------------------------------------------------------------------
-# Mochila da próxima run + Kits
+# Mochila da próxima run
 # ---------------------------------------------------------------------
-func get_kit(id: String) -> Dictionary:
-	for k in KITS:
-		if k["id"] == id:
-			return k
-	return {}
-
 func bag_has(t: String, id: String) -> bool:
 	return bag.any(func(e): return e["t"] == t and e["id"] == id)
 
@@ -300,7 +301,7 @@ func add_to_bag(t: String, id: String) -> bool:
 	if coroas < price:
 		return false
 	coroas -= price
-	bag.append({"t": t, "id": id, "paid": price, "kit": ""})
+	bag.append({"t": t, "id": id, "paid": price})
 	save_data()
 	changed.emit()
 	return true
@@ -310,10 +311,7 @@ func remove_from_bag(t: String, id: String) -> void:
 	for i in range(bag.size()):
 		if bag[i]["t"] == t and bag[i]["id"] == id:
 			coroas += int(bag[i]["paid"])
-			var kit_id: String = bag[i]["kit"]
 			bag.remove_at(i)
-			if kit_id != "" and equipped_kit == kit_id:
-				equipped_kit = ""   # kit incompleto deixa de contar como equipado
 			save_data()
 			changed.emit()
 			return
@@ -321,74 +319,8 @@ func remove_from_bag(t: String, id: String) -> void:
 func clear_bag() -> void:
 	coroas += bag_total_paid()
 	bag.clear()
-	equipped_kit = ""
 	save_data()
 	changed.emit()
-
-func buy_kit(id: String) -> bool:
-	var k := get_kit(id)
-	if k.is_empty() or owned_kits.has(id) or coroas < int(k["cost"]):
-		return false
-	coroas -= int(k["cost"])
-	owned_kits.append(id)
-	for rid in k["rules"]:
-		if not unlocked_rules.has(rid):
-			unlocked_rules.append(rid)
-	for cid in k["cards"]:
-		if not unlocked_cards.has(cid):
-			unlocked_cards.append(cid)
-	save_data()
-	changed.emit()
-	return true
-
-# Itens do kit que ainda não estão na mochila: [{t, id}]
-func _kit_items(k: Dictionary) -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	for rid in k["rules"]:
-		if not bag_has("rule", rid):
-			out.append({"t": "rule", "id": rid})
-	for cid in k["cards"]:
-		if not bag_has("card", cid):
-			out.append({"t": "card", "id": cid})
-	return out
-
-# Preço total de levar o kit agora (escalada sequencial + desconto).
-func kit_carry_price(id: String) -> int:
-	var k := get_kit(id)
-	if k.is_empty():
-		return 0
-	var total := 0
-	var n := bag.size()
-	for it in _kit_items(k):
-		total += int(round(float(_escalate(_base_carry(it["t"], _rarity_of(it["t"], it["id"])), n)) * KIT_CARRY_DISCOUNT))
-		n += 1
-	return total
-
-func toggle_kit(id: String) -> bool:
-	var k := get_kit(id)
-	if k.is_empty() or not owned_kits.has(id):
-		return false
-	if equipped_kit == id:
-		# desequipar: devolve só o que o kit trouxe
-		for i in range(bag.size() - 1, -1, -1):
-			if bag[i]["kit"] == id:
-				coroas += int(bag[i]["paid"])
-				bag.remove_at(i)
-		equipped_kit = ""
-		save_data()
-		changed.emit()
-		return true
-	var items := _kit_items(k)
-	if bag.size() + items.size() > BAG_MAX or coroas < kit_carry_price(id):
-		return false
-	for it in items:
-		var price := int(round(float(carry_price(it["t"], _rarity_of(it["t"], it["id"]))) * KIT_CARRY_DISCOUNT))
-		coroas -= price
-		bag.append({"t": it["t"], "id": it["id"], "paid": price, "kit": id})
-	equipped_kit = id
-	save_data()
-	changed.emit()
-	return true
 
 # Entrega a mochila a uma run NOVA (chamado por JOGAR depois de
 # RunManager.start_new_run) e esvazia: a próxima run paga de novo.
@@ -405,7 +337,6 @@ func consume_bag_into_run() -> void:
 				if card.id == e["id"] and not RunManager.player_deck.any(func(c): return c.id == card.id):
 					RunManager.add_card_to_deck(card)
 	bag.clear()
-	equipped_kit = ""
 	save_data()
 	changed.emit()
 

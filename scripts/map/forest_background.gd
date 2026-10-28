@@ -379,7 +379,7 @@ func _tree_fits(tex: Texture2D, ground: Vector2, segments: Array, node_points: A
 	var sz: Vector2 = tex.get_size() * float(_scale)
 	var ctr: Vector2 = _tree_center(tex, ground)
 	var rect := Rect2(ctr - sz / 2.0, sz)
-	# A copa pode passar da borda (a moldura fica na frente e corta a copa), mas
+	# A copa pode passar da borda (fica por cima da moldura), mas
 	# a base do tronco precisa estar bem dentro do tabuleiro.
 	if not _board_rect.grow(-0.3 * _tile).has_point(ground):
 		return false
@@ -441,6 +441,10 @@ func _draw() -> void:
 	# então vai ANTES da decoração (nada do mapa pode ficar escondido por ela).
 	if _th["frame"] == "bordas":
 		_draw_frame_sheet()
+	else:
+		# Floresta: a moldura vai ANTES da decoração, então a copa das árvores
+		# que passam da borda fica NA FRENTE dela (não por trás).
+		_draw_frame()
 
 	for c in _clearings:
 		var ctex: Texture2D = c[0]
@@ -451,18 +455,19 @@ func _draw() -> void:
 		var dtex: Texture2D = d[0]
 		var dsz = dtex.get_size() * float(_scale)
 		var drect := Rect2(d[1] - dsz / 2.0, dsz)
-		if _board_rect.encloses(drect):
+		# Deserto: corta no limite do tabuleiro (a areia da moldura fica por cima das
+		# casas). Floresta: a copa passa por cima da moldura e só é cortada no limite
+		# externo do mapa.
+		var clip_rect: Rect2 = _board_rect if _th["frame"] == "bordas" else world_rect
+		if clip_rect.encloses(drect):
 			draw_texture_rect(dtex, drect, false)
 		else:
-			# Árvore grande passando da borda: corta no limite do tabuleiro (fica "atrás" da moldura).
-			var clip := drect.intersection(_board_rect)
+			var clip := drect.intersection(clip_rect)
 			if clip.size.x > 0.0 and clip.size.y > 0.0:
 				var k := 1.0 / float(_scale)
 				draw_texture_rect_region(dtex, clip, Rect2((clip.position - drect.position) * k, clip.size * k))
 
 	_draw_swirls()
-	if _th["frame"] != "bordas":
-		_draw_frame()
 
 # Redemoinhos: 4 quadros de 8x8 numa faixa; vagam devagar pelo tabuleiro.
 func _draw_swirls() -> void:

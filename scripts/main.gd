@@ -92,6 +92,7 @@ var rule_banner_view: RuleTriggerBannerView
 # ---------- Interface ----------
 var hud_bar: HUDBar
 var enemy_hud_bar: EnemyHudBar
+var boss_banter: BossBanterView = null
 var enemy_hand_ui: EnemyHandUI
 var ai_card_reveal_view: AICardRevealView
 var inventory_ui: InventoryUI
@@ -352,6 +353,13 @@ func _setup_ui() -> void:
 	ui_layer.add_child(inventory_ui)
 	inventory_ui.setup()
 
+	# Personalidade do Chefe: rostinho no canto + balão de fala durante o duelo.
+	if current_duel is DuelBoss and not TutorialManager.is_active:
+		boss_banter = BossBanterView.new()
+		add_child(boss_banter)
+		boss_banter.setup(RunManager.map_biome, (current_duel as DuelBoss).law_id)
+		boss_banter.place_near.call_deferred(enemy_hud_bar.law_board)
+
 	tile_hover_view = BoardTileHoverView.new()
 	ui_layer.add_child(tile_hover_view)
 	tile_hover_view.setup(self)
@@ -401,6 +409,14 @@ func _setup_ui() -> void:
 	skip_box.add_child(skip_extra_sub)
 	ui_layer.add_child(skip_extra_btn)
 
+	# Tutorial, Duelo 1: tela enxuta — só o tabuleiro. Leis, ouro, cartas e o
+	# quadro do inimigo ainda não existem para o jogador (aparecem nas lições
+	# seguintes, uma coisa de cada vez).
+	if _is_tutorial_bare_duel():
+		hud_bar.visible = false
+		enemy_hud_bar.visible = false
+		enemy_hand_ui.visible = false
+
 	if TutorialManager.is_active:
 		tutorial_guide_view = TutorialGuideView.new()
 		tutorial_guide_view.spot_resolver = _tutorial_spot_rect
@@ -441,7 +457,13 @@ func clear_board_selection() -> void:
 func handle_cell_click(pos: Vector2i) -> void:
 	await turn_controller.handle_cell_click(pos)
 
+# Duelo 1 do tutorial: HUD reduzida ao tabuleiro.
+func _is_tutorial_bare_duel() -> bool:
+	return TutorialManager.is_active and TutorialManager.current_step == TutorialManager.Step.DUEL_1_BASICS
+
 func toggle_inventory() -> void:
+	if _is_tutorial_bare_duel():
+		return
 	if inventory_ui:
 		inventory_ui.toggle_visibility()
 
@@ -677,7 +699,14 @@ func _get_common_piece_positions(team: int) -> Array[Vector2i]:
 				positions.append(Vector2i(c, r))
 	return positions
 
+# O Chefe comenta (se este duelo for de Chefe). Sem efeito nos outros duelos.
+func boss_say(event: String) -> void:
+	if boss_banter != null and is_instance_valid(boss_banter):
+		boss_banter.react(event)
+
 func _on_board_piece_destroyed(grid_pos: Vector2i, destroyed_piece: BoardPiece) -> void:
+	if destroyed_piece != null and not is_game_over:
+		boss_say("piece_lost" if destroyed_piece.owner_team == ai_team else "capture_boss")
 	var piece_center = board_offset + Vector2(grid_pos.x * cell_size + cell_size / 2.0, grid_pos.y * cell_size + cell_size / 2.0)
 	piece_shatter_view.shatter_piece(piece_center, destroyed_piece, cell_size)
 

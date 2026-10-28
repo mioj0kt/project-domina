@@ -167,6 +167,7 @@ func _execute_selected_card(pos: Vector2i) -> void:
 	Juice.sparkle(_host, _host.get_global_mouse_position(), 18)   # juice: fagulhas ao jogar
 	@warning_ignore("redundant_await")
 	await selected_action_card.execute(_host.board, pos, _host.human_team, _build_context())
+	_host.boss_say("card_player")
 	TutorialManager.report_event("card_used")
 
 	# Cartas que mexem na mão (Reabastecer, Reciclar) mudam os índices: acha a
