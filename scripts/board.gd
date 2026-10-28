@@ -96,6 +96,11 @@ var quicksand_tiles: Dictionary = {}
 # esperando a múmia nascer (DuelBossDesert.advance_turn consome a lista).
 var mummy_team: int = 0
 var released_mummies: Array = []
+# Casa -> time dono da múmia (só sarcófagos de CARTA; os do chefe não entram aqui).
+var released_mummy_owner: Dictionary = {}
+# Isca do Sapo (carta): [{"pos": Vector2i, "turns": int}] — a língua do sapo
+# devora o que estiver na casa quando "turns" (jogadas) chega a 0.
+var bait_flies: Array = []
 # Quantos turnos (do próprio time) a peça fica enraizada depois de capturar.
 const HUNGRY_ROOTS_TURNS: int = 2
 var _capturers: Array = []
@@ -172,6 +177,8 @@ func clear_board() -> void:
 	quicksand_tiles.clear()
 	mummy_team = 0
 	released_mummies.clear()
+	released_mummy_owner.clear()
+	bait_flies.clear()
 	_capturers.clear()
 
 # Concede à peça em `pos` a possibilidade de andar `distance` casas (caminho
@@ -791,8 +798,10 @@ func make_move(move_dict: Dictionary) -> bool:
 			# Árvore: cai sem Leis, sem eventos de captura e sem ouro.
 			grid[cap_pos.y][cap_pos.x] = EMPTY
 			piece_destroyed.emit(cap_pos, cap_piece)
-			if cap_piece.is_sarcophagus and not is_simulation and mummy_team != 0:
+			if cap_piece.is_sarcophagus and not is_simulation and (mummy_team != 0 or cap_piece.mummy_owner != 0):
 				released_mummies.append(cap_pos)
+				if cap_piece.mummy_owner != 0:
+					released_mummy_owner[cap_pos] = cap_piece.mummy_owner
 			if cap_piece.is_cactus:
 				# Espinhos: quem derruba o cacto morre no pouso (mesmo caminho da
 				# Terra Queimada: a peça some e o movimento não segue para promoção).

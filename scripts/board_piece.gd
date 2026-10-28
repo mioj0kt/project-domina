@@ -22,6 +22,9 @@ var is_sarcophagus: bool = false
 var is_cactus: bool = false
 # Múmia (Sarcófagos): peça comum do chefe com sprite próprio.
 var is_mummy: bool = false
+# Sarcófago criado por CARTA: time de quem jogou a carta — a múmia nasce para ele
+# (0 = sarcófago do chefe, que usa Board.mummy_team).
+var mummy_owner: int = 0
 # Emboscada: turnos (do dono da peça) em que ela NÃO pode se mover/capturar.
 var rooted_turns: int = 0
 # Herdeiro: turnos (do dono) restantes como Dama temporária; 0 = Dama normal ou comum.
@@ -68,6 +71,7 @@ func clone() -> BoardPiece:
 	copy.is_sarcophagus = is_sarcophagus
 	copy.is_cactus = is_cactus
 	copy.is_mummy = is_mummy
+	copy.mummy_owner = mummy_owner
 	copy.rooted_turns = rooted_turns
 	copy.temp_king_turns = temp_king_turns
 	copy.shield_turns = shield_turns

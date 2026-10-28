@@ -862,6 +862,8 @@ func _conclude_turn(team_that_moved: int) -> void:
 			host.board_offset + Vector2(rp.x * host.cell_size + host.cell_size / 2.0, rp.y * host.cell_size + host.cell_size / 2.0),
 			"ENRAIZADA!", Color(0.45, 0.85, 0.35), "hungry_roots")
 
+	await _process_card_hazards()
+
 	if await check_game_over():
 		return
 
@@ -890,6 +892,60 @@ func _conclude_turn(team_that_moved: int) -> void:
 		host.board.tick_scorched_tiles()
 		if host.board.rule_pipeline != null:
 			host.board.rule_pipeline.emit_event(&"turn_started", {}, host.board)
+
+# Efeitos de CARTAS que atuam depois das jogadas: múmias de sarcófagos de carta
+# nascendo e a língua da Isca do Sapo. Chamado a cada fim de jogada, antes de
+# checar o fim do duelo (a língua pode devorar a última peça de alguém).
+func _process_card_hazards() -> void:
+	var host = _host
+	var board: Board = host.board
+
+	# 1) Múmias dos sarcófagos de carta: nascem para quem jogou a carta.
+	var born: Array = []
+	for pos in board.released_mummies.duplicate():
+		if not board.released_mummy_owner.has(pos):
+			continue
+		var team: int = board.released_mummy_owner[pos]
+		board.released_mummy_owner.erase(pos)
+		board.released_mummies.erase(pos)
+		if board.grid[pos.y][pos.x] == Board.EMPTY and not board.scorched_tiles.has(pos):
+			var mummy := BoardPiece.new(team, false)
+			mummy.is_mummy = true
+			board.grid[pos.y][pos.x] = mummy
+			born.append(pos)
+	if not born.is_empty():
+		var c0: Vector2i = born[0]
+		host.rule_banner_view.pop_rule_trigger(
+			host.board_offset + Vector2(c0.x * host.cell_size + host.cell_size / 2.0, c0.y * host.cell_size + host.cell_size / 2.0),
+			"A MÚMIA DESPERTA!", Color(0.8, 0.7, 0.4), "sarcophagi")
+		var tw = create_tween().set_parallel(true)
+		for bp in born:
+			host.piece_spawn_scales[bp] = 0.0
+			tw.tween_method(func(v): host.piece_spawn_scales[bp] = v, 0.0, 1.0, 0.45)\
+				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		await tw.finished
+
+	# 2) Isca do Sapo: conta as jogadas; quando zera, a língua desce.
+	if board.bait_flies.is_empty():
+		return
+	var due: Array = []
+	for b in board.bait_flies:
+		b["turns"] = int(b["turns"]) - 1
+		if int(b["turns"]) <= 0:
+			due.append(b["pos"])
+	var pending: Array = []
+	for b in board.bait_flies:
+		if int(b["turns"]) > 0:
+			pending.append(b["pos"])
+	if host.frog_animation_view != null:
+		host.frog_animation_view.ensure_static_flies(pending + due)
+	if due.is_empty():
+		return
+	board.bait_flies = board.bait_flies.filter(func(b): return int(b["turns"]) > 0)
+	await get_tree().create_timer(0.3).timeout
+	await host.frog_animation_view.play_tongue_attack(board, due)
+	host.frog_animation_view.ensure_static_flies(pending)
+	host.queue_redraw()
 
 # ==========================================
 # FIM DE DUELO

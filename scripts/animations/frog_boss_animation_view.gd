@@ -4,7 +4,7 @@ extends Node2D
 signal attack_sequence_finished()
 signal flies_spawn_finished()
 
-const FLY_SPRITE_PATH: String = "" 
+const FLY_SPRITE_PATH: String = "res://assets/sprites/fx/fly.png"  # sem o arquivo, desenha a mosca por código
 
 var fly_texture: Texture2D = null
 var hazard_tiles: Array = []
@@ -102,6 +102,31 @@ func spawn_new_flies(tiles: Array) -> void:
 	queue_redraw()
 	flies_spawn_finished.emit()
 
+# Isca do Sapo (carta): uma mosca pousa numa casa SEM apagar as outras.
+func add_fly(tile: Vector2i) -> void:
+	var target_center = board_offset + Vector2(tile.x * cell_size + cell_size / 2.0, tile.y * cell_size + cell_size / 2.0)
+	var start_pos = Vector2(target_center.x + randf_range(-50.0, 50.0), -60.0)
+	var fly_data = {"pos": start_pos, "scale": 1.7, "alpha": 0.0, "is_fleeing": false}
+	active_flies[tile] = fly_data
+	var tw = create_tween()
+	tw.tween_method(func(t: float):
+		var q = ease(t, -2.0)
+		fly_data["pos"] = start_pos.lerp(target_center, q)
+		fly_data["scale"] = lerpf(1.7, 1.0, q)
+		fly_data["alpha"] = clampf(t * 3.0, 0.0, 1.0)
+		queue_redraw()
+	, 0.0, 1.0, 0.55)
+	await tw.finished
+
+# Garante que cada casa da lista tem uma mosca parada (usado depois de um ataque
+# ou quando o chefe-sapo troca as moscas dele).
+func ensure_static_flies(tiles: Array) -> void:
+	for tile in tiles:
+		if not active_flies.has(tile):
+			active_flies[tile] = {"pos": board_offset + Vector2(tile.x * cell_size + cell_size / 2.0, tile.y * cell_size + cell_size / 2.0),
+				"scale": 1.0, "alpha": 1.0, "is_fleeing": false}
+	queue_redraw()
+
 # Ataque sequencial da língua
 func play_tongue_attack(board: Board, tiles_to_attack: Array) -> void:
 	if tiles_to_attack.is_empty():
@@ -197,14 +222,41 @@ func _draw() -> void:
 		if devouring_piece != null:
 			PixelRenderer.draw_piece(self, devouring_piece, tongue_tip, cell_size, 0.95)
 
+const FLY_FPS: float = 16.0
+const FLY_CELL_FRACTION: float = 0.55   # largura da mosca em relação à casa
+
+# Ordem do bater de asas: 0 = asas em cima ... N-1 = asas abertas embaixo; vai e volta.
+func _fly_sequence(frames: int) -> Array:
+	var seq: Array = []
+	for i in range(frames):
+		seq.append(i)
+	for i in range(frames - 2, 0, -1):
+		seq.append(i)
+	return seq
+
 func _draw_animated_fly(center: Vector2, scale_mod: float, alpha: float) -> void:
 	if alpha <= 0.01:
 		return
 
 	if fly_texture != null:
-		var base_sz = cell_size * 0.5 * scale_mod
-		var dest = Rect2(center - Vector2(base_sz, base_sz) / 2.0, Vector2(base_sz, base_sz))
-		draw_texture_rect(fly_texture, dest, false, Color(1.0, 1.0, 1.0, alpha))
+		var tw: float = float(fly_texture.get_width())
+		var th: float = float(fly_texture.get_height())
+		if tw >= th * 2.0:
+			# Tira de quadros quadrados (bater de asas): vai-e-volta, escala inteira
+			# de pixel (nada de pixel "quebrado"). Cada mosca tem uma fase própria.
+			var frames: int = int(round(tw / th))
+			var seq: Array = _fly_sequence(frames)
+			var phase: int = int(absf(center.x * 0.37 + center.y * 0.11)) % seq.size()
+			var idx: int = int(seq[(int(Time.get_ticks_msec() / 1000.0 * FLY_FPS) + phase) % seq.size()])
+			var px: float = maxf(1.0, round(cell_size * FLY_CELL_FRACTION / th)) * scale_mod
+			var dest_sz := Vector2(th, th) * px
+			var dest_pos := (center - dest_sz / 2.0).round()
+			draw_texture_rect_region(fly_texture, Rect2(dest_pos, dest_sz), Rect2(idx * th, 0.0, th, th), Color(1.0, 1.0, 1.0, alpha))
+			queue_redraw()   # mantém as asas batendo enquanto houver mosca
+		else:
+			var base_sz = cell_size * 0.5 * scale_mod
+			var dest = Rect2(center - Vector2(base_sz, base_sz) / 2.0, Vector2(base_sz, base_sz))
+			draw_texture_rect(fly_texture, dest, false, Color(1.0, 1.0, 1.0, alpha))
 	else:
 		var body_col = Color(0.12, 0.12, 0.15, alpha)
 		var wing_col = Color(0.8, 0.9, 1.0, 0.8 * alpha)

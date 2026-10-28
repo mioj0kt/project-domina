@@ -133,12 +133,14 @@ func advance_turn() -> Array:
 			# Múmias dos sarcófagos derrubados (por qualquer lado).
 			var born: Array = []
 			for pos2 in board.released_mummies:
+				if board.released_mummy_owner.has(pos2):
+					continue   # múmia de carta: quem nasce é o controlador do duelo
 				if board.grid[pos2.y][pos2.x] == Board.EMPTY and not board.scorched_tiles.has(pos2):
 					var mummy := BoardPiece.new(ai_team, false)
 					mummy.is_mummy = true
 					board.grid[pos2.y][pos2.x] = mummy
 					born.append(pos2)
-			board.released_mummies.clear()
+			board.released_mummies = board.released_mummies.filter(func(p): return board.released_mummy_owner.has(p))
 			if not born.is_empty():
 				events.append({"type": "mummy", "tiles": born})
 		LAW_CACTI:

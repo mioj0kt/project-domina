@@ -234,6 +234,14 @@ static func _draw_boss_sprite(canvas: CanvasItem, names: Array[String], piece_ob
 	var tex: Texture2D = _boss_sprite_cache[name]
 	if tex == null:
 		return false
+	# Sprite QUADRADO = peça-disco (ex.: sarcófago em forma de peça de damas): desenhado
+	# como as peças comuns (mesmo tamanho, centralizado, mesma sombra).
+	if tex.get_width() == tex.get_height():
+		var dest_size := Vector2(cell_size * 0.82, cell_size * 0.82) * scale_factor
+		var dest_rect := Rect2(center - dest_size / 2.0, dest_size)
+		canvas.draw_texture_rect(tex, Rect2(dest_rect.position + Vector2(2, 3), dest_size), false, Color(0, 0, 0, 0.35))
+		canvas.draw_texture_rect(tex, dest_rect, false, Color.WHITE)
+		return true
 	var k: float = maxf(1.0, floorf(cell_size * scale_factor / 26.0 + 0.35))
 	var dsz: Vector2 = tex.get_size() * k
 	var foot: Vector2 = center + Vector2(0.0, cell_size * scale_factor * 0.46)

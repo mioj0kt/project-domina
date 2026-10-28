@@ -73,7 +73,11 @@ static func get_all_action_cards() -> Array[ActionCard]:
 		CardAmbush.new(),
 		CardScorchedEarth.new(),
 		CardTripleToss.new(),
-		CardLightUp.new()
+		CardLightUp.new(),
+		CardPlantTree.new(),
+		CardPlantCactus.new(),
+		CardPlaceSarcophagus.new(),
+		CardFrogBait.new()
 	]
 	return cards
 
