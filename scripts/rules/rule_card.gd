@@ -7,7 +7,8 @@ enum Category {
 	PROMOTION,
 	TURN,
 	BOARD,
-	COMBO
+	COMBO,
+	BOSS   # leis de chefe (especiais): não entram em loja/baú/altar
 }
 
 enum Scope {
@@ -109,6 +110,7 @@ static func get_category_color(cat: int) -> Color:
 		Category.PROMOTION: return Color(1.00, 0.82, 0.20)
 		Category.TURN:      return Color(0.70, 0.35, 0.95)
 		Category.BOARD:     return Color(0.25, 0.85, 0.45)
+		Category.BOSS:      return Color(0.90, 0.20, 0.55)
 		_:                  return Color(1.00, 0.55, 0.15)
 
 static func get_category_name(cat: int) -> String:
@@ -118,6 +120,7 @@ static func get_category_name(cat: int) -> String:
 		Category.PROMOTION: return "PROMOÇÃO"
 		Category.TURN:      return "TURNO"
 		Category.BOARD:     return "TABULEIRO"
+		Category.BOSS:      return "CHEFE"
 		_:                  return "COMBO"
 
 static func get_category_slug(cat: int) -> String:
@@ -127,6 +130,7 @@ static func get_category_slug(cat: int) -> String:
 		Category.PROMOTION: return "yellow"
 		Category.TURN:      return "purple"
 		Category.BOARD:     return "green"
+		Category.BOSS:      return "boss"
 		_:                  return "orange"
 
 # Leis valem mais que Cartas da mesma raridade: ficam ativas na run inteira.

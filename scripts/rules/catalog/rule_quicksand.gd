@@ -9,7 +9,7 @@ func _init() -> void:
 	boss_law = true
 	name = "Areia Movediça"
 	description = "4 casas de areia movediça trocam de lugar a cada 4 rodadas. Quem POUSA numa delas fica preso e perde a próxima jogada (as suas peças e as do chefe). Elimine todo o exército inimigo pra vencer."
-	category = Category.BOARD
+	category = Category.BOSS
 	scope = Scope.BOTH
 	priority = 1
 	cost = 0

@@ -9,7 +9,7 @@ func _init() -> void:
 	boss_law = true
 	name = "Sarcófagos"
 	description = "A cada 3 rodadas surge um sarcófago numa casa vazia. Ele bloqueia o caminho, mas qualquer lado pode derrubá-lo pulando por cima (opcional, sem ouro) — e derrubar um sarcófago liberta uma múmia do chefe naquela casa. Elimine todo o exército inimigo pra vencer."
-	category = Category.BOARD
+	category = Category.BOSS
 	scope = Scope.BOTH
 	priority = 1
 	cost = 0

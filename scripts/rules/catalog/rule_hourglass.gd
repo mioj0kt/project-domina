@@ -9,7 +9,7 @@ func _init() -> void:
 	boss_law = true
 	name = "Ampulheta"
 	description = "A cada 4 rodadas a areia soterra mais uma coluna de cada lado do tabuleiro (as próximas aparecem marcadas; casas ocupadas são soterradas quando esvaziam). O tabuleiro encolhe. Elimine todo o exército inimigo pra vencer."
-	category = Category.BOARD
+	category = Category.BOSS
 	scope = Scope.BOTH
 	priority = 1
 	cost = 0

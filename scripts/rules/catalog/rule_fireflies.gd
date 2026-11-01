@@ -9,7 +9,7 @@ func _init() -> void:
 	boss_law = true
 	name = "Vaga-lumes"
 	description = "Vaga-lumes voam pelas casas claras, 1 casa por rodada (o próximo passo aparece marcado). Peças ao lado de um vaga-lume não podem ser capturadas — as suas e as do chefe. Elimine todo o exército inimigo pra vencer."
-	category = Category.BOARD
+	category = Category.BOSS
 	scope = Scope.BOTH
 	priority = 1
 	cost = 0

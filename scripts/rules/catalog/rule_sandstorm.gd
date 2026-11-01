@@ -9,7 +9,7 @@ func _init() -> void:
 	boss_law = true
 	name = "Tempestade de Areia"
 	description = "A cada 3 rodadas a areia cobre 4 casas vazias por 2 rodadas: ninguém pode passar nem pousar nelas (as próximas aparecem marcadas). Elimine todo o exército inimigo pra vencer."
-	category = Category.BOARD
+	category = Category.BOSS
 	scope = Scope.BOTH
 	priority = 1
 	cost = 0
