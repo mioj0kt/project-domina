@@ -30,11 +30,13 @@ const ISLAND_PATHS: Array[String] = [
 	"res://assets/sprites/ui/ilhas/ilha_1.png", "res://assets/sprites/ui/ilhas/ilha_2.png",
 	"res://assets/sprites/ui/ilhas/ilha_3.png", "res://assets/sprites/ui/ilhas/ilha_4.png",
 	"res://assets/sprites/ui/ilhas/ilha_5.png", "res://assets/sprites/ui/ilhas/ilha_6.png",
+	"res://assets/sprites/ui/ilhas/ilha_7.png", "res://assets/sprites/ui/ilhas/ilha_8.png",
+	"res://assets/sprites/ui/ilhas/ilha_9.png",
 ]
 const ISLAND_DEPTHS: Array[Dictionary] = [
-	{"scale": 2, "tint": 0.55, "speed": 4.0, "bob": 4.0},
-	{"scale": 3, "tint": 0.75, "speed": 8.0, "bob": 6.0},
-	{"scale": 4, "tint": 0.95, "speed": 13.0, "bob": 8.0},
+	{"scale": 0.5, "tint": 0.55, "speed": 4.0, "bob": 4.0},
+	{"scale": 0.7, "tint": 0.75, "speed": 8.0, "bob": 6.0},
+	{"scale": 0.95, "tint": 0.95, "speed": 13.0, "bob": 8.0},
 ]
 const PIECE_PATHS: Array[String] = [
 	"res://assets/sprites/pieces/white.png", "res://assets/sprites/pieces/black.png",
@@ -234,7 +236,8 @@ func _build_floaters(_fixed_rng: RandomNumberGenerator) -> void:
 		var d: Dictionary = ISLAND_DEPTHS[int(item.z)]
 		var spr = Sprite2D.new()
 		spr.texture = _island_texs[int(island_bag.pop_back())]
-		spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		# Ilhas novas são arte grande: reduzidas por profundidade, com filtro suave.
+		spr.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		spr.scale = Vector2(d["scale"], d["scale"])
 		var t: float = d["tint"]
 		spr.modulate = Color(t, t, t, 1.0 * floater_alpha)
@@ -288,5 +291,4 @@ func _update_floaters(delta: float) -> void:
 			var bs: float = f["base_scale"]
 			n.scale.x = maxf(0.2, absf(cos(_t * 0.9 + f["phase"]))) * bs
 
-# Ilha-tabuleiro vista de cima/de frente: topo quadriculado, borda de madeira
-# e base de rocha em degraus que afunila. 8 px por casa (altura da casa 5 px).
+# (As ilhas agora vêm prontas de assets/sprites/ui/ilhas/.)

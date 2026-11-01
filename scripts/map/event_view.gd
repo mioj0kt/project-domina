@@ -100,7 +100,6 @@ const NOMAD_DUEL_BONUS: int = 14
 const RELIC_BUY_COST: int = 12
 const RELIC_SELL_GOLD: int = 10
 const OBELISK_PRAYER_GOLD: int = 6
-const KILN_HELP_GOLD: int = 5
 const SCRIBE_ALMS_GOLD: int = 5
 const OASIS_DRINK_CARD_CHANCE: float = 0.45
 const OASIS_FEVER_LOSS: int = 6
@@ -343,14 +342,6 @@ func _build_events() -> Array[Dictionary]:
 			]
 		},
 		{
-			"id": "kiln", "biome": "deserto", "title": "FORJA DAS DUNAS",
-			"text": "Um ferreiro de pele curtida mantém um forno de barro aceso no meio do nada. O metal ali brilha mais do que deveria.",
-			"choices": [
-				{"id": "forge", "label": "FORJAR (%d ouro)" % FORGE_COST, "hint": "1 carta aleatória sobe de raridade", "requires": "upgradable_%d" % FORGE_COST},
-				{"id": "help", "label": "AJUDAR NO FORNO", "hint": "+%d ouro pelo trabalho" % KILN_HELP_GOLD},
-			]
-		},
-		{
 			"id": "scribe", "biome": "deserto", "title": "ESCRIBA DE PAPIRO",
 			"text": "Um escriba sentado sobre rolos de papiro ergue os olhos: \"As Leis que você carrega foram escritas às pressas. Posso reescrever uma, se o preço for justo.\"",
 			"choices": [
@@ -446,7 +437,7 @@ const EVENT_TINTS := {
 	"hunter": Color("#4a6a3a"), "witch": Color("#5a3a7a"), "monk": Color("#7a6a3a"),
 	"mirage": Color("#3a8a9a"), "sarcophagus": Color("#8a7a3a"), "caravan": Color("#8a5a3a"),
 	"sphinx": Color("#9a8a5a"), "sandstorm": Color("#a86a3a"), "nomad": Color("#3a5a8a"),
-	"relics": Color("#7a5a8a"), "obelisk": Color("#8a8a5a"), "kiln": Color("#a8502a"),
+	"relics": Color("#7a5a8a"), "obelisk": Color("#8a8a5a"),
 	"scribe": Color("#6a7a5a"), "oasis": Color("#2a8a7a"), "bandits": Color("#8a3a3a"),
 }
 
@@ -1089,11 +1080,6 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 			if given != null:
 				preview_hbox.add_child(_labeled_card_visual("OFERECIDA", given, Color(1.0, 0.6, 0.6, 0.8)))
 			return "A areia engole a oferenda. %s" % _give_random_law()
-		"kiln":
-			if choice_id == "help":
-				RunManager.add_gold(KILN_HELP_GOLD)
-				return "Você bombeia o fole sob o sol por uma hora: +%d de ouro." % KILN_HELP_GOLD
-			return _forge_card()
 		"scribe":
 			if choice_id == "alms":
 				RunManager.add_gold(SCRIBE_ALMS_GOLD)

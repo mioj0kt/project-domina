@@ -125,7 +125,7 @@ func remove_rule(rule_id: String) -> void:
 	rules_updated.emit()
 
 func start_new_run():
-	gold = 10000
+	gold = 0
 	shop_purchases = 0
 	current_board_size = Vector2i(8, 8)
 	current_board_layout = Board.LAYOUT_CLASSIC
@@ -142,7 +142,6 @@ func start_new_run():
 	seen_event_ids.clear()
 	rule_pipeline.clear_rules()
 	_init_default_deck()
-	player_deck.assign([CardLateralBridge.new(), CardVerticalBridge.new()])
 	MetaProgress.reset_run_stats()
 	# A mochila do Grimório é entregue só pelo botão JOGAR (MetaProgress.consume_bag_into_run).
 	

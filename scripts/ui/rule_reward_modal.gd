@@ -7,11 +7,18 @@ signal reward_completed()
 # lado a lado, então em tamanho cheio ficam gigantes. Essa escala traz de
 # volta um tamanho de exibição razoável só pro modal de recompensa.
 const REWARD_SCALE: float = 0.8
+# Sem nenhuma Lei nova para sortear (jogador já tem todas as desbloqueadas):
+# a recompensa vira ouro, em vez de um sorteio vazio.
+const NO_LAW_GOLD: int = 40
+const SUBTITLE_DRAFT: String = "Escolha 1 nova Lei Permanente para o seu Grimório (Passe o mouse para ler)"
+const SUBTITLE_NO_LAW: String = "Você já tem todas as Leis que conhece! Desbloqueie mais no Grimório. Em troca, receba ouro."
 
 var container: HBoxContainer
 var tooltip: RuleCardTooltip
 var root_ctrl: Control
 var discard_modal: RuleDiscardModal
+var _subtitle_label: Label
+var _skip_btn: Button
 
 func _init() -> void:
 	layer = 120
@@ -55,7 +62,8 @@ func _build_ui() -> void:
 	header_vbox.add_child(title)
 
 	var subtitle = Label.new()
-	subtitle.text = "Escolha 1 nova Lei Permanente para o seu Grimório (Passe o mouse para ler)"
+	subtitle.text = SUBTITLE_DRAFT
+	_subtitle_label = subtitle
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_font_size_override("font_size", 20)
 	subtitle.add_theme_color_override("font_color", Color(0.7, 0.8, 0.95))
@@ -76,6 +84,7 @@ func _build_ui() -> void:
 		reward_completed.emit()
 	)
 	center_vbox.add_child(skip_btn)
+	_skip_btn = skip_btn
 
 	# Limite de Leis atingido (ou incompatibilidade): o jogador escolhe qual
 	# Lei revogar. Cancelar volta pro draft, sem perder a escolha.
@@ -98,6 +107,23 @@ func open_reward_draft() -> void:
 	var selected_rules = LootTables.get_random_rules(3, owned_ids)
 
 	visible = true
+	_subtitle_label.text = SUBTITLE_DRAFT if not selected_rules.is_empty() else SUBTITLE_NO_LAW
+	_skip_btn.visible = not selected_rules.is_empty()
+
+	if selected_rules.is_empty():
+		var gold_btn = Button.new()
+		gold_btn.text = "RECEBER %d OURO" % NO_LAW_GOLD
+		gold_btn.custom_minimum_size = Vector2(340, 60)
+		gold_btn.add_theme_font_size_override("font_size", 24)
+		PixelUI.skin_button(gold_btn, Color(0.85, 0.64, 0.25), "", "icone_confirmar")
+		gold_btn.pressed.connect(func():
+			if RunManager != null:
+				RunManager.add_gold(NO_LAW_GOLD)
+			visible = false
+			reward_completed.emit()
+		)
+		container.add_child(gold_btn)
+		return
 
 	for i in range(selected_rules.size()):
 		var rule = selected_rules[i]

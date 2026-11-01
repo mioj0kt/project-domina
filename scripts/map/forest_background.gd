@@ -104,16 +104,24 @@ const DESERT_LIGHT_TILES: Array[String] = [
 	"casas/casa_clara_textura_3", "casas/casa_clara_textura_4", "casas/casa_clara_textura_5",
 	"casas/casa_clara_textura_6",
 ]
-const DESERT_DARK_TILES: Array[String] = ["casas/casa_escura", "casas/casa_escura_2", "casas/casa_escura_3"]
+const DESERT_DARK_TILES: Array[String] = [
+	"casas/casa_escura", "casas/casa_escura_2", "casas/casa_escura_3", "casas/casa_escura_4",
+	"casas/casa_escura_5", "casas/casa_escura_6", "casas/casa_escura_7", "casas/casa_escura_8",
+	"casas/casa_escura_9", "casas/casa_escura_10", "casas/casa_escura_11", "casas/casa_escura_12",
+]
 const DESERT_TREES_LIGHT: Array[String] = [
-	"monolitos/monolito_1_chao_claro", "monolitos/monolito_3_chao_claro", "monolitos/monolito_6_chao_claro",
+	"monolitos/monolito_1_chao_claro", "monolitos/monolito_3_chao_claro", "monolitos/monolito_6_chao_claro", "monolitos/monolito_7_chao_claro", "monolitos/monolito_9_chao_claro", "monolitos/monolito_11_chao_claro", "monolitos/monolito_13_chao_claro",
+	"monolitos/monolito_1_chao_claro", "monolitos/monolito_3_chao_claro", "monolitos/monolito_6_chao_claro", "monolitos/monolito_7_chao_claro", "monolitos/monolito_9_chao_claro", "monolitos/monolito_11_chao_claro", "monolitos/monolito_13_chao_claro",
+	"monolitos/monolito_1_chao_claro", "monolitos/monolito_3_chao_claro", "monolitos/monolito_6_chao_claro", "monolitos/monolito_7_chao_claro", "monolitos/monolito_9_chao_claro", "monolitos/monolito_11_chao_claro", "monolitos/monolito_13_chao_claro",
 	"torres/torre_enterrada_1_chao_claro", "torres/torre_enterrada_3_chao_claro", "torres/torre_enterrada_6_chao_claro",
-	"monolitos/monolito_1_chao_claro", "monolitos/monolito_3_chao_claro",
+	"torres/torre_enterrada_1_chao_claro", "torres/torre_enterrada_3_chao_claro", "torres/torre_enterrada_6_chao_claro",
 ]
 const DESERT_TREES_DARK: Array[String] = [
-	"monolitos/monolito_2_chao_escuro", "monolitos/monolito_4_chao_escuro", "monolitos/monolito_5_chao_escuro",
+	"monolitos/monolito_2_chao_escuro", "monolitos/monolito_4_chao_escuro", "monolitos/monolito_5_chao_escuro", "monolitos/monolito_8_chao_escuro", "monolitos/monolito_10_chao_escuro", "monolitos/monolito_12_chao_escuro", "monolitos/monolito_14_chao_escuro",
+	"monolitos/monolito_2_chao_escuro", "monolitos/monolito_4_chao_escuro", "monolitos/monolito_5_chao_escuro", "monolitos/monolito_8_chao_escuro", "monolitos/monolito_10_chao_escuro", "monolitos/monolito_12_chao_escuro", "monolitos/monolito_14_chao_escuro",
+	"monolitos/monolito_2_chao_escuro", "monolitos/monolito_4_chao_escuro", "monolitos/monolito_5_chao_escuro", "monolitos/monolito_8_chao_escuro", "monolitos/monolito_10_chao_escuro", "monolitos/monolito_12_chao_escuro", "monolitos/monolito_14_chao_escuro",
 	"torres/torre_enterrada_2_chao_escuro", "torres/torre_enterrada_4_chao_escuro", "torres/torre_enterrada_5_chao_escuro",
-	"monolitos/monolito_2_chao_escuro", "monolitos/monolito_4_chao_escuro",
+	"torres/torre_enterrada_2_chao_escuro", "torres/torre_enterrada_4_chao_escuro", "torres/torre_enterrada_5_chao_escuro",
 ]
 const DESERT_BUSHES_LIGHT: Array[String] = [
 	"vegetacao/arbusto_4_chao_claro", "vegetacao/arbusto_6_chao_claro",
@@ -132,22 +140,21 @@ const DESERT_GRASS: Array[String] = [
 	"vegetacao/flor_do_deserto", "vegetacao/flor_do_deserto_2",
 ]
 const DESERT_BIG_LIGHT: Array[String] = [
-	"ruinas/coluna_quebrada_chao_claro", "ruinas/coluna_caida_chao_claro", "ruinas/tora_de_ruina_chao_claro",
-	"ruinas/carcaca_de_vaso_grande_chao_claro", "ruinas/laje_inclinada_chao_claro", "ruinas/degrau_soterrado_chao_claro",
-	"pedras/rocha", "pedras/rochas_grupo", "pedras/pedra_grande_2", "pedras/pedra_rachada", "ruinas/escada_de_ruina",
+	"ruinas/coluna_quebrada_chao_claro", "ruinas/laje_inclinada_chao_claro",
+	"pedras/rocha", "pedras/rochas_grupo", "pedras/pedra_grande_2", "pedras/pedra_rachada",
+	"pedras/rocha", "pedras/rochas_grupo",
 ]
 const DESERT_BIG_DARK: Array[String] = [
-	"ruinas/coluna_quebrada_chao_escuro", "ruinas/coluna_caida_chao_escuro", "ruinas/tora_de_ruina_chao_escuro",
-	"ruinas/carcaca_de_vaso_grande_chao_escuro", "ruinas/laje_inclinada_chao_escuro", "ruinas/degrau_soterrado_chao_escuro",
-	"pedras/rocha", "pedras/rochas_grupo", "pedras/pedra_grande_3", "pedras/pedra_lisa", "ruinas/escada_de_ruina",
+	"ruinas/coluna_quebrada_chao_escuro", "ruinas/laje_inclinada_chao_escuro",
+	"pedras/rocha", "pedras/rochas_grupo", "pedras/pedra_grande_3", "pedras/pedra_lisa",
+	"pedras/rocha", "pedras/rochas_grupo",
 ]
 const DESERT_SMALL: Array[String] = [
 	"pedras/pedrinha", "pedras/pedrinha_clara", "pedras/pedra", "pedras/seixos", "pedras/pedra_media_1",
 	"pedras/pedra_media_2", "folhas/folha_seca_1", "folhas/folha_seca_2", "folhas/folha_seca_clara",
 	"ossos_e_restos/osso", "ossos_e_restos/caco_de_vaso", "ossos_e_restos/corda_velha",
 	"ossos_e_restos/cranio_pequeno", "ossos_e_restos/escaravelho", "ossos_e_restos/peca_de_xadrez_quebrada",
-	"ruinas/bloco_de_ruina", "ruinas/bloco_de_ruina_2", "ruinas/bloco_de_ruina_3",
-	"ruinas/hieroglifo_no_chao", "ruinas/laje_com_coroa",
+	"ruinas/bloco_de_ruina", "ruinas/hieroglifo_no_chao",
 	"poeira/areia_soprada_1", "poeira/areia_soprada_2", "poeira/areia_soprada_3",
 ]
 
@@ -177,7 +184,7 @@ const THEMES: Dictionary = {
 		"grass_light": DESERT_GRASS, "grass_dark": DESERT_GRASS,
 		"big_light": DESERT_BIG_LIGHT, "big_dark": DESERT_BIG_DARK,
 		"small_light": DESERT_SMALL, "small_dark": DESERT_SMALL,
-		"tree_ground_y": 0.82, "tree_density": 0.8, "grass_scale": 0.7,
+		"tree_ground_y": 0.82, "tree_density": 2.4, "grass_scale": 0.7,
 		"frame": "bordas", "frame_pad": Vector2(8, 10),
 		"clearing_node": "", "clearing_boss": "",
 		"swirls": "tabuleiro/poeira/redemoinho_pequeno",

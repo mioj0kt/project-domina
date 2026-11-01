@@ -235,6 +235,17 @@ func _render_laws_stock() -> void:
 		var law = laws_for_sale[i]
 		var law_widget = _create_law_item_ui(law, i)
 		laws_container.add_child(law_widget)
+	# Nenhuma Lei à venda (o jogador já tem todas as que desbloqueou): avisa, em vez
+	# de deixar a fileira vazia. No tutorial a fileira some de propósito depois da compra.
+	if laws_for_sale.is_empty() and not TutorialManager.is_active:
+		var msg := Label.new()
+		msg.text = "Você já tem todas as Leis que conhece!\nDesbloqueie mais no Grimório."
+		msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		msg.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		msg.add_theme_font_size_override("font_size", 26)
+		msg.add_theme_color_override("font_color", Color(0.7, 0.8, 0.95))
+		msg.custom_minimum_size = Vector2(0, RuleCardVisual.CARD_SIZE * SHOP_CARD_SCALE * 0.5)
+		laws_container.add_child(msg)
 	_laws_revealed = true
 
 func _create_law_item_ui(law: RuleCard, index: int) -> Control:

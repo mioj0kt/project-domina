@@ -34,7 +34,10 @@ const _DESERT_LIGHT: Array[String] = [
 	"casa_clara_textura_1", "casa_clara_textura_2", "casa_clara_textura_3",
 	"casa_clara_textura_4", "casa_clara_textura_5", "casa_clara_textura_6",
 ]
-const _DESERT_DARK: Array[String] = ["casa_escura", "casa_escura_2", "casa_escura_3"]
+const _DESERT_DARK: Array[String] = [
+	"casa_escura", "casa_escura_2", "casa_escura_3", "casa_escura_4", "casa_escura_5", "casa_escura_6",
+	"casa_escura_7", "casa_escura_8", "casa_escura_9", "casa_escura_10", "casa_escura_11", "casa_escura_12",
+]
 const _DESERT_FRAME := "borda/borda_tabuleiro_13x12"
 # Medidas nativas (px) da folha da borda; iguais às de ForestBackground.
 const _D_TILE: float = 26.0
