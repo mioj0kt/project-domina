@@ -7,7 +7,7 @@ func _init() -> void:
 	id = "vengeful_fury"
 	name = "Fúria Vingativa"
 	description = "Ao perder uma peça, a próxima peça sua a se mover ganha +1 casa de alcance de captura neste turno."
-	category = Category.COMBO
+	category = Category.CAPTURE
 	scope = Scope.PLAYER_ONLY
 	rarity = Rarity.EPIC
 	priority = 18

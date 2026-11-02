@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "corrupt"
 	icon_path = "res://assets/sprites/cards/icons/corrupt.png"
 	name = "Corromper"
-	description = "Rouba permanentemente uma peca comum inimiga isolada (sem nenhum aliado dela adjacente) para o seu lado."
+	description = "Toma para sempre uma peça comum inimiga isolada (sem aliadas coladas nela)."
 	rarity = Rarity.EPIC
 	target_type = TargetType.ENEMY_PIECE
 
@@ -33,33 +33,16 @@ func execute(board: Board, target_pos: Vector2i, human_team: int, context: Dicti
 	var piece: BoardPiece = board.grid[target_pos.y][target_pos.x]
 	if piece == Board.EMPTY:
 		return
+	await _convert_piece(board, target_pos, piece, human_team, context)
 
-	piece.owner_team = human_team
-
-	# Se a peça corrompida já estiver na fileira de promoção do NOVO dono,
-	# ela vira Dama na hora — mesma regra de quando uma peça anda até lá
-	# normalmente (Board.make_move usa a mesma lógica).
+# Troca o dono com a animação de conversão (CardFx.convert). Se a peça já estiver
+# na fileira de promoção do NOVO dono, ela vira Dama na hora: mesma regra de
+# quando uma peça anda até lá (Board.make_move).
+func _convert_piece(board: Board, pos: Vector2i, piece: BoardPiece, human_team: int, context: Dictionary) -> void:
+	var old_team: int = piece.owner_team
 	var promotion_row = 0 if (human_team == board.human_team_color) else (board.rows - 1)
-	if target_pos.y == promotion_row:
-		piece.is_king = true
-
-	var main_node = context.get("main")
-	if main_node and "king_animation_view" in main_node and main_node.king_animation_view != null:
-		_play_corrupt_animation(main_node, target_pos, piece)
-
-# Função separada (não aguardada por execute) porque ActionCard.execute()
-# não é assíncrona — mas ainda precisamos aguardar a animação pra saber a
-# hora certa de limpar animating_coronation_tile.
-func _play_corrupt_animation(main_node, target_pos: Vector2i, piece: BoardPiece) -> void:
-	# É essa flag que faz o BoardRenderer parar de desenhar a peça pelo
-	# caminho normal enquanto a animação cuida dela — sem isso, as duas
-	# renderizações brigam ao mesmo tempo (o "efeito estranho").
-	main_node.animating_coronation_tile = target_pos
-
-	var center = main_node.board_offset + Vector2(
-		target_pos.x * main_node.cell_size + main_node.cell_size / 2.0,
-		target_pos.y * main_node.cell_size + main_node.cell_size / 2.0
-	)
-	await main_node.king_animation_view.play_coronation(center, main_node.cell_size, piece)
-
-	main_node.animating_coronation_tile = Vector2i(-1, -1)
+	await CardFx.convert(context.get("main"), pos, old_team, human_team, func():
+		piece.owner_team = human_team
+		piece.rooted_turns = 0
+		if pos.y == promotion_row:
+			piece.is_king = true)

@@ -6,7 +6,7 @@ var has_used_extra_step: bool = false
 func _init() -> void:
 	id = "second_move"
 	name = "Segundo Movimento"
-	description = "Ao realizar um passo simples sem capturar, você pode mover outra peça antes de passar o turno."
+	description = "Depois de um passo simples (sem captura), você pode mover outra peça antes de passar o turno."
 	category = Category.TURN
 	scope = Scope.PLAYER_ONLY
 	priority = 50

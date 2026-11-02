@@ -10,7 +10,7 @@ func _init() -> void:
 	id = "frog_devourer"
 	boss_law = true
 	name = "Sapo Devorador"
-	description = "A cada poucos turnos, o sapo estica a lingua nas casas com moscas, devorando qualquer peca que estiver la. Elimine todo o exercito inimigo pra vencer este duelo."
+	description = "De tempos em tempos, o sapo estica a língua nas casas com mosca e devora qualquer peça que estiver ali."
 	category = Category.BOSS
 	scope = Scope.BOTH
 	priority = 1

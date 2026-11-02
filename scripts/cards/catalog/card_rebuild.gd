@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "rebuild"
 	icon_path = "res://assets/sprites/cards/icons/rebuild.png"
 	name = "Reconstrução"
-	description = "Revive uma peça que foi capturada e a posiciona em uma casa vazia da sua primeira fileira."
+	description = "Revive uma peça sua capturada numa casa vazia da primeira fileira."
 	rarity = Rarity.RARE
 	target_type = TargetType.EMPTY_TILE
 
@@ -30,5 +30,6 @@ func is_valid_target(board: Board, target_pos: Vector2i, human_team: int, contex
 		return target_pos.y == (board.rows - 1)
 	return target_pos.y == 0
 
-func execute(board: Board, target_pos: Vector2i, human_team: int, _context: Dictionary = {}) -> void:
+func execute(board: Board, target_pos: Vector2i, human_team: int, context: Dictionary = {}) -> void:
 	board.grid[target_pos.y][target_pos.x] = BoardPiece.new(human_team, false)
+	await CardFx.spawn(context.get("main"), target_pos, human_team)

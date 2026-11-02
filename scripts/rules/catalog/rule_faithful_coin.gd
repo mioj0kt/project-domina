@@ -9,7 +9,7 @@ extends RuleCard
 func _init() -> void:
 	id = "faithful_coin"
 	name = "Lei da Moeda Fiel"
-	description = "Depois do sorteio de cores, a primeira da partida será viciada"
+	description = "A primeira moeda girada no duelo (de carta ou Lei) cai na cor das suas peças."
 	category = Category.TURN
 	scope = Scope.PLAYER_ONLY
 	rarity = Rarity.RARE

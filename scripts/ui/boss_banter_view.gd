@@ -11,10 +11,10 @@ extends CanvasLayer
 # Sprite próprio do chefe: assets/sprites/guide/boss_<bioma>_talk.png (tira de
 # 8 quadros 32x32). Sem ele, usa o rosto do Irmão tingido com a cor do bioma.
 
-const FACE_PX: float = 104.0
-const BUBBLE_W: float = 425.0
+const FACE_PX: float = 96.0
+const BUBBLE_W: float = 560.0
 const FONT_SIZE: int = 32
-const BUBBLE_H: float = 210.0   # altura do balão (até 4 linhas)
+const BUBBLE_H: float = 140.0   # altura do balão (até 3 linhas)
 const TYPE_CPS: float = 38.0       # caracteres por segundo
 const ALWAYS := ["start", "win", "lose"]
 
@@ -113,10 +113,9 @@ func _build() -> void:
 	_name_label = Label.new()
 	_name_label.text = BossDialogue.boss_name(biome)
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_label.add_theme_font_size_override("font_size", 18)
+	_name_label.add_theme_font_size_override("font_size", 14)
 	_name_label.add_theme_color_override("font_color", BossDialogue.boss_tint(biome))
-	_name_label.custom_minimum_size = Vector2(FACE_PX, 0)
-	_name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_name_label.custom_minimum_size = Vector2(150.0, 0)
 	fv.add_child(_name_label)
 
 	_bubble = PanelContainer.new()
@@ -234,22 +233,22 @@ func play_intro() -> void:
 	_intro_fx.queue_free()
 	intro_playing = false
 
-# Posiciona na coluna da direita, logo abaixo do quadro de Leis do inimigo:
-# espaço livre, grande e no campo de visão. Balão em cima (largura do quadro),
-# rosto embaixo. Chame depois do layout assentar.
-func place_near(ref: Control) -> void:
-	var r: Rect2 = ref.get_global_rect()
+# Posiciona no TOPO da tela, ao lado da mão do inimigo (centro-direita): perto do
+# tabuleiro e do olhar do jogador, em vez de escondido no canto. Rosto à esquerda,
+# balão à direita. `ref` não é mais usado (fica só por compatibilidade).
+# Chame depois do layout assentar.
+func place_near(_ref: Control = null) -> void:
 	var vp: Vector2 = get_viewport().get_visible_rect().size
-	var w: float = maxf(r.size.x, 340.0)
 	var frame: Control = _root.get_node("Frame")
-	var fw: float = FACE_PX + 28.0
-	var bw: float = w - fw - 10.0
-	var y0: float = minf(r.end.y + 12.0, vp.y - BUBBLE_H - 8.0)
+	var y0: float = 4.0
+	var x0: float = vp.x * 0.5 + 92.0
+	var fsz: Vector2 = frame.get_combined_minimum_size()
+	var bw: float = minf(BUBBLE_W, vp.x - 100.0 - (x0 + fsz.x + 10.0))
 	_bubble.custom_minimum_size = Vector2(bw, BUBBLE_H)
 	_label.custom_minimum_size = Vector2(bw - 40.0, 0)
 	_bubble.size = Vector2(bw, BUBBLE_H)
-	_bubble.position = Vector2(r.position.x + fw + 10.0, y0)
-	frame.position = Vector2(r.position.x, y0 + BUBBLE_H - frame.size.y)
+	frame.position = Vector2(x0, y0)
+	_bubble.position = Vector2(x0 + fsz.x + 10.0, y0 + maxf(0.0, fsz.y - BUBBLE_H))
 
 # Pronuncia um evento (com ritmo). `force` ignora chance e tempo mínimo.
 func react(event: String, force: bool = false) -> void:

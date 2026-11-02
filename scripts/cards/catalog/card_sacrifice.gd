@@ -5,8 +5,8 @@ func _init() -> void:
 	id = "sacrifice"
 	icon_path = "res://assets/sprites/cards/icons/sacrifice.png"
 	name = "Sacrifício"
-	description = "Remove voluntariamente uma peça sua do tabuleiro para ganhar +15 de Ouro e comprar 1 carta extra."
-	rarity = Rarity.RARE
+	description = "Remove uma peça sua do tabuleiro: ganha +15 de ouro e 1 carta extra."
+	rarity = Rarity.COMMON
 	target_type = TargetType.ALLY_PIECE
 
 func execute(board: Board, target_pos: Vector2i, _human_team: int, context: Dictionary = {}) -> void:

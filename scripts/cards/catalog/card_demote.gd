@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "demote"
 	icon_path = "res://assets/sprites/cards/icons/demote.png"
 	name = "Rebaixar"
-	description = "Uma Dama inimiga volta a ser uma peça comum."
+	description = "Uma Dama inimiga volta a ser peça comum."
 	rarity = Rarity.RARE
 	target_type = TargetType.ENEMY_PIECE
 
@@ -28,8 +28,9 @@ func execute(board: Board, target_pos: Vector2i, _human_team: int, context: Dict
 	# Última Chance: salva = continua Dama (o próprio perigo era virar peça comum).
 	if await RuleLastChance.try_save(context.get("main"), target_pos, piece, true):
 		return
-	piece.is_king = false
-	piece.temp_king_turns = 0
+	await CardFx.demote(context.get("main"), target_pos, func():
+		piece.is_king = false
+		piece.temp_king_turns = 0)
 	_pop_banner(context, "REBAIXADA!", Color(0.9, 0.45, 0.4), target_pos)
 
 func _is_enemy_king(board: Board, pos: Vector2i, team: int) -> bool:

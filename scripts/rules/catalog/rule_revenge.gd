@@ -6,7 +6,7 @@ var revenge_charges: int = 0
 func _init() -> void:
 	id = "revenge"
 	name = "Vingança"
-	description = "Quando uma peça aliada é destruída, acumula 1 Carga de Vingança. Com 5 cargas sua próxima captura consome todas as cargas para gerar +5 de Ouro e coroar o atacante a Dama imediatamente."
+	description = "Cada peça sua destruída dá 1 Carga de Vingança. Com 5 cargas, sua próxima captura gasta todas: +5 de ouro e coroa a peça que capturou."
 	category = Category.CAPTURE
 	scope = Scope.PLAYER_ONLY
 	priority = 25

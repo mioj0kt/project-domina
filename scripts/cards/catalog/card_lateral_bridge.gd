@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "lateral_bridge"
 	icon_path = "res://assets/sprites/cards/icons/lateral_bridge.png"
 	name = "Ponte Lateral"
-	description = "Construa uma ponte numa casa clara a sua escolha por 4 rodadas. Todas as peças lado dela podem atravessar para o outro lado se a casa de destino estiver livre."
+	description = "Cria uma ponte numa casa clara por 4 rodadas. Peças à esquerda ou à direita dela pulam para o outro lado, se a casa estiver livre."
 	rarity = Rarity.COMMON
 	target_type = TargetType.EMPTY_TILE
 

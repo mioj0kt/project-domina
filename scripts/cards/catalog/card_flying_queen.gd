@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "flying_queen"
 	icon_path = "res://assets/sprites/cards/icons/flying_queen.png"
 	name = "Dama Voadora"
-	description = "Uma Dama sua move duas vezes neste turno."
+	description = "Uma Dama sua se move duas vezes neste turno."
 	rarity = Rarity.COMMON
 	target_type = TargetType.ALLY_PIECE
 

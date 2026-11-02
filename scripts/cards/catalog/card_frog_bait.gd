@@ -10,7 +10,7 @@ func _init() -> void:
 	id = "frog_bait"
 	icon_path = "res://assets/sprites/cards/icons/frog_bait.png"
 	name = "Isca do Sapo"
-	description = "Pousa uma mosca numa casa escura vazia. Na 2a rodada depois, a lingua do sapo desce e devora QUALQUER peca que estiver la, inclusive as suas."
+	description = "Pousa uma mosca numa casa escura vazia. Duas rodadas depois, a língua do sapo devora a peça que estiver ali, seja de quem for."
 	rarity = Rarity.RARE
 	target_type = TargetType.EMPTY_TILE
 

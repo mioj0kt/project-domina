@@ -4,7 +4,7 @@ extends RuleCard
 func _init() -> void:
 	id = "reverse_movement"
 	name = "Movimento Reverso"
-	description = "Suas peças comuns podem se mover e capturar recuando nas diagonais para trás."
+	description = "Suas peças comuns também andam e capturam para trás, nas diagonais."
 	category = Category.MOVEMENT
 	scope = Scope.PLAYER_ONLY
 	priority = 10

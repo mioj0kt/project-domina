@@ -8,8 +8,8 @@ func _init() -> void:
 	id = "scorched_earth"
 	icon_path = "res://assets/sprites/cards/icons/scorched_earth.png"
 	name = "Terra Queimada"
-	description = "A casa e as 4 vizinhas pegam fogo por 2 turnos: a peça POUSAR nelas é destruída."
-	rarity = Rarity.RARE
+	description = "A casa escolhida e as 4 vizinhas pegam fogo por 2 turnos. Peça que pousar nelas é destruída."
+	rarity = Rarity.EPIC
 	target_type = TargetType.EMPTY_TILE
 
 func is_valid_target(board: Board, target_pos: Vector2i, human_team: int, context: Dictionary = {}) -> bool:

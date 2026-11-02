@@ -5,8 +5,8 @@ func _init() -> void:
 	super._init()
 	id = "place_sarcophagus"
 	icon_path = "res://assets/sprites/cards/icons/place_sarcophagus.png"
-	name = "Sarcofago"
-	description = "Faz surgir um sarcofago numa casa escura vazia a sua escolha. Quando alguem o derrubar (pulando por cima), uma MUMIA nasce no lugar: uma peca comum SUA, mesmo que o inimigo o tenha derrubado."
+	name = "Sarcófago"
+	description = "Coloca um sarcófago numa casa escura vazia. Quem o derrubar pulando por cima solta uma múmia que é peça SUA, mesmo se foi o inimigo que derrubou."
 	rarity = Rarity.EPIC
 
 func _make_piece(owner_team: int) -> BoardPiece:

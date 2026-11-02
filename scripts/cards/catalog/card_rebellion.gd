@@ -9,13 +9,13 @@ func _init() -> void:
 	id = "rebellion"
 	icon_path = "res://assets/sprites/cards/icons/rebellion.png"
 	name = "Rebelião"
-	description = "Converte ate 2 peças comuns inimigas isoladas para o seu lado: a escolhida e mais uma."
+	description = "Toma até 2 peças comuns inimigas isoladas: a escolhida e mais uma."
 	rarity = Rarity.LEGENDARY
 	target_type = TargetType.ENEMY_PIECE
 
 func execute(board: Board, target_pos: Vector2i, human_team: int, context: Dictionary = {}) -> void:
 	# A primeira usa a conversao animada do Corromper.
-	super.execute(board, target_pos, human_team, context)
+	await super.execute(board, target_pos, human_team, context)
 
 	# Segunda peca: qualquer outra comum isolada do inimigo (sorteada).
 	var candidates: Array[Vector2i] = []
@@ -30,9 +30,5 @@ func execute(board: Board, target_pos: Vector2i, human_team: int, context: Dicti
 
 	var second: Vector2i = candidates[randi() % candidates.size()]
 	var piece: BoardPiece = board.grid[second.y][second.x]
-	piece.owner_team = human_team
-	piece.rooted_turns = 0
-	var promotion_row = 0 if (human_team == board.human_team_color) else (board.rows - 1)
-	if second.y == promotion_row:
-		piece.is_king = true
 	_pop_banner(context, "REBELIAO!", Color(0.85, 0.3, 0.3), second)
+	await _convert_piece(board, second, piece, human_team, context)

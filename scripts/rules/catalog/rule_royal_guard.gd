@@ -9,7 +9,7 @@ extends RuleCard
 func _init() -> void:
 	id = "royal_guard"
 	name = "Guarda Real"
-	description = "[LEI INIMIGA] O inimigo começa o duelo com 1 Dama na fileira de trás. Essa Dama não conta para ativar a Morte Súbita."
+	description = "[LEI INIMIGA] O inimigo começa com 1 Dama na fileira de trás. Ela não conta para ativar a Morte Súbita."
 	category = Category.BOARD
 	scope = Scope.AI_ONLY
 	priority = 6

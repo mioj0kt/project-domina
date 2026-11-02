@@ -34,7 +34,7 @@ const BAG_MAX: int = 8
 
 # Conjunto INICIAL (já liberado). O resto se desbloqueia nos montes.
 const STARTER_CARDS: Array[String] = [
-	"second_chance", "lucky_duel", "coin_of_destiny", "heroic_advance", "vision"]
+	"ambush", "lucky_duel", "pause", "heroic_advance", "vision"]
 const STARTER_RULES: Array[String] = [
 	"early_promotion", "reverse_movement", "optional_capture", "power_center", "ascension_law"]
 

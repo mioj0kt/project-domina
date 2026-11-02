@@ -28,6 +28,9 @@ const HOURGLASS_FOREVER := 9999
 const SARCOPHAGUS_INTERVAL_PLIES := 6
 const SARCOPHAGUS_MAX := 4
 const SARCOPHAGUS_START := 2
+# Depois dessa quantidade de múmias, os sarcófagos só bloqueiam a casa.
+const MUMMY_MAX := 3
+var _mummies_raised: int = 0
 const CACTUS_INTERVAL_PLIES := 6
 const CACTUS_MAX := 5
 const CACTUS_START := 3
@@ -46,6 +49,7 @@ func setup(p_board: Board, p_human_team: int, p_ai_team: int, p_sudden_death_mgr
 	super.setup(p_board, p_human_team, p_ai_team, p_sudden_death_mgr)
 	telegraph_tiles = []
 	_desert_ply = 0
+	_mummies_raised = 0
 	_buried_per_side = 0
 	_last_sun_key = ""
 
@@ -135,7 +139,10 @@ func advance_turn() -> Array:
 			for pos2 in board.released_mummies:
 				if board.released_mummy_owner.has(pos2):
 					continue   # múmia de carta: quem nasce é o controlador do duelo
+				if _mummies_raised >= MUMMY_MAX:
+					continue
 				if board.grid[pos2.y][pos2.x] == Board.EMPTY and not board.scorched_tiles.has(pos2):
+					_mummies_raised += 1
 					var mummy := BoardPiece.new(ai_team, false)
 					mummy.is_mummy = true
 					board.grid[pos2.y][pos2.x] = mummy

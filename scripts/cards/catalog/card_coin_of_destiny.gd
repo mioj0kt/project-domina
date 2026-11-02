@@ -5,8 +5,8 @@ func _init() -> void:
 	id = "coin_of_destiny"
 	icon_path = "res://assets/sprites/cards/icons/coin_of_destiny.png"
 	name = "Moeda do Destino"
-	description = "Escolha uma peça aliada comum e gire a moeda: se cair na cor dela, vira Dama na hora. Senão, a peça é perdida."
-	rarity = Rarity.COMMON
+	description = "Escolha uma peça sua comum e gire a moeda. Na sua cor, ela vira Dama. Senão, é perdida."
+	rarity = Rarity.RARE
 	target_type = TargetType.ALLY_PIECE
 
 func is_valid_target(board: Board, target_pos: Vector2i, human_team: int, context: Dictionary = {}) -> bool:
@@ -27,7 +27,7 @@ func execute(board: Board, target_pos: Vector2i, _human_team: int, context: Dict
 		if randi() % 2 == 0:
 			piece.is_king = true
 		else:
-			board.grid[target_pos.y][target_pos.x] = Board.EMPTY
+			await CardFx.destroy(null, board, target_pos, piece)
 		return
 
 	main_node.is_resolving_card_effect = true
@@ -44,7 +44,8 @@ func execute(board: Board, target_pos: Vector2i, _human_team: int, context: Dict
 
 	if landed_promotion:
 		piece.is_king = true
+		await CardFx.crown(main_node, target_pos, piece)
 	else:
-		board.grid[target_pos.y][target_pos.x] = Board.EMPTY
+		await CardFx.destroy(main_node, board, target_pos, piece)
 
 	main_node.is_resolving_card_effect = false

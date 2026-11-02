@@ -5,8 +5,8 @@ func _init() -> void:
 	id = "recycle"
 	icon_path = "res://assets/sprites/cards/icons/recycle.png"
 	name = "Reciclar"
-	description = "Devolve à sua mão a ultima carta usada neste duelo."
-	rarity = Rarity.EPIC
+	description = "Devolve para a mão a última carta usada no duelo."
+	rarity = Rarity.RARE
 	target_type = TargetType.NONE
 
 func can_play(_board: Board, _human_team: int, context: Dictionary = {}) -> bool:

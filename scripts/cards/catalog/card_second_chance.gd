@@ -5,8 +5,8 @@ func _init() -> void:
 	id = "second_chance"
 	icon_path = "res://assets/sprites/cards/icons/second_chance.png"
 	name = "Segunda Chance"
-	description = "Gire a moeda: se cair na cor das suas peças, voce ganha um turno extra. Senão, quem ganha é o inimigo."
-	rarity = Rarity.COMMON
+	description = "Gire a moeda. Na cor das suas peças, você ganha um turno extra. Senão, quem ganha é o inimigo."
+	rarity = Rarity.RARE
 	target_type = TargetType.NONE
 
 func execute(board: Board, _target_pos: Vector2i, human_team: int, context: Dictionary = {}) -> void:

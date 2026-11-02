@@ -7,7 +7,7 @@ func _init() -> void:
 	id = "closing_forest"
 	boss_law = true
 	name = "A Floresta Fecha"
-	description = "A cada 3 rodadas nasce uma arvore numa casa vazia. Arvores bloqueiam o caminho, mas qualquer lado pode derruba-las pulando por cima (opcional, sem ouro). Elimine todo o exercito inimigo pra vencer."
+	description = "A cada 3 rodadas nasce uma árvore numa casa vazia. Ela bloqueia a casa. Qualquer lado pode derrubá-la pulando por cima (opcional)."
 	category = Category.BOSS
 	scope = Scope.BOTH
 	priority = 1

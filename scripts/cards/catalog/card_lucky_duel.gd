@@ -5,8 +5,8 @@ func _init() -> void:
 	id = "lucky_duel"
 	icon_path = "res://assets/sprites/cards/icons/lucky_duel.png"
 	name = "Duelo de Sorte"
-	description = "Escolha uma peça inimiga e gire a moeda: se cair na cor das suas peças, ela é capturada. Senão, uma peça sua aleatória é capturada."
-	rarity = Rarity.COMMON
+	description = "Escolha uma peça inimiga e gire a moeda. Na sua cor, ela é capturada. Senão, você perde uma peça sua aleatória."
+	rarity = Rarity.RARE
 	target_type = TargetType.ENEMY_PIECE
 
 func execute(board: Board, target_pos: Vector2i, human_team: int, context: Dictionary = {}) -> void:
@@ -17,7 +17,7 @@ func execute(board: Board, target_pos: Vector2i, human_team: int, context: Dicti
 	var main_node = context.get("main")
 	if main_node == null or not ("card_coin_flip_view" in main_node) or main_node.card_coin_flip_view == null:
 		if randi() % 2 == 0:
-			board.grid[target_pos.y][target_pos.x] = Board.EMPTY
+			await CardFx.destroy(null, board, target_pos, enemy_piece)
 		else:
 			_capture_random_own_piece(board, human_team)
 		return
@@ -38,7 +38,7 @@ func execute(board: Board, target_pos: Vector2i, human_team: int, context: Dicti
 		main_node.is_resolving_card_effect = false
 		# Última Chance: a vítima pode ser uma Dama do jogador (carta da IA).
 		if not await RuleLastChance.try_save(main_node, target_pos, enemy_piece):
-			board.grid[target_pos.y][target_pos.x] = Board.EMPTY
+			await CardFx.destroy(main_node, board, target_pos, enemy_piece)
 	else:
 		main_node.is_resolving_card_effect = false
 		await _capture_random_own_piece(board, human_team, main_node)
@@ -58,4 +58,4 @@ func _capture_random_own_piece(board: Board, team: int, main_node = null) -> voi
 	# Última Chance: se a sorteada for a Dama do jogador, a moeda gira antes.
 	if await RuleLastChance.try_save(main_node, chosen, board.grid[chosen.y][chosen.x]):
 		return
-	board.grid[chosen.y][chosen.x] = Board.EMPTY
+	await CardFx.destroy(main_node, board, chosen, board.grid[chosen.y][chosen.x])

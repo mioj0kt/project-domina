@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "grand_reinforcement"
 	icon_path = "res://assets/sprites/cards/icons/grand_reinforcement.png"
 	name = "Grande Reforço"
-	description = "Se uma das 3 fileiras do seu lado estiver totalmente vazia (sem nenhuma peça), invoca uma peça comum em cada casa escura dessa fileira."
+	description = "Se uma das suas 3 primeiras fileiras estiver vazia, enche as casas escuras dela com peças comuns."
 	rarity = Rarity.LEGENDARY
 	target_type = TargetType.EMPTY_TILE
 
@@ -29,11 +29,14 @@ func is_valid_target(board: Board, target_pos: Vector2i, human_team: int, contex
 		return false
 	return _is_own_back_row(board, target_pos.y, human_team) and _is_row_totally_empty(board, target_pos.y)
 
-func execute(board: Board, target_pos: Vector2i, human_team: int, _context: Dictionary = {}) -> void:
+func execute(board: Board, target_pos: Vector2i, human_team: int, context: Dictionary = {}) -> void:
 	var row = target_pos.y
+	var spawned: Array = []
 	for c in range(board.cols):
 		var is_dark_tile = (row + c) % 2 == 1
 		var is_empty = board.grid[row][c] == Board.EMPTY
 		var is_scorched = board.scorched_tiles.has(Vector2i(c, row))
 		if is_dark_tile and is_empty and not is_scorched:
 			board.grid[row][c] = BoardPiece.new(human_team, false)
+			spawned.append(Vector2i(c, row))
+	await CardFx.spawn_many(context.get("main"), spawned, human_team)

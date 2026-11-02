@@ -5,8 +5,8 @@ func _init() -> void:
 	super._init()
 	id = "plant_tree"
 	icon_path = "res://assets/sprites/cards/icons/plant_tree.png"
-	name = "Plantar Arvore"
-	description = "Faz brotar uma arvore numa casa escura vazia a sua escolha. Ela bloqueia a casa e nao anda; qualquer lado pode derruba-la pulando por cima (opcional, sem ouro)."
+	name = "Plantar Árvore"
+	description = "Planta uma árvore numa casa escura vazia. Ela bloqueia a casa, e qualquer lado pode derrubá-la pulando por cima (opcional)."
 	rarity = Rarity.COMMON
 
 func _make_piece(_owner_team: int) -> BoardPiece:

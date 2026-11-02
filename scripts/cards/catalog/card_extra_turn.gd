@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "extra_turn"
 	icon_path = "res://assets/sprites/cards/icons/extra_turn.png"
 	name = "Segundo Turno"
-	description = "Concede um turno adicional imediatamente após realizar a sua jogada deste turno."
+	description = "Ganha um turno extra logo depois da sua jogada."
 	rarity = Rarity.LEGENDARY
 	target_type = TargetType.NONE
 

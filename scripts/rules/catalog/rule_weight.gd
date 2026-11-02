@@ -10,7 +10,7 @@ const MAX_STEP_RANGE: int = 3
 func _init() -> void:
 	id = "weight"
 	name = "Lei do Peso"
-	description = "Suas Damas andam no máximo 3 casas, mas capturam de qualquer distancia mesmo sem casa livre atras da vítima (pousam na casa antes dela)."
+	description = "Suas Damas andam até 3 casas, mas capturam de qualquer distância e pousam na casa antes do alvo."
 	category = Category.MOVEMENT
 	scope = Scope.PLAYER_ONLY
 	rarity = Rarity.RARE

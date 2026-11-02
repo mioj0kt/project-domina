@@ -8,7 +8,7 @@ func _init() -> void:
 	id = "hungry_roots"
 	boss_law = true
 	name = "Raízes Famintas"
-	description = "Toda peça sua que captura fica enraizada: não pode se mover nos seus próximos 2 turnos. As peças do chefe não sofrem esse efeito. Elimine todo o exército inimigo pra vencer."
+	description = "Peça sua que captura fica enraizada e não se move nos próximos 2 turnos. As do chefe não sofrem isso."
 	category = Category.BOSS
 	scope = Scope.PLAYER_ONLY
 	priority = 1

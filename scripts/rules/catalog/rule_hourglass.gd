@@ -8,7 +8,7 @@ func _init() -> void:
 	id = "hourglass"
 	boss_law = true
 	name = "Ampulheta"
-	description = "A cada 4 rodadas a areia soterra mais uma coluna de cada lado do tabuleiro (as próximas aparecem marcadas; casas ocupadas são soterradas quando esvaziam). O tabuleiro encolhe. Elimine todo o exército inimigo pra vencer."
+	description = "A cada 4 rodadas, a areia soterra mais uma coluna de cada lado (as próximas aparecem marcadas). O tabuleiro vai encolhendo."
 	category = Category.BOSS
 	scope = Scope.BOTH
 	priority = 1

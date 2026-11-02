@@ -4,7 +4,7 @@ extends RuleCard
 func _init() -> void:
 	id = "shockwave"
 	name = "Onda de Choque"
-	description = "Ao capturar uma peça com uma Dama, uma peça inimiga adjacente a casa de pouso também é destruída."
+	description = "Quando uma Dama sua captura, uma peça inimiga ao lado da casa de pouso também é destruída."
 	category = Category.CAPTURE
 	scope = Scope.PLAYER_ONLY
 	rarity = Rarity.LEGENDARY

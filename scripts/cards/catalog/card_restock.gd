@@ -5,7 +5,7 @@ func _init() -> void:
 	id = "restock"
 	icon_path = "res://assets/sprites/cards/icons/restock.png"
 	name = "Reabastecer"
-	description = "Descarta as outras cartas da mão e compra a mesma quantidade."
+	description = "Descarta o resto da mão e compra a mesma quantidade de cartas."
 	rarity = Rarity.COMMON
 	target_type = TargetType.NONE
 

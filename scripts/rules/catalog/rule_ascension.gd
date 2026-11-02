@@ -19,7 +19,7 @@ extends RuleCard
 func _init() -> void:
 	id = "ascension_law"
 	name = "Lei da Ascensão"
-	description = "Toda vez que uma peça INIMIGA for promovida a Dama, gire uma moeda: se cair na cor dela, promove normalmente. Senão, a peça não promove."
+	description = "Quando uma peça inimiga vai virar Dama, gire a moeda. Na cor dela, promove. Senão, não promove."
 	category = Category.PROMOTION
 	scope = Scope.PLAYER_ONLY
 	priority = 8

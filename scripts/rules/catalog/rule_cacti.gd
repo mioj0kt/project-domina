@@ -8,7 +8,7 @@ func _init() -> void:
 	id = "cacti"
 	boss_law = true
 	name = "Cactos"
-	description = "A cada 3 rodadas brota um cacto numa casa vazia. Ele bloqueia o caminho, mas qualquer lado pode derrubá-lo pulando por cima (opcional, sem ouro) — só que os espinhos matam a peça que o derrubou: ela é eliminada. Elimine todo o exército inimigo pra vencer."
+	description = "A cada 3 rodadas nasce um cacto numa casa vazia. Ele bloqueia a casa. Qualquer lado pode derrubá-lo pulando por cima (opcional), mas a peça que pousar é destruída."
 	category = Category.BOSS
 	scope = Scope.BOTH
 	priority = 1

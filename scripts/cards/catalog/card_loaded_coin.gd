@@ -6,7 +6,7 @@ func _init() -> void:
 	icon_path = "res://assets/sprites/cards/icons/loaded_coin.png"
 	name = "Moeda Viciada"
 	description = "A próxima moeda do duelo cai na cor das suas peças."
-	rarity = Rarity.EPIC
+	rarity = Rarity.RARE
 	target_type = TargetType.NONE
 
 func can_play(_board: Board, _human_team: int, _context: Dictionary = {}) -> bool:

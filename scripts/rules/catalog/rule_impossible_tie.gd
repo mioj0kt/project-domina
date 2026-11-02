@@ -9,7 +9,7 @@ extends RuleCard
 func _init() -> void:
 	id = "impossible_tie_law"
 	name = "Empate Impossível"
-	description = "Ao começaar a Morte Subita, gira 3 moedas em sequencia: cada uma que cair na cor das suas peças promove uma peça comum aleatória sua a Dama."
+	description = "Quando a Morte Súbita começa, gire 3 moedas. Cada uma na cor das suas peças promove uma peça comum sua aleatória a Dama."
 	category = Category.PROMOTION
 	scope = Scope.PLAYER_ONLY
 	priority = 5

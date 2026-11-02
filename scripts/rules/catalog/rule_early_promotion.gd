@@ -3,8 +3,8 @@ extends RuleCard
 
 func _init() -> void:
 	id = "early_promotion"
-	name = "Promoção Relampago"
-	description = "Suas peças se tornam Damas ao atingirem a penúltima linha do tabuleiro."
+	name = "Promoção Relâmpago"
+	description = "Suas peças viram Dama já na penúltima fileira."
 	category = Category.PROMOTION
 	scope = Scope.PLAYER_ONLY
 	priority = 30

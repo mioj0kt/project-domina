@@ -4,7 +4,7 @@ extends RuleCard
 func _init() -> void:
 	id = "carnage"
 	name = "Carnificina"
-	description = "Ao capturar uma peça inimiga, concede +1 de Ouro imediatamente."
+	description = "Ganha +1 de ouro a cada captura."
 	category = Category.CAPTURE
 	scope = Scope.PLAYER_ONLY
 	priority = 35
