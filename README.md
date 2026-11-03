@@ -63,7 +63,7 @@ Você precisa do [Godot 4.7](https://godotengine.org/download) (o projeto foi sa
 
 1. Clone o repositório:
    ```bash
-   git clone <URL-DO-REPOSITORIO>
+   git clone https://github.com/mioj0kt/project-domina
    ```
 2. Abra o Godot, clique em **Importar** e selecione o `project.godot` na raiz da pasta.
 3. Na primeira abertura o Godot importa as imagens, o que pode levar alguns minutos.
