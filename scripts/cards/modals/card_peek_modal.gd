@@ -11,6 +11,8 @@ signal chosen(card: ActionCard)
 
 var _cards_box: HBoxContainer
 var _tooltip: ActionCardTooltip
+var _done: bool = false
+var _targets: Array = []  # [{ctrl: Control, card: ActionCard}]
 
 func _init() -> void:
 	layer = 120
@@ -64,11 +66,40 @@ func _build_ui() -> void:
 	add_child(_tooltip)
 
 func present(cards: Array) -> void:
+	_targets.clear()
 	for c in _cards_box.get_children():
 		c.queue_free()
 	for card in cards:
 		_cards_box.add_child(_make_widget(card))
+	_done = false
 	visible = true
+
+func _pick(card: ActionCard) -> void:
+	if _done:
+		return
+	_done = true
+	visible = false
+	_tooltip.hide_tooltip()
+	chosen.emit(card)
+
+# Rede de segurança: trata o clique direto no _input, independente de qual
+# controle de GUI estiver capturando o mouse (o modal nasce no meio de um
+# clique vindo da mão, e o viewport ainda pode estar com o foco em outra carta).
+func _input(event: InputEvent) -> void:
+	if not visible or _done:
+		return
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		for t in _targets:
+			var c: Control = t["ctrl"]
+			if is_instance_valid(c) and c.is_visible_in_tree() and c.get_global_rect().has_point(event.position):
+				get_viewport().set_input_as_handled()
+				_pick(t["card"])
+				return
+		get_viewport().set_input_as_handled()
+
+func _on_click(event: InputEvent, card: ActionCard) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_pick(card)
 
 func _make_widget(card: ActionCard) -> Control:
 	var rar_color = ActionCardVisual.get_rarity_color(card.rarity)
@@ -97,11 +128,20 @@ func _make_widget(card: ActionCard) -> Control:
 	v.add_child(frame)
 
 	var vis := ActionCardVisual.new(card, true, PEEK_SCALE)
-	vis.mouse_filter = Control.MOUSE_FILTER_STOP
+	vis.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(vis)
-	vis.mouse_entered.connect(func():
-		_tooltip.show_tooltip(card, vis.global_position + Vector2(w / 2.0, 0.0)))
-	vis.mouse_exited.connect(func(): _tooltip.hide_tooltip())
+	# O desenho da carta tem controles internos que engolem o mouse; por isso a
+	# área clicável é uma camada transparente por cima de tudo.
+	var hit := Control.new()
+	hit.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hit.mouse_filter = Control.MOUSE_FILTER_STOP
+	hit.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	frame.add_child(hit)
+	_targets.append({"ctrl": hit, "card": card})
+	hit.mouse_entered.connect(func():
+		_tooltip.show_tooltip(card, frame.global_position + Vector2(w / 2.0, 0.0)))
+	hit.mouse_exited.connect(func(): _tooltip.hide_tooltip())
+	hit.gui_input.connect(func(ev): _on_click(ev, card))
 
 	var btn := Button.new()
 	btn.text = "LEVAR"
@@ -109,9 +149,7 @@ func _make_widget(card: ActionCard) -> Control:
 	btn.add_theme_font_size_override("font_size", 24)
 	PixelUI.skin_button(btn, Color(0.3, 0.9, 0.4), "", "icone_confirmar")
 	btn.add_theme_color_override("font_color", Color(1.0, 0.95, 0.5))
-	btn.pressed.connect(func():
-		visible = false
-		_tooltip.hide_tooltip()
-		chosen.emit(card))
+	btn.pressed.connect(func(): _pick(card))
 	v.add_child(btn)
+	_targets.append({"ctrl": btn, "card": card})
 	return box
