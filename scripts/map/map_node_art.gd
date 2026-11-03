@@ -7,13 +7,13 @@ extends RefCounted
 # inteiro, então nada se desalinha em nenhuma resolução de janela.
 
 const NODE_SPRITE_SCALE: int = 2
-const MAP_SPRITE_DIR: String = "res://assets/sprites/hud/map/"
+const MAP_SPRITE_DIR: String = "res://assets/sprites/mapa/nodos/"
 
 static var _pawn_socket_cache: Dictionary = {}
 static var _ring_socket_cache: Dictionary = {}
 
 static func sprite(file: String) -> Texture2D:
-	return PixelUI.hud_texture("map/" + file, NODE_SPRITE_SCALE)
+	return PixelUI.hud_texture(file, NODE_SPRITE_SCALE, MAP_SPRITE_DIR)
 
 # Aplica a arte de UM nó (soquete/anel/selo) no botão. `sprite_name` é o arquivo
 # do soquete já com sufixo de estado (ex.: "_escura"); `ind_name` o anel ou, se

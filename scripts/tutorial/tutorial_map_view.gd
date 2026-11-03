@@ -1,10 +1,10 @@
 class_name TutorialMapView
 extends Control
 
-const MAIN_MENU_PATH: String = "res://main_menu.tscn"
-const DUEL_SCENE_PATH: String = "res://main.tscn"
-const SHOP_SCENE_PATH: String = "res://shop_view.tscn"
-const BET_SCENE_PATH: String = "res://bet_view.tscn"
+const MAIN_MENU_PATH: String = "res://scenes/main_menu.tscn"
+const DUEL_SCENE_PATH: String = "res://scenes/main.tscn"
+const SHOP_SCENE_PATH: String = "res://scenes/shop_view.tscn"
+const BET_SCENE_PATH: String = "res://scenes/bet_view.tscn"
 
 # O mapa do tutorial é uma versão curta do mapa do jogo: mesma casa, mesma
 # distância entre camadas, mesmos soquetes/anéis/trilhas, câmera que acompanha

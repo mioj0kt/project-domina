@@ -5,8 +5,8 @@ extends Control
 # ou ir direto ao Grimório. Lê MetaProgress.last_summary (preenchido por
 # MetaProgress.settle_run). Clique em qualquer lugar pula a animação.
 
-const MAIN_MENU_PATH: String = "res://main_menu.tscn"
-const META_SCENE_PATH: String = "res://meta_view.tscn"
+const MAIN_MENU_PATH: String = "res://scenes/main_menu.tscn"
+const META_SCENE_PATH: String = "res://scenes/meta_view.tscn"
 const MAX_ICONS_PER_ROW: int = 20
 
 const C_GOLD := Color(0.85, 0.64, 0.25)

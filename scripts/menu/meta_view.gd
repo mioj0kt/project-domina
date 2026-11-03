@@ -5,7 +5,7 @@ extends Control
 # da próxima run (preço por item, sobe a cada item levado).
 # Tudo vive em MetaProgress (autoload); aqui é só a interface.
 
-const MAIN_MENU_PATH: String = "res://main_menu.tscn"
+const MAIN_MENU_PATH: String = "res://scenes/main_menu.tscn"
 const RULE_COLS: int = 4
 const CARD_COLS: int = 6
 const RULE_SCALE: float = 0.9

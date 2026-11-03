@@ -2,7 +2,7 @@ class_name ForestTrail
 extends Node2D
 
 # Trilha entre dois nós do mapa da floresta, desenhada casa a casa (estilo
-# "grade"). Cada peça de res://assets/sprites/map/forest/trilhas_grade/
+# "grade"). Cada peça de res://assets/sprites/biomas/floresta/trilhas_grade/
 # <estado>/<casa_clara|casa_escura>/trilha_<direções>.png ocupa UMA casa do
 # tabuleiro (26 px nativos, canvas de 36 px com 5 px de sobra pra emendar nas
 # vizinhas) e liga o centro da casa às casas vizinhas nas direções do nome
@@ -14,7 +14,7 @@ extends Node2D
 # entrada (casa anterior) e a saída (próxima casa); as casas dos nós também
 # ganham a ponta, que fica sob o soquete do nó.
 
-const DIR := "res://assets/sprites/map/forest/trilhas_grade/"
+const DIR := "res://assets/sprites/biomas/floresta/trilhas_grade/"
 const NATIVE_TILE: float = 26.0
 const DIR_ORDER: Array[String] = ["N", "NE", "SE", "S", "SW", "NW"]
 

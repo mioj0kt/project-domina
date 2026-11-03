@@ -1,9 +1,9 @@
 class_name MainMenu
 extends Control
 
-const MAP_SCENE_PATH: String = "res://map_view.tscn"
-const META_SCENE_PATH: String = "res://meta_view.tscn"
-const TUTORIAL_MAP_SCENE_PATH: String = "res://tutorial_map_view.tscn"
+const MAP_SCENE_PATH: String = "res://scenes/map_view.tscn"
+const META_SCENE_PATH: String = "res://scenes/meta_view.tscn"
+const TUTORIAL_MAP_SCENE_PATH: String = "res://scenes/tutorial_map_view.tscn"
 
 # A abertura (splash) liga isto antes de trocar de cena: o menu então surge
 # do preto em vez de aparecer de uma vez.
@@ -180,7 +180,7 @@ func _on_reset_pressed() -> void:
 	_reset_gen += 1
 	MetaProgress.reset_all()
 	RunManager.start_new_run()  # descarta qualquer run em andamento
-	get_tree().call_deferred("change_scene_to_file", "res://main_menu.tscn")
+	get_tree().call_deferred("change_scene_to_file", "res://scenes/main_menu.tscn")
 
 func _on_play_pressed() -> void:
 	# Quem nunca concluiu o tutorial recebe um aviso antes da primeira run.

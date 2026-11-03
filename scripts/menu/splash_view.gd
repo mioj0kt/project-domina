@@ -6,8 +6,8 @@ extends Control
 # Toca os frames com o tempo original do GIF, segura o último, faz fade out e
 # vai para o menu. Clique / tecla pula (também com fade).
 
-const NEXT_SCENE: String = "res://main_menu.tscn"
-const SHEET_PATH: String = "res://assets/sprites/splash/wrong_moon_sheet.png"
+const NEXT_SCENE: String = "res://scenes/main_menu.tscn"
+const SHEET_PATH: String = "res://assets/sprites/menu/splash/wrong_moon_sheet.png"
 
 # Grade nativa do GIF (320x180) e recorte guardado na folha (só a área que muda).
 const NATIVE_SIZE := Vector2(320, 180)

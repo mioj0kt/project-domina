@@ -2,7 +2,7 @@ class_name TutorialTrail
 extends Node2D
 
 # Trilha do mapa do tutorial (estilo "plástico", casa a casa). Cada peça de
-# res://assets/sprites/map/trilhas_plastico/ ocupa UMA casa do tabuleiro
+# res://assets/sprites/tutorial/trilha_mapa/ ocupa UMA casa do tabuleiro
 # (32 px nativos + 4 px de sobra de cada lado pra emendar) e vem em duas
 # cores: "clara" nas casas claras e "escura" nas casas escuras (tom sobre tom).
 #
@@ -11,7 +11,7 @@ extends Node2D
 # as diagonais no meio. A peça de cada casa depende de por onde o caminho
 # entra e sai dela (reto, diagonal ou curva).
 
-const DIR := "res://assets/sprites/map/trilhas_plastico/"
+const DIR := "res://assets/sprites/tutorial/trilha_mapa/"
 const NATIVE_TILE: float = 32.0
 
 static var _tex_cache: Dictionary = {}

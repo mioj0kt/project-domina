@@ -238,11 +238,11 @@ const _BTN_STATES := {
 static var _tex_cache: Dictionary = {}
 
 # Textura do HUD ampliada por inteiro (NEAREST) e cacheada; null se não existir.
-static func hud_texture(file: String, factor: int = 1) -> Texture2D:
-	var key = "%s@%d" % [file, factor]
+static func hud_texture(file: String, factor: int = 1, dir: String = HUD_DIR) -> Texture2D:
+	var key = "%s%s@%d" % [dir, file, factor]
 	if _tex_cache.has(key):
 		return _tex_cache[key]
-	var path = HUD_DIR + file + ".png"
+	var path = dir + file + ".png"
 	var tex: Texture2D = null
 	if ResourceLoader.exists(path):
 		var base: Texture2D = load(path)

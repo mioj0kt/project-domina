@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://bwqk1n7bap01a"]
+
+[ext_resource type="Script" path="res://scripts/map/nodes/bet_view.gd" id="1_bvxk1"]
+
+[node name="BetControl" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_bvxk1")

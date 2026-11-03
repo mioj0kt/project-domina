@@ -8,15 +8,15 @@ extends Control
 const FRAME_SIZE := 32
 const FRAME_COUNT := 8
 const TEXTURES := {
-	"guide": "res://assets/sprites/guide/guide_talk.png",
-	"evil": "res://assets/sprites/guide/evil_talk.png",
+	"guide": "res://assets/sprites/retratos/guide_talk.png",
+	"evil": "res://assets/sprites/retratos/evil_talk.png",
 	# Chefes: se o sprite próprio (tira 8x 32x32, igual aos acima) ainda não existir,
 	# usa o rosto do Irmão com a cor do bioma (tint) como provisório.
-	"boss_floresta": "res://assets/sprites/guide/boss_floresta_talk.png",
-	"boss_deserto": "res://assets/sprites/guide/boss_deserto_talk.png",
+	"boss_floresta": "res://assets/sprites/retratos/boss_floresta_talk.png",
+	"boss_deserto": "res://assets/sprites/retratos/boss_deserto_talk.png",
 }
 var fallback_tint: Color = Color.WHITE
-const FALLBACK_PATH := "res://assets/sprites/guide/evil_talk.png"
+const FALLBACK_PATH := "res://assets/sprites/retratos/evil_talk.png"
 const TALK_FPS := 11.0
 
 var who: String = "guide"

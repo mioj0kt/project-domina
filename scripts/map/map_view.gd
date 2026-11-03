@@ -123,12 +123,12 @@ func _input(event: InputEvent) -> void:
 			# nó no mapa — só pra facilitar teste, não é um atalho pro
 			# jogo normal.
 			is_traveling = true
-			SceneTransition.go("res://bet_view.tscn")
+			SceneTransition.go("res://scenes/bet_view.tscn")
 			get_viewport().set_input_as_handled()
 		elif DebugFlags.SHORTCUTS and event.keycode == KEY_E:
 			# DEBUG: acesso direto a um evento "?" (mesma ideia da tecla B).
 			is_traveling = true
-			SceneTransition.go("res://event_view.tscn")
+			SceneTransition.go("res://scenes/event_view.tscn")
 			get_viewport().set_input_as_handled()
 		elif DebugFlags.SHORTCUTS and event.keycode >= KEY_1 and event.keycode <= KEY_6:
 			# DEBUG: abre um duelo de CHEFE direto, com a lei escolhida
@@ -147,7 +147,7 @@ func _input(event: InputEvent) -> void:
 				RunManager.current_board_size = Vector2i(10, 10)
 				RunManager.current_board_layout = Board.LAYOUT_CLASSIC
 				is_traveling = true
-				SceneTransition.go("res://main.tscn")
+				SceneTransition.go("res://scenes/main.tscn")
 				get_viewport().set_input_as_handled()
 
 # DEBUG: lembrete das teclas de atalho do mapa (só com DebugFlags.SHORTCUTS).
@@ -516,15 +516,15 @@ func _on_node_clicked(node: MapNode) -> void:
 	
 	match node.type:
 		MapNode.NodeType.Duelo, MapNode.NodeType.DueloForte, MapNode.NodeType.Chefe:
-			SceneTransition.go("res://main.tscn")
+			SceneTransition.go("res://scenes/main.tscn")
 		MapNode.NodeType.Loja:
-			SceneTransition.go("res://shop_view.tscn")
+			SceneTransition.go("res://scenes/shop_view.tscn")
 		MapNode.NodeType.Aposta:
-			SceneTransition.go("res://bet_view.tscn")
+			SceneTransition.go("res://scenes/bet_view.tscn")
 		MapNode.NodeType.Evento:
-			SceneTransition.go("res://event_view.tscn")
+			SceneTransition.go("res://scenes/event_view.tscn")
 		MapNode.NodeType.Altar:
-			SceneTransition.go("res://altar_view.tscn")
+			SceneTransition.go("res://scenes/altar_view.tscn")
 		_:
 			is_traveling = false
 

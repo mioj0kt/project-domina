@@ -207,9 +207,9 @@ static func draw_piece(canvas: CanvasItem, piece_obj: BoardPiece, center: Vector
 # (variantes de chão escuro, cuja sombra serve em qualquer casa). A variante é
 # fixa por árvore (id do objeto), então ela não "troca de cara" ao redesenhar.
 const _TREE_SPRITES: Array[String] = [
-	"res://assets/sprites/map/forest/tabuleiro/arvores/arvore_copa_2_chao_escuro.png",
-	"res://assets/sprites/map/forest/tabuleiro/arvores/arvore_copa_4_chao_escuro.png",
-	"res://assets/sprites/map/forest/tabuleiro/arvores/arvore_copa_5_chao_escuro.png",
+	"res://assets/sprites/biomas/floresta/tabuleiro/arvores/arvore_copa_2_chao_escuro.png",
+	"res://assets/sprites/biomas/floresta/tabuleiro/arvores/arvore_copa_4_chao_escuro.png",
+	"res://assets/sprites/biomas/floresta/tabuleiro/arvores/arvore_copa_5_chao_escuro.png",
 ]
 static var _tree_tex: Array = []
 
@@ -221,7 +221,7 @@ static func _get_tree_tex(variant: int) -> Texture2D:
 
 # Sprites 26x30 dos neutros do chefe do deserto (variante fixa por peça). Escala
 # inteira de pixel, base apoiada no pé da casa. Devolve false se faltar arte.
-const _BOSS_SPRITE_DIR := "res://assets/sprites/board/deserto_boss/"
+const _BOSS_SPRITE_DIR := "res://assets/sprites/biomas/deserto/chefe/"
 const _CACTUS_SPRITES: Array[String] = ["cacto/cacto_dois_bracos", "cacto/cacto_um_braco", "cacto/cacto_barril"]
 const _SARCOPHAGUS_SPRITES: Array[String] = ["sarcofago/sarcofago_intacto", "sarcofago/sarcofago_tampa_rachada", "sarcofago/sarcofago_inclinado"]
 static var _boss_sprite_cache: Dictionary = {}

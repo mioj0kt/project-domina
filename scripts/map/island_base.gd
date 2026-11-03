@@ -12,8 +12,8 @@ const BOB_STEPS: int = 2            # amplitude em "pixels de arte"
 const BOB_PERIOD: float = 11.0      # segundos por ciclo (lento)
 
 # Arte pronta: ponta esquerda (a direita é o espelho) + faixa repetível.
-const CAP_PATH := "res://assets/sprites/map/ilha/base_ponta.png"
-const STRIP_PATH := "res://assets/sprites/map/ilha/base_faixa.png"
+const CAP_PATH := "res://assets/sprites/mapa/ilha/base_ponta.png"
+const STRIP_PATH := "res://assets/sprites/mapa/ilha/base_faixa.png"
 const ART_HEIGHT: int = 96
 const OVERLAP_UNITS: int = 0        # quanto a base sobe por baixo da moldura
 
