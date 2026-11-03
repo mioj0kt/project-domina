@@ -25,29 +25,25 @@ const LIGHT_TILES: Array[String] = [
 ]
 const DARK_TILES: Array[String] = ["casas/casa_escura"]
 
-# Árvores e arbustos (já vêm com a sombra e o chão da cor da casa).
-const TREES_LIGHT: Array[String] = [
-	"arvores/arvore_copa_1_chao_claro", "arvores/arvore_copa_3_chao_claro",
-	"arvores/arvore_copa_6_chao_claro", "arvores/arvore_copa_3_chao_claro",
+# Árvores e arbustos (pixel art sem chão: servem em casa clara e escura).
+const TREES: Array[String] = [
+	"arvores/arvore_copa_1", "arvores/arvore_copa_2", "arvores/arvore_copa_3", "arvores/arvore_copa_4",
+	"arvores/arvore_copa_5", "arvores/arvore_copa_6", "arvores/arvore_copa_7", "arvores/arvore_copa_8",
+	"arvores/arvore_copa_9", "arvores/arvore_copa_10", "arvores/arvore_copa_11", "arvores/arvore_copa_12",
+	"arvores/arvore_copa_13", "arvores/arvore_copa_14",
 ]
-const TREES_DARK: Array[String] = [
-	"arvores/arvore_copa_2_chao_escuro", "arvores/arvore_copa_4_chao_escuro",
-	"arvores/arvore_copa_5_chao_escuro", "arvores/arvore_copa_4_chao_escuro",
+const TREES_LIGHT: Array[String] = TREES
+const TREES_DARK: Array[String] = TREES
+const BUSHES: Array[String] = [
+	"arvores/arbusto_1", "arvores/arbusto_2", "arvores/arbusto_3", "arvores/arbusto_4", "arvores/arbusto_5",
+	"arvores/arbusto_6", "arvores/arbusto_7", "arvores/arbusto_8", "arvores/arbusto_9",
 ]
-const BUSHES_LIGHT: Array[String] = [
-	"vegetacao/arbusto_4_chao_claro", "vegetacao/arbusto_6_chao_claro",
-	"vegetacao/arbusto_8_chao_claro", "vegetacao/arbusto_11_chao_claro",
-]
-const BUSHES_DARK: Array[String] = [
-	"vegetacao/arbusto_1_chao_escuro", "vegetacao/arbusto_2_chao_escuro",
-	"vegetacao/arbusto_3_chao_escuro", "vegetacao/arbusto_5_chao_escuro",
-	"vegetacao/arbusto_7_chao_escuro", "vegetacao/arbusto_9_chao_escuro",
-	"vegetacao/arbusto_10_chao_escuro", "vegetacao/arbusto_12_chao_escuro",
-]
+const BUSHES_LIGHT: Array[String] = BUSHES
+const BUSHES_DARK: Array[String] = BUSHES
 
 # As árvores são grandes (copa de ~2 casas de largura): a base do tronco fica
 # a TREE_GROUND_Y da altura da arte, e é ela que se ancora na casa sorteada.
-const TREE_GROUND_Y: float = 0.78
+const TREE_GROUND_Y: float = 0.97
 const TREE_MIN_SPACING: float = 1.2   # em casas, entre troncos
 const TREE_PATH_CLEAR: float = 0.6   # copa a pelo menos isto (em casas) das trilhas
 const TREE_NODE_CLEAR: float = 0.85   # copa a pelo menos isto (em casas) dos nós
@@ -171,7 +167,7 @@ const THEMES: Dictionary = {
 		"grass_light": GRASS_LIGHT, "grass_dark": GRASS_DARK,
 		"big_light": BIG_LIGHT, "big_dark": BIG_DARK,
 		"small_light": SMALL_LIGHT, "small_dark": SMALL_DARK,
-		"tree_ground_y": 0.78, "tree_density": 1.0, "grass_scale": 1.0,
+		"tree_ground_y": 0.97, "tree_density": 1.0, "grass_scale": 1.0,
 		"frame": "moldura", "frame_pad": Vector2(10, 10),
 		"clearing_node": "decoracao/clareira_nodo", "clearing_boss": "decoracao/clareira_boss",
 	},

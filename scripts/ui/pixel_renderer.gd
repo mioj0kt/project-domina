@@ -207,9 +207,9 @@ static func draw_piece(canvas: CanvasItem, piece_obj: BoardPiece, center: Vector
 # (variantes de chão escuro, cuja sombra serve em qualquer casa). A variante é
 # fixa por árvore (id do objeto), então ela não "troca de cara" ao redesenhar.
 const _TREE_SPRITES: Array[String] = [
-	"res://assets/sprites/biomas/floresta/tabuleiro/arvores/arvore_copa_2_chao_escuro.png",
-	"res://assets/sprites/biomas/floresta/tabuleiro/arvores/arvore_copa_4_chao_escuro.png",
-	"res://assets/sprites/biomas/floresta/tabuleiro/arvores/arvore_copa_5_chao_escuro.png",
+	"res://assets/sprites/biomas/floresta/tabuleiro/arvores/arvore_copa_1.png",
+	"res://assets/sprites/biomas/floresta/tabuleiro/arvores/arvore_copa_4.png",
+	"res://assets/sprites/biomas/floresta/tabuleiro/arvores/arvore_copa_6.png",
 ]
 static var _tree_tex: Array = []
 
