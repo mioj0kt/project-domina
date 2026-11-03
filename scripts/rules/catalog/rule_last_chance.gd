@@ -31,7 +31,7 @@ static func capture_already_covered(board: Board, victim: BoardPiece) -> bool:
 		return true
 	if board.rule_pipeline != null:
 		var sh = board.rule_pipeline.get_rule("shield")
-		if sh != null and sh.applies_to_team(victim.owner_team, board.human_team_color) and not sh.shield_used:
+		if sh != null and sh.applies_to_team(victim.owner_team, board.human_team_color) and sh.blocks_used < RuleShield.MAX_BLOCKS:
 			return true
 	return false
 
