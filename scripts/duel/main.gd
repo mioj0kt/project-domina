@@ -86,6 +86,7 @@ var piece_movement_view: PieceMovementAnimationView
 var frog_animation_view: FrogBossAnimationView
 var piece_shatter_view: PieceShatterView
 var sudden_death_mgr: SuddenDeathManager
+var sudden_death_view: SuddenDeathView
 var score_tally_view: ScoreTallyView
 var rule_banner_view: RuleTriggerBannerView
 
@@ -318,6 +319,9 @@ func _setup_modules(max_dim: int) -> void:
 	sudden_death_mgr = SuddenDeathManager.new()
 	add_child(sudden_death_mgr)
 	sudden_death_mgr.configure(max_dim)
+	sudden_death_view = SuddenDeathView.new()
+	add_child(sudden_death_view)
+	sudden_death_mgr.view = sudden_death_view
 	score_tally_view = ScoreTallyView.new()
 	add_child(score_tally_view)
 	sudden_death_mgr.tally_view = score_tally_view
@@ -539,7 +543,9 @@ func _tutorial_spot_rect(id: String) -> Rect2:
 		return Rect2(board_offset + Vector2(0, rr * cs), Vector2(board.cols * cs, cs))
 	match id:
 		"sd_clock":
-			return Rect2(20.0, 20.0, 340.0, 50.0)
+			if sudden_death_view != null:
+				return sudden_death_view.get_counter_rect()
+			return Rect2(40.0, 10.0, 440.0, 100.0)
 		"hand":
 			if action_cards != null and action_cards.card_hand_ui != null:
 				var hr: Rect2 = action_cards.card_hand_ui.get_hand_rect()
@@ -567,76 +573,8 @@ func _on_sudden_death_triggered() -> void:
 			and not TutorialManager.duel1_sudden_death_done:
 		TutorialManager.duel1_sudden_death_done = true
 		await tutorial_guide_view.play_sequence(TutorialManager.get_sudden_death_started_lines())
-	if sudden_death_mgr.triggered_by_stall:
-		await _show_impasse_banner()
+	await sudden_death_view.play_intro(sudden_death_mgr.turns_left, sudden_death_mgr.triggered_by_stall, self)
 	await _resolve_impossible_tie()
-
-# Aviso exclusivo da Morte Súbita por IMPASSE: a palavra gigante pulsando no
-# centro da tela por alguns segundos (a jogada espera acabar).
-const IMPASSE_SHOW_TIME: float = 2.6
-func _show_impasse_banner() -> void:
-	var layer := CanvasLayer.new()
-	layer.layer = 120
-	add_child(layer)
-
-	var tint := ColorRect.new()
-	tint.set_anchors_preset(Control.PRESET_FULL_RECT)
-	tint.color = Color(0.25, 0.0, 0.03, 0.0)
-	tint.mouse_filter = Control.MOUSE_FILTER_STOP   # bloqueia cliques enquanto o aviso está na tela
-	layer.add_child(tint)
-
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(center)
-
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 6)
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	center.add_child(box)
-
-	var word := Label.new()
-	word.text = "IMPASSE"
-	word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	word.add_theme_font_size_override("font_size", 200)
-	word.add_theme_color_override("font_color", Color(1.0, 0.32, 0.34))
-	word.add_theme_color_override("font_outline_color", Color(0.1, 0.02, 0.04))
-	word.add_theme_constant_override("outline_size", 24)
-	box.add_child(word)
-
-	var sub := Label.new()
-	sub.text = "MORTE SÚBITA"
-	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub.add_theme_font_size_override("font_size", 34)
-	sub.add_theme_color_override("font_color", Color(0.94, 0.9, 0.81))
-	sub.add_theme_color_override("font_outline_color", Color(0.1, 0.02, 0.04))
-	sub.add_theme_constant_override("outline_size", 8)
-	box.add_child(sub)
-
-	box.modulate.a = 0.0
-	await get_tree().process_frame
-	box.pivot_offset = box.size / 2.0
-	box.scale = Vector2(1.6, 1.6)
-
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(tint, "color:a", 0.38, 0.3)
-	tw.tween_property(box, "modulate:a", 1.0, 0.25)
-	tw.tween_property(box, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	await tw.finished
-
-	# Pulsa até o fim do tempo.
-	var pulse := create_tween().set_loops()
-	pulse.tween_property(box, "scale", Vector2(1.1, 1.1), 0.32).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	pulse.tween_property(box, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	await get_tree().create_timer(IMPASSE_SHOW_TIME).timeout
-	pulse.kill()
-
-	var out := create_tween().set_parallel(true)
-	out.tween_property(tint, "color:a", 0.0, 0.4)
-	out.tween_property(box, "modulate:a", 0.0, 0.4)
-	out.tween_property(box, "scale", Vector2(1.25, 1.25), 0.4)
-	await out.finished
-	layer.queue_free()
 
 # Lei Empate Impossível: ao começar a Morte Súbita, cada time ao qual a Lei
 # se aplica joga 3 moedas; cada moeda que cair na cor do time promove uma peça comum aleatória sua.

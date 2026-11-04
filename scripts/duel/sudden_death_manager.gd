@@ -46,7 +46,7 @@ func reset() -> void:
 	_stall_plies = 0
 	_last_piece_total = -1
 	triggered_by_stall = false
-	queue_redraw()
+	_refresh_view()
 
 func configure(max_dim: int = 8) -> void:
 	max_turns = max(4, max_dim + 2)
@@ -62,7 +62,7 @@ func start_immediately() -> void:
 	turns_left = max_turns
 	just_triggered = true
 	sudden_death_triggered.emit()
-	queue_redraw()
+	_refresh_view()
 
 func _count_total_kings(board: Board) -> int:
 	# Damas "isentas" (Lei da Guarda Real) não contam: senão a Dama inicial
@@ -98,7 +98,7 @@ func check_conditions(board: Board, human_team: int, ai_team: int) -> void:
 		turns_left = max_turns
 		just_triggered = true
 		sudden_death_triggered.emit()
-		queue_redraw()
+		_refresh_view()
 
 # Peças "congeladas": homens (não Damas) parados na última fileira sem nenhum
 # movimento ou captura — acontece quando a Lei da Ascensão barra a promoção.
@@ -156,11 +156,11 @@ func process_turn_end(board: Board, human_team: int, ai_team: int) -> bool:
 
 	if pause_ticks > 0:
 		pause_ticks -= 1
-		queue_redraw()
+		_refresh_view()
 		return false
 
 	turns_left -= 1
-	queue_redraw()
+	_refresh_view()
 
 	if turns_left <= 0:
 		await _resolve_points(board, human_team, ai_team)
@@ -197,27 +197,8 @@ func _resolve_points(board: Board, human_team: int, ai_team: int) -> void:
 	
 	match_finished_by_points.emit(won, msg)
 
-func _draw() -> void:
-	if is_active:
-		# Canto fixo da tela — não depende mais da posição/tamanho do
-		# tabuleiro, então não precisa reservar espaço nenhum acima dele.
-		var banner_w = 340.0
-		var banner_h = 50.0
-		var banner_rect = Rect2(20.0, 20.0, banner_w, banner_h)
-
-		draw_rect(banner_rect, Color(0.08, 0.02, 0.03, 0.96))
-
-		var shadow_rect = Rect2(banner_rect.position + Vector2(2, 3), banner_rect.size)
-		draw_rect(shadow_rect, Color(0, 0, 0, 0.4), false, 2.0)
-		draw_rect(banner_rect, Color(0.9, 0.15, 0.2, 0.95), false, 2.5)
-
-		PixelRenderer.draw_pixel_corners(self, banner_rect, Color(1.0, 0.4, 0.45, 1.0), 10.0, 2.5)
-
-		var font = ThemeDB.fallback_font
-		var msg = "MORTE SUBITA: %d TURNOS RESTANTES" % turns_left
-		if pause_ticks > 0:
-			msg = "MORTE SUBITA: %d TURNOS - PAUSADA" % turns_left
-		var text_pos = Vector2(banner_rect.position.x, banner_rect.position.y + 33)
-
-		draw_string(font, text_pos + Vector2(2, 2), msg, HORIZONTAL_ALIGNMENT_CENTER, banner_rect.size.x, 18, Color(0.05, 0.05, 0.05, 1.0))
-		draw_string(font, text_pos, msg, HORIZONTAL_ALIGNMENT_CENTER, banner_rect.size.x, 18, Color(1.0, 0.35, 0.35, 1.0))
+# Atualiza o contador na tela (SuddenDeathView, criado pelo main).
+var view: SuddenDeathView = null
+func _refresh_view() -> void:
+	if view != null:
+		view.set_state(is_active, turns_left, max_turns, pause_ticks > 0)

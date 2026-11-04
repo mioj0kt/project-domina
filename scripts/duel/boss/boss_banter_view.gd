@@ -101,21 +101,29 @@ func _build() -> void:
 	frame.name = "Frame"
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.modulate.a = 0.0   # só aparece depois da entrada (play_intro)
-	frame.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.08, 0.06, 0.1, 0.95), BossDialogue.boss_tint(biome), 8))
+	# Sem caixa: só o rosto com a aura e o nome (margem para a aura caber).
+	var no_box := StyleBoxEmpty.new()
+	no_box.set_content_margin_all(16.0)
+	frame.add_theme_stylebox_override("panel", no_box)
 	_root.add_child(frame)
 	var fv := VBoxContainer.new()
-	fv.add_theme_constant_override("separation", 2)
+	fv.add_theme_constant_override("separation", 6)
 	frame.add_child(fv)
 	_face = GuideFaceControl.new()
 	_face.fallback_tint = BossDialogue.boss_tint(biome)
+	_face.aura = true
+	_face.aura_color = BossDialogue.boss_tint(biome)
 	_face.setup(FACE_PX, "boss_" + biome)
+	_face.size_flags_horizontal = Control.SIZE_SHRINK_CENTER   # centralizado no painel
 	fv.add_child(_face)
 	_name_label = Label.new()
 	_name_label.text = BossDialogue.boss_name(biome)
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_label.add_theme_font_size_override("font_size", 14)
-	_name_label.add_theme_color_override("font_color", BossDialogue.boss_tint(biome))
-	_name_label.custom_minimum_size = Vector2(150.0, 0)
+	_name_label.add_theme_font_size_override("font_size", 20)
+	_name_label.add_theme_color_override("font_color", BossDialogue.boss_tint(biome).lightened(0.4))
+	_name_label.add_theme_color_override("font_outline_color", Color(0.04, 0.02, 0.06))
+	_name_label.add_theme_constant_override("outline_size", 8)
+	_name_label.custom_minimum_size = Vector2(FACE_PX + 56.0, 0)
 	fv.add_child(_name_label)
 
 	_bubble = PanelContainer.new()
@@ -155,6 +163,8 @@ func play_intro() -> void:
 
 	_big_face = GuideFaceControl.new()
 	_big_face.fallback_tint = tint
+	_big_face.aura = true
+	_big_face.aura_color = tint
 	_big_face.setup(BIG_PX, "boss_" + biome)
 	_big_face.pivot_offset = Vector2(BIG_PX, BIG_PX) / 2.0
 	_big_face.mouse_filter = Control.MOUSE_FILTER_IGNORE

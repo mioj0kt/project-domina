@@ -386,6 +386,11 @@ func _tree_fits(tex: Texture2D, ground: Vector2, segments: Array, node_points: A
 	# a base do tronco precisa estar bem dentro do tabuleiro.
 	if not _board_rect.grow(-0.3 * _tile).has_point(ground):
 		return false
+	# E a árvore INTEIRA tem que caber na área desenhada (senão a parte que
+	# sai do limite do mapa aparece cortada).
+	var limit: Rect2 = _board_rect if _th["frame"] == "bordas" else world_rect
+	if not limit.encloses(rect):
+		return false
 	for o in others:
 		if o.distance_to(ground) < TREE_MIN_SPACING * _tile:
 			return false
