@@ -14,7 +14,7 @@ extends RefCounted
 #   teclas no duelo  -> DebugRuleConsole (vencer, perder, alternar leis...)
 #   (o reset de progresso agora é o botão RESETAR PROGRESSO nas configurações)
 # Continua exigindo build de debug onde já exigia (OS.is_debug_build()).
-const SHORTCUTS: bool = true 
+const SHORTCUTS: bool = false
 
 # Pré-visualização de bioma do mapa: "" = segue o RunManager (floresta);
 # "deserto" força o Deserto das Torres em qualquer run NOVA (mapa, fundos dos

@@ -426,17 +426,22 @@ func play_ai_turn() -> void:
 	await get_tree().create_timer(0.3).timeout
 	await get_tree().process_frame
 
+	var layer: int = RunManager.current_node.id.x if RunManager.current_node != null else 0
+	var profile: Dictionary = AiDifficulty.for_duel(RunManager.current_node_type, RunManager.map_biome, layer, TutorialManager.is_active)
 	if ai_deck_mgr != null:
 		ai_deck_mgr.on_turn_started()
-		await _maybe_play_ai_card()
+		if profile["cards"]:
+			await _maybe_play_ai_card()
 		# Carta da IA que eliminou o último do jogador (ou o dela): fim de duelo já.
 		if await check_elimination():
 			host.is_ai_thinking = false
 			return
 
 	var board = host.board
-	var search_depth = 3 if max(board.rows, board.cols) >= 10 else 4
-	var ai_move = CheckersAI.get_best_move(board, search_depth, host.ai_team)
+	var search_depth: int = profile["depth"]
+	if max(board.rows, board.cols) >= 10:
+		search_depth = maxi(2, search_depth - 1)
+	var ai_move = CheckersAI.get_best_move(board, search_depth, host.ai_team, Vector2i(-1, -1), profile)
 	host.current_duel.note_ai_turn(not ai_move.is_empty())
 
 	var last_pos: Vector2i = await _ai_execute_move_chain(ai_move)
@@ -448,7 +453,7 @@ func play_ai_turn() -> void:
 	if counter_rule != null and last_pos.x >= 0 and not host.is_game_over:
 		var extras: int = counter_rule.consume_charges()
 		for i in range(extras):
-			var extra_move = CheckersAI.get_best_move(board, search_depth, host.ai_team, last_pos)
+			var extra_move = CheckersAI.get_best_move(board, search_depth, host.ai_team, last_pos, profile)
 			if extra_move.is_empty():
 				break
 			host.rule_banner_view.pop_rule_trigger(
@@ -721,14 +726,41 @@ func _ai_find_retreat_target(board: Board, host: Node2D) -> Variant:
 				return cap_pos
 	return null
 
-# Investida Heroica: qualquer peça comum da IA serve como alvo simples.
+# Investida Heroica: só vale a pena quando os 2 passos levam uma peça comum à
+# fileira de promoção (virar Dama um turno antes) e a Dama não é capturada na
+# hora. Antes qualquer peça servia e a IA gastava a carta andando 1 casa.
 func _ai_find_heroic_advance_target(board: Board, ai_team: int) -> Variant:
+	var promo_row: int = board.rows - 1 if ai_team != board.human_team_color else 0
+	var step: int = 1 if ai_team != board.human_team_color else -1
 	for r in range(board.rows):
 		for c in range(board.cols):
 			var p: BoardPiece = board.grid[r][c]
-			if p != Board.EMPTY and p.owner_team == ai_team and not p.is_king:
-				return Vector2i(c, r)
+			if p == Board.EMPTY or p.owner_team != ai_team or p.is_king:
+				continue
+			if r + 2 * step != promo_row:
+				continue
+			for dx in [-1, 1]:
+				var r1: int = r + step
+				var c1: int = c + dx
+				var r2: int = r + 2 * step
+				var c2: int = c + 2 * dx
+				if not board.is_valid_pos(r1, c1) or not board.is_valid_pos(r2, c2):
+					continue
+				if board.grid[r1][c1] != Board.EMPTY or board.grid[r2][c2] != Board.EMPTY:
+					continue
+				if _ai_landing_is_safe(board, Vector2i(c, r), Vector2i(c2, r2), ai_team):
+					return Vector2i(c, r)
 	return null
+
+# Simula a peça indo para `to` e vê se o jogador consegue capturá-la em seguida.
+func _ai_landing_is_safe(board: Board, from: Vector2i, to: Vector2i, ai_team: int) -> bool:
+	var sim: Board = board.clone()
+	sim.make_move({"from": from, "to": to, "is_capture": false, "captured": Vector2i(-1, -1)})
+	var enemy: int = Board.BLACK if ai_team == Board.WHITE else Board.WHITE
+	for m in sim.get_all_valid_moves(enemy):
+		if m.get("is_capture", false) and m["captured"] == to:
+			return false
+	return true
 
 func _process_boss_turn_events() -> void:
 	var host = _host

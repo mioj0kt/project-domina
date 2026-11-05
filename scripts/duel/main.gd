@@ -886,17 +886,17 @@ func debug_toggle_rule(rule_id: String, make_rule: Callable) -> void:
 	else:
 		RunManager.add_rule(make_rule.call())
 
-# Juice do duelo. Movimento: poeira + pequena onda no pouso. Captura: clarão na
-# casa, onda grande, faíscas quentes em leque e um tremor curto e discreto.
+# Juice do duelo. Movimento: duas lufadas de poeira no pouso. Captura: só o
+# impacto aqui (poeira, tremor curto e hit-stop); a explosão em si vem da peça
+# se despedaçando, sem clarão nem anéis.
 func _on_piece_landed(center: Vector2, is_capture: bool) -> void:
+	# Movimento comum: sem partículas, anel, clarão ou tremor.
+	if not is_capture:
+		return
 	var g: Vector2 = to_global(center)
 	Juice.dust(self, g, cell_size)
-	if not is_capture:
-		Juice.ring(self, g, cell_size * 0.5, Color(0.85, 0.63, 0.25, 0.9), 3.0, 0.22)
-		return
-	Juice.flash_square(self, g, cell_size, Color(1.0, 0.93, 0.75, 0.85), 0.18)
-	Juice.ring(self, g, cell_size * 0.85, Color(1.0, 0.78, 0.35), 5.0, 0.3)
-	Juice.ring(self, g, cell_size * 0.55, Color(1.0, 0.95, 0.85), 3.0, 0.22)
+	# Captura: o impacto da primeira versão (faíscas quentes em leque, tremor
+	# curto e hit-stop), sem clarão nem anéis.
 	Juice.burst(self, g, Color(0.96, 0.55, 0.18), 24, cell_size * 4.6, 0.55, maxf(5.0, cell_size / 9.0), 520.0, 360.0)
 	Juice.burst(self, g, Color(1.0, 0.92, 0.6), 14, cell_size * 3.2, 0.45, maxf(4.0, cell_size / 12.0), 420.0, 360.0)
 	Juice.shake(self, 2.5, 0.14)
