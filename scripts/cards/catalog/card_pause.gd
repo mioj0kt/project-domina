@@ -23,6 +23,5 @@ func execute(_board: Board, _target_pos: Vector2i, _human_team: int, context: Di
 	var main_node = context.get("main")
 	if main_node == null or not ("sudden_death_mgr" in main_node) or main_node.sudden_death_mgr == null:
 		return
-	main_node.sudden_death_mgr.pause_ticks = PAUSED_TICKS
-	main_node.sudden_death_mgr.queue_redraw()
+	main_node.sudden_death_mgr.apply_pause(PAUSED_TICKS)
 	_pop_banner(context, "TEMPO PAUSADO!", Color(0.45, 0.8, 1.0))

@@ -143,7 +143,8 @@ const AI_ELIGIBLE_CARD_IDS: Array[String] = [
 	"fortify", "grand_reinforcement", "corrupt",
 	"recruit", "rebuild", "extra_turn", "retreat", "heroic_advance",
 	"coin_of_destiny", "lucky_duel", "second_chance",
-	"rebellion", "demote", "heir", "guillotine", "ambush"
+	"rebellion", "demote", "heir", "guillotine", "ambush",
+	"coronation", "plant_tree", "restock", "triple_toss"
 ]
 
 # Pesos de raridade [comum, rara, épica, lendária] das cartas do inimigo por

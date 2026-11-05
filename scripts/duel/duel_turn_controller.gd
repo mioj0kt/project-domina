@@ -428,6 +428,7 @@ func play_ai_turn() -> void:
 
 	var layer: int = RunManager.current_node.id.x if RunManager.current_node != null else 0
 	var profile: Dictionary = AiDifficulty.for_duel(RunManager.current_node_type, RunManager.map_biome, layer, TutorialManager.is_active)
+	_ai_pending_move = {}
 	if ai_deck_mgr != null:
 		ai_deck_mgr.on_turn_started()
 		if profile["cards"]:
@@ -442,6 +443,13 @@ func play_ai_turn() -> void:
 	if max(board.rows, board.cols) >= 10:
 		search_depth = maxi(2, search_depth - 1)
 	var ai_move = CheckersAI.get_best_move(board, search_depth, host.ai_team, Vector2i(-1, -1), profile)
+	# Carta que prepara uma jogada (Recuar, Investida): executa essa jogada, se ainda for válida.
+	if not _ai_pending_move.is_empty():
+		for vm in board.get_all_valid_moves(host.ai_team):
+			if vm["from"] == _ai_pending_move["from"] and vm["to"] == _ai_pending_move["to"]:
+				ai_move = vm
+				break
+		_ai_pending_move = {}
 	host.current_duel.note_ai_turn(not ai_move.is_empty())
 
 	var last_pos: Vector2i = await _ai_execute_move_chain(ai_move)
@@ -615,6 +623,37 @@ func _find_ai_card_target(card: ActionCard, board: Board, host: Node2D) -> Varia
 			return _ai_find_any_own_common_piece(board, host.ai_team)
 		"ambush":
 			return _ai_find_ambush_target(card, board, host)
+		"coronation":
+			return _ai_find_any_own_common_piece(board, host.ai_team)
+		"plant_tree":
+			return _ai_find_tree_target(card, board, host)
+		"restock":
+			# Só troca quando sobra carta na mão (3+), senão gasta uma boa.
+			@warning_ignore("incompatible_ternary")
+			return Vector2i.ZERO if ai_deck_mgr.hand.size() >= 3 else null
+		"triple_toss":
+			# Aposta só quando está perdendo em material.
+			@warning_ignore("incompatible_ternary")
+			return Vector2i.ZERO if _ai_material(board, host.ai_team) < _ai_material(board, host.human_team) else null
+	return null
+
+func _ai_material(board: Board, team: int) -> int:
+	var total := 0
+	for r in range(board.rows):
+		for c in range(board.cols):
+			var p: BoardPiece = board.grid[r][c]
+			if p != Board.EMPTY and p.owner_team == team and not p.is_tree:
+				total += 5 if p.is_king else 1
+	return total
+
+# Plantar Árvore: casa escura vazia onde o jogador iria andar (bloqueia avanço).
+func _ai_find_tree_target(card: ActionCard, board: Board, host: Node2D) -> Variant:
+	for m in board.get_all_valid_moves(host.human_team):
+		if m.get("is_capture", false):
+			continue
+		var pos: Vector2i = m["to"]
+		if card.is_valid_target(board, pos, host.ai_team, {}):
+			return pos
 	return null
 
 # Rebaixar/Guilhotina: uma Dama inimiga (do jogador), qualquer uma.
@@ -716,15 +755,61 @@ func _ai_should_play_extra_turn(board: Board, host: Node2D) -> bool:
 			return true
 	return false
 
-# Recuar: salva uma peça comum da IA que o jogador poderia capturar agora.
-func _ai_find_retreat_target(board: Board, host: Node2D) -> Variant:
-	for m in board.get_all_valid_moves(host.human_team):
+# Jogada que a carta acabou de preparar (Recuar, Investida Heroica): o turno da
+# IA a executa direto em vez de deixar o minimax escolher e, às vezes, ignorar
+# a carta (que ficava gasta sem fazer nada).
+var _ai_pending_move: Dictionary = {}
+
+# Quantas peças comuns da IA o jogador consegue capturar agora.
+func _ai_threatened_count(b: Board, ai_team: int, human_team: int) -> int:
+	var seen: Dictionary = {}
+	for m in b.get_all_valid_moves(human_team):
 		if m.get("is_capture", false):
-			var cap_pos: Vector2i = m["captured"]
-			var p: BoardPiece = board.grid[cap_pos.y][cap_pos.x]
-			if p != Board.EMPTY and p.owner_team == host.ai_team and not p.is_king:
-				return cap_pos
-	return null
+			var cp: Vector2i = m["captured"]
+			var p: BoardPiece = b.grid[cp.y][cp.x]
+			if p != Board.EMPTY and p.owner_team == ai_team and not p.is_king and not p.is_tree:
+				seen[cp] = true
+	return seen.size()
+
+# Recuar: só vale quando RECUAR de fato salva material: a peça ameaçada tem uma
+# casa livre atrás e, depois de recuar, há menos peças da IA sob ataque (e ela
+# não fica capturável no novo lugar). Com captura disponível o recuo seria
+# ilegal (captura é obrigatória), então a carta nem é jogada.
+func _ai_find_retreat_target(board: Board, host: Node2D) -> Variant:
+	var ai_team: int = host.ai_team
+	var human_team: int = host.human_team
+	for m in board.get_all_valid_moves(ai_team):
+		if m.get("is_capture", false):
+			return null
+	var before: int = _ai_threatened_count(board, ai_team, human_team)
+	if before == 0:
+		return null
+	var back: int = -1 if ai_team != board.human_team_color else 1
+	var best_pos: Variant = null
+	var best_dest := Vector2i.ZERO
+	var best_after: int = before
+	for m in board.get_all_valid_moves(human_team):
+		if not m.get("is_capture", false):
+			continue
+		var from_p: Vector2i = m["captured"]
+		var piece: BoardPiece = board.grid[from_p.y][from_p.x]
+		if piece == Board.EMPTY or piece.owner_team != ai_team or piece.is_king or piece.is_tree:
+			continue
+		for dx in [-1, 1]:
+			var dest := Vector2i(from_p.x + dx, from_p.y + back)
+			if not board.is_valid_pos(dest.y, dest.x) or board.grid[dest.y][dest.x] != Board.EMPTY or board.scorched_tiles.has(dest):
+				continue
+			var sim: Board = board.clone()
+			sim.make_move({"from": from_p, "to": dest, "is_capture": false, "captured": Vector2i(-1, -1)})
+			var after: int = _ai_threatened_count(sim, ai_team, human_team)
+			if after < best_after:
+				best_after = after
+				best_pos = from_p
+				best_dest = dest
+	if best_pos == null:
+		return null
+	_ai_pending_move = {"from": best_pos, "to": best_dest, "is_capture": false, "captured": Vector2i(-1, -1)}
+	return best_pos
 
 # Investida Heroica: só vale a pena quando os 2 passos levam uma peça comum à
 # fileira de promoção (virar Dama um turno antes) e a Dama não é capturada na
@@ -749,6 +834,7 @@ func _ai_find_heroic_advance_target(board: Board, ai_team: int) -> Variant:
 				if board.grid[r1][c1] != Board.EMPTY or board.grid[r2][c2] != Board.EMPTY:
 					continue
 				if _ai_landing_is_safe(board, Vector2i(c, r), Vector2i(c2, r2), ai_team):
+					_ai_pending_move = {"from": Vector2i(c, r), "to": Vector2i(c2, r2), "is_capture": false, "captured": Vector2i(-1, -1)}
 					return Vector2i(c, r)
 	return null
 

@@ -168,6 +168,13 @@ func process_turn_end(board: Board, human_team: int, ai_team: int) -> bool:
 
 	return false
 
+# Carta Pausa: congela o relógio pelos próximos `ticks` fechamentos de turno
+# (2 = uma rodada: o seu turno e o da IA) e mostra a pausa NA HORA no contador
+# e nas bordas, sem esperar o próximo fechamento de turno.
+func apply_pause(ticks: int) -> void:
+	pause_ticks = ticks
+	_refresh_view()
+
 func _resolve_points(board: Board, human_team: int, ai_team: int) -> void:
 	var human_score = 0
 	var ai_score = 0

@@ -27,6 +27,60 @@ var _sprites: Array[Sprite2D] = []
 var _names: Array[String] = []
 var _light: Array[bool] = []
 var state: String = "normal"
+var _outlines: Array[Sprite2D] = []
+
+# Destaque do trecho selecionável SEM mexer na cor da arte: um contorno de 1 px
+# nativo (creme quente) desenhado atrás da trilha, que pulsa de leve. A trilha
+# em si continua exatamente a arte original.
+const OUTLINE_SHADER_CODE := """
+shader_type canvas_item;
+uniform vec4 outline_color : source_color = vec4(1.0, 0.93, 0.66, 1.0);
+uniform float speed = 2.2;
+uniform float min_alpha = 0.35;
+uniform float max_alpha = 0.95;
+void fragment() {
+	vec2 px = TEXTURE_PIXEL_SIZE;
+	float a = texture(TEXTURE, UV).a;
+	float n = 0.0;
+	for (int i = -1; i <= 1; i++) {
+		for (int j = -1; j <= 1; j++) {
+			n = max(n, texture(TEXTURE, UV + vec2(float(i), float(j)) * px).a);
+		}
+	}
+	float edge = (1.0 - step(0.01, a)) * step(0.01, n);
+	float pulse = mix(min_alpha, max_alpha, 0.5 + 0.5 * sin(TIME * speed));
+	COLOR = vec4(outline_color.rgb, edge * pulse);
+}
+"""
+static var _outline_material: ShaderMaterial = null
+
+static func _get_outline_material() -> ShaderMaterial:
+	if _outline_material == null:
+		var sh := Shader.new()
+		sh.code = OUTLINE_SHADER_CODE
+		_outline_material = ShaderMaterial.new()
+		_outline_material.shader = sh
+	return _outline_material
+
+func _update_outlines(on: bool) -> void:
+	for o in _outlines:
+		o.queue_free()
+	_outlines.clear()
+	if not on:
+		return
+	for sp in _sprites:
+		if sp.texture == null:
+			continue
+		var o := Sprite2D.new()
+		o.texture = sp.texture
+		o.centered = true
+		o.scale = sp.scale
+		o.position = sp.position
+		o.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		o.material = _get_outline_material()
+		add_child(o)
+		move_child(o, 0)
+		_outlines.append(o)
 
 static func _texture(piece: String, st: String, on_light: bool, dir: String = DIR) -> Texture2D:
 	var key = "%s|%s/%s/%s" % [dir, st, "casa_clara" if on_light else "casa_escura", piece]
@@ -52,6 +106,10 @@ const BIOME_STATE_RAMPS: Dictionary = {
 	},
 }
 static var _recolor_cache: Dictionary = {}
+# Biomas em que o trecho "selecionado" NÃO ganha o dourado: usa a arte "normal"
+# (a cor original da trilha). O caminho disponível já é indicado pelos anéis dos
+# nós; o dourado da floresta destoava do mapa. Tire o bioma daqui para voltar.
+const SELECTED_KEEPS_ORIGINAL: Array[String] = ["floresta", "deserto"]
 
 static func _recolored(tex: Texture2D, st: String, key: String, biome_id: String = "") -> Texture2D:
 	if not STATE_RAMPS.has(st):
@@ -146,7 +204,10 @@ func set_state(new_state: String) -> void:
 	state = new_state
 	var dir: String = String(ForestBackground.THEMES[biome]["trail_dir"])
 	for i in range(_sprites.size()):
-		var tex: Texture2D = _texture(_names[i], state, _light[i], dir)
+		var art_state: String = state
+		if state == "selecionado" and SELECTED_KEEPS_ORIGINAL.has(biome):
+			art_state = "normal"
+		var tex: Texture2D = _texture(_names[i], art_state, _light[i], dir)
 		var tint := Color.WHITE
 		if tex == null:
 			var base: Texture2D = _texture(_names[i], "normal", _light[i], dir)
@@ -154,3 +215,4 @@ func set_state(new_state: String) -> void:
 				tex = _recolored(base, state, "%s|%s|%s" % [dir, _light[i], _names[i]], biome)
 		_sprites[i].texture = tex
 		_sprites[i].modulate = tint
+	_update_outlines(state == "selecionado")
