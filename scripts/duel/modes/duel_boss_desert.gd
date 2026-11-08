@@ -300,7 +300,7 @@ func _bury(tiles: Array, turns: int, kind: int = 1) -> Array:
 
 # Ampulheta: colunas k e cols-1-k (as k-ésimas a partir de cada lado).
 func _max_buried_per_side() -> int:
-	return maxi(0, (board.cols - HOURGLASS_MIN_COLS) / 2)
+	return maxi(0, floori((board.cols - HOURGLASS_MIN_COLS) / 2.0))
 
 func _buried_tiles_for(k: int) -> Array:
 	var out: Array = []
@@ -341,7 +341,7 @@ func count_cacti() -> int:
 				n += 1
 	return n
 
-func _spawn_neutral(initial: bool, cactus: bool) -> Vector2i:
+func _spawn_neutral(_initial: bool, cactus: bool) -> Vector2i:
 	if cactus and count_cacti() >= CACTUS_MAX:
 		return Vector2i(-1, -1)
 	if not cactus and count_sarcophagi() >= SARCOPHAGUS_MAX:

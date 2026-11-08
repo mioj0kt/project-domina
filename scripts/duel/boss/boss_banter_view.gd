@@ -30,6 +30,7 @@ var _name_label: Label
 var _hide_tween: Tween
 var _type_tween: Tween
 var _last_line: String = ""
+var _last_vis: int = 0
 var _last_time_ms: int = -100000
 var _busy_until_ms: int = 0
 var _intro_fx: IntroFx = null
@@ -188,6 +189,7 @@ func play_intro() -> void:
 	_root.add_child(_big_title)
 
 	# 1) Escurece com um tremor de pressentimento.
+	Sfx.play("boss_intro_deserto" if biome == "deserto" else "boss_intro_floresta")
 	var t1 := create_tween()
 	t1.tween_property(_intro_fx, "dim", 1.0, 0.35)
 	await t1.finished
@@ -224,6 +226,7 @@ func play_intro() -> void:
 	_big_face.talking = false
 
 	# 3) Encolhe voando até o cantinho; o resto da tela volta ao normal.
+	Sfx.play("boss_encolhe")
 	var t4 := create_tween().set_parallel(true)
 	t4.tween_property(_big_face, "scale", Vector2(slot_scale, slot_scale), 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	t4.tween_property(_big_face, "position", slot - Vector2(BIG_PX, BIG_PX) / 2.0, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
@@ -278,6 +281,19 @@ func react(event: String, force: bool = false) -> void:
 	if line == "":
 		return
 	say(line)
+
+# "Blip" de voz por letra revelada (estilo Undertale): Musgo na floresta, Faraó no deserto.
+func _process(_delta: float) -> void:
+	if _label == null:
+		return
+	var vis: int = _label.visible_characters
+	var txt: String = _label.text
+	if vis > _last_vis and vis <= txt.length() and _bubble != null and _bubble.visible:
+		for i in range(_last_vis, vis):
+			if i >= 0 and i < txt.length() and not " .,;:!?…-—\n".contains(txt[i]):
+				Sfx.play("voz_farao" if biome == "deserto" else "voz_musgo")
+				break
+	_last_vis = vis if vis >= 0 else txt.length()
 
 func say(text: String) -> void:
 	var fr0: Control = _root.get_node("Frame")

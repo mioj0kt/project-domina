@@ -39,6 +39,7 @@ func is_valid_target(board: Board, target_pos: Vector2i, human_team: int, contex
 func execute(board: Board, target_pos: Vector2i, human_team: int, context: Dictionary = {}) -> void:
 	board.grid[target_pos.y][target_pos.x] = _make_piece(human_team)
 	_pop_banner(context, _banner_text(), _banner_color(), target_pos)
+	Sfx.play("brotar")
 	var main_node = context.get("main")
 	if main_node != null and "piece_spawn_scales" in main_node:
 		main_node.piece_spawn_scales[target_pos] = 0.0

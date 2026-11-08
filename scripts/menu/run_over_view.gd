@@ -284,6 +284,7 @@ func _run_tally() -> void:
 					ic.scale = Vector2(0.3, 0.3)
 					create_tween().tween_property(ic, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 			if not _skip:
+				Sfx.play("coroa_conta", 0.0, minf(1.0 + 0.03 * float(running), 1.9))   # sobe de tom a cada Coroa
 				_pulse_total()
 				await get_tree().create_timer(delay).timeout
 				if is_instance_valid(_total_label):
@@ -299,10 +300,16 @@ func _run_tally() -> void:
 		_msg_label.text = "Nenhuma Coroa desta vez. Vença duelos para ganhar Coroas!"
 	else:
 		_msg_label.text = "Gaste suas Coroas no Grimório para desbloquear Leis e Cartas."
+	if MetaProgress.grimorio_just_unlocked:
+		MetaProgress.grimorio_just_unlocked = false
+		_msg_label.text = "GRIMÓRIO DESBLOQUEADO! Gaste suas Coroas lá para liberar Leis e Cartas novas."
+		_msg_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
 	if total > 0:
 		_total_label.pivot_offset = _total_label.size / 2.0
 		_total_label.scale = Vector2(1.4, 1.4)
 		create_tween().tween_property(_total_label, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		if not _skip:
+			Sfx.play("coroa_final")
 		_fx.pop_at(_total_label.global_position + _total_label.size * 0.5, 12 if bool(_summary["won"]) else 8)
 	_done = true
 	_menu_btn.disabled = false

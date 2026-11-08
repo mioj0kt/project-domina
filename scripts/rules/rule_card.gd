@@ -8,7 +8,7 @@ enum Category {
 	TURN,
 	BOARD,
 	COMBO,
-	BOSS   # leis de chefe (especiais): não entram em loja/baú/altar
+	BOSS   # leis de chefe (especiais): não entram em loja/altar
 }
 
 enum Scope {

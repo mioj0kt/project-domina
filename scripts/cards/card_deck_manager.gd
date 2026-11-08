@@ -9,6 +9,8 @@ const MAX_HAND_SIZE: int = 5
 var draw_pile: Array[ActionCard] = []
 var hand: Array[ActionCard] = []
 var discard_pile: Array[ActionCard] = []
+# Só a mão do jogador toca som ao comprar (a da IA fica muda).
+var play_sounds: bool = false
 
 # Chamado ao iniciar o duelo: todo o deck do jogador vai para a pilha de compra
 func setup_duel(deck_source: Array[ActionCard]) -> void:
@@ -41,6 +43,8 @@ func draw_cards(amount: int = 1) -> void:
 		drew_any = true
 
 	if drew_any:
+		if play_sounds:
+			Sfx.play("carta")
 		hand_updated.emit()
 
 func _draw_one_card_raw() -> void:
@@ -56,6 +60,8 @@ func play_card_at(card_index: int) -> ActionCard:
 	# Vai para o descarte e permanece lá até o próximo duelo
 	discard_pile.append(card)
 
+	if play_sounds:
+		Sfx.play("carta_jogar")
 	card_played.emit(card)
 	hand_updated.emit()
 	return card

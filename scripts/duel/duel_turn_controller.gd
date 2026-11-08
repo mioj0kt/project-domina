@@ -81,6 +81,7 @@ func on_coin_flip_completed(player_won_white: bool) -> void:
 	# Damas que já existem no começo (Realeza, Guarda Real) nunca contam como
 	# "Dama nova" — o relógio da Morte Súbita não pode nem piscar por causa delas.
 	_host.sudden_death_mgr.snapshot_initial_kings(_host.board)
+	_host.apply_sudden_death_duel_rules()
 
 	if _host.current_duel is DuelBoss:
 		var boss_duel = _host.current_duel as DuelBoss
@@ -575,6 +576,7 @@ func _maybe_play_ai_card() -> void:
 		# Primeiro a carta aparece/é lançada, SÓ DEPOIS o efeito resolve (assim
 		# cara ou coroa, animações etc. acontecem depois de mostrar a carta).
 		ai_deck_mgr.play_card_at(i)
+		Sfx.play("carta_jogar")
 		if host.ai_card_reveal_view != null:
 			var from_pos = Vector2(get_viewport().get_visible_rect().size.x / 2.0, 75.0)
 			var to_pos = from_pos
@@ -907,6 +909,7 @@ func _process_boss_law_events(boss_duel: DuelBoss) -> void:
 				await get_tree().create_timer(0.7).timeout
 			"cactus":
 				host.rule_banner_view.pop_rule_trigger(center, "UM CACTO BROTA!", Color(0.5, 0.85, 0.4), "cacti")
+				Sfx.play("brotar")
 				var tw3 = create_tween().set_parallel(true)
 				for pos in ev["tiles"]:
 					host.piece_spawn_scales[pos] = 0.0
@@ -916,6 +919,7 @@ func _process_boss_law_events(boss_duel: DuelBoss) -> void:
 			"sarcophagus", "mummy":
 				var is_mummy: bool = ev["type"] == "mummy"
 				host.rule_banner_view.pop_rule_trigger(center, "A MÚMIA DESPERTA!" if is_mummy else "UM SARCÓFAGO SURGE!", Color(0.8, 0.7, 0.4), "sarcophagi")
+				Sfx.play("brotar")
 				var tw2 = create_tween().set_parallel(true)
 				for pos in ev["tiles"]:
 					host.piece_spawn_scales[pos] = 0.0
@@ -1093,8 +1097,24 @@ func check_elimination() -> bool:
 	if host.is_game_over:
 		return true
 	if host.board.count_pieces(host.human_team) > 0 and host.board.count_pieces(host.ai_team) > 0:
+		await _check_sudden_death_after_effect()
 		return false
 	return await check_game_over()
+
+# Uma carta/efeito pode deixar um lado com 1 peça (ou criar uma Dama nova): a
+# Morte Súbita liga NA HORA, em vez de só no fim da próxima jogada. Só checa a
+# condição (não desconta turno do relógio). O Chefe (stall_only) não usa isso.
+func _check_sudden_death_after_effect() -> void:
+	var host = _host
+	if host.is_game_over or not host.current_duel.uses_sudden_death():
+		return
+	var sd = host.sudden_death_mgr
+	if sd.is_active or sd.stall_only:
+		return
+	sd.check_conditions(host.board, host.human_team, host.ai_team)
+	if sd.just_triggered:
+		sd.just_triggered = false
+		await host._on_sudden_death_triggered()
 
 func check_game_over() -> bool:
 	var host = _host

@@ -29,6 +29,7 @@ func _vp() -> Vector2:
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 
 # origin: onde a moeda caiu (coordenadas globais da tela)
@@ -86,7 +87,7 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var inv: Transform2D = get_global_transform().affine_inverse()
 	if spot_target != null and is_instance_valid(spot_target) and spot_target.is_inside_tree():
-		var c: Vector2 = inv * (spot_target.get_global_rect().get_center() + Vector2(0.0, 10.0))
+		var c: Vector2 = inv * (spot_target.get_global_rect().get_center())
 		_draw_spot(c)
 	if frame_target != null and is_instance_valid(frame_target) and frame_target.is_inside_tree():
 		var gr: Rect2 = frame_target.get_global_rect()
@@ -112,13 +113,10 @@ func _draw_spot(c: Vector2) -> void:
 	var L: float = 150.0
 	for i in range(n):
 		var ang: float = rot + float(i) * TAU / float(n)
-		var half: float = 0.12
-		var pts := PackedVector2Array([c,
-			c + Vector2(cos(ang - half), sin(ang - half)) * L,
-			c + Vector2(cos(ang + half), sin(ang + half)) * L])
-		draw_polygon(pts, PackedColorArray([Color(GOLD, 0.10 * k), Color(GOLD, 0.0), Color(GOLD, 0.0)]))
+		var half: float = 0.10
+		PixelBeam.beam(self, c, ang, L, half, Color(GOLD, 0.30 * k))
 	for i in range(4):
-		draw_circle(c, 120.0 - 22.0 * i, Color(GOLD, 0.025 * k))
+		PixelBeam.disc(self, c, 120.0 - 26.0 * i, Color(GOLD, 0.035 * k), 6.0)
 
 # --- letreiro de lâmpadas ---
 func _draw_marquee(r: Rect2) -> void:
@@ -165,10 +163,7 @@ func _draw_burst_beams(o: Vector2) -> void:
 	for i in range(n):
 		var ang: float = rot + float(i) * TAU / float(n)
 		var half: float = 0.06
-		var pts := PackedVector2Array([o,
-			o + Vector2(cos(ang - half), sin(ang - half)) * L,
-			o + Vector2(cos(ang + half), sin(ang + half)) * L])
-		draw_polygon(pts, PackedColorArray([Color(GOLD.lightened(0.3), 0.22 * k), Color(GOLD, 0.0), Color(GOLD, 0.0)]))
+		PixelBeam.beam(self, o, ang, L, half, Color(GOLD.lightened(0.3), 0.55 * k))
 
 func _draw_coin(co: Dictionary) -> void:
 	var a: float = clampf(float(co["life"]) / 0.3, 0.0, 1.0)

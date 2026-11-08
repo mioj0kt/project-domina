@@ -19,6 +19,7 @@ func play_coronation(screen_pos: Vector2, p_cell_size: float, piece: BoardPiece)
 	anim_pos = screen_pos
 	cell_size = p_cell_size
 	is_animating = true
+	Sfx.play("coroar")
 	flip_scale_x = 1.0
 	toss_scale = 1.0
 

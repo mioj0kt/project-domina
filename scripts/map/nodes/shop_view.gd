@@ -380,6 +380,7 @@ func _on_buy_law_pressed(index: int) -> void:
 
 	var law = laws_for_sale[index]
 	if RunManager == null or RunManager.gold < _law_price(law):
+		Sfx.play("negado")
 		return
 	if not RunManager.can_add_rule(law):
 		# Limite de Leis: só cobra se o jogador revogar uma e a nova entrar.
@@ -414,6 +415,8 @@ func _on_buy_action_card_pressed(index: int) -> void:
 		return
 
 	var card = cards_for_sale[index]
+	if RunManager != null and RunManager.gold < _card_price(card):
+		Sfx.play("negado")
 	# Mesmo princípio: respeita o limite do inventário antes de cobrar.
 	if RunManager != null and RunManager.gold >= _card_price(card) and RunManager.add_card_to_deck(card):
 		RunManager.gold -= _card_price(card)

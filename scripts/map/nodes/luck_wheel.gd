@@ -131,6 +131,7 @@ func spin_to(key: String) -> void:
 		return
 	result_key = key
 	is_spinning = true
+	Sfx.play("roleta_giro")
 	var seg: Dictionary = segments[idx]
 	var p: float = lerpf(seg["a0"], seg["a1"], randf_range(0.2, 0.8))
 	# O ponto p (ângulo local) tem que parar no topo: p + rotação ≡ 0 (mod TAU).
@@ -153,6 +154,13 @@ func _on_stopped(idx: int) -> void:
 	caption = seg["label"]
 	caption_color = KIND_COLORS.get(seg.get("kind", "neutral"), Color.WHITE).lightened(0.45)
 	_burst(seg.get("kind", "neutral"))
+	match seg.get("kind", "neutral"):
+		"good":
+			Sfx.play("cassino_acerto")
+		"bad", "danger":
+			Sfx.play("cassino_erro")
+		_:
+			Sfx.play("roleta_fim")
 	var t = create_tween()
 	t.tween_property(self, "_highlight", 1.0, 0.12)
 	t.tween_property(self, "_highlight", 0.25, 0.18)
@@ -192,6 +200,7 @@ func _process(delta: float) -> void:
 			if _last_idx != -1:
 				_pointer_kick = 1.0
 				tick.emit()
+				Sfx.play("roleta_tick")
 			_last_idx = idx
 	_pointer_kick = maxf(0.0, _pointer_kick - delta * 6.0)
 	for p in _particles:

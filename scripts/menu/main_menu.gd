@@ -61,6 +61,20 @@ func _setup_ui() -> void:
 	var meta_btn = _make_menu_button("GRIMÓRIO", Color(0.2, 0.16, 0.08), Color(0.85, 0.64, 0.25))
 	meta_btn.pressed.connect(_on_meta_pressed)
 	center_box.add_child(meta_btn)
+	# Grimório bloqueado até o fim da 1ª run (derrota ou vitória).
+	if not MetaProgress.grimorio_unlocked:
+		meta_btn.text = "GRIMÓRIO  (BLOQUEADO)"
+		meta_btn.disabled = true
+		meta_btn.modulate = Color(1, 1, 1, 0.55)
+		meta_btn.tooltip_text = "Termine sua primeira run para desbloquear o Grimório."
+		center_box.add_child(_menu_note("Termine sua primeira run para desbloquear o Grimório.", Color(0.94, 0.9, 0.81, 0.6)))
+	elif MetaProgress.grimorio_just_unlocked:
+		MetaProgress.grimorio_just_unlocked = false
+		var note := _menu_note("GRIMÓRIO DESBLOQUEADO!", Color(1.0, 0.85, 0.3))
+		center_box.add_child(note)
+		var tw := create_tween().set_loops(6)
+		tw.tween_property(meta_btn, "modulate", Color(1.5, 1.3, 0.9), 0.5)
+		tw.tween_property(meta_btn, "modulate", Color.WHITE, 0.5)
 
 	var tutorial_btn = _make_menu_button("TUTORIAL", Color(0.12, 0.16, 0.24), Color(0.35, 0.7, 1.0))
 	tutorial_btn.pressed.connect(_on_tutorial_pressed)
@@ -112,6 +126,16 @@ func _make_logo() -> Control:
 	logo.custom_minimum_size = Vector2(best_tex.get_width() * best_scale, best_tex.get_height() * best_scale)
 	logo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	return logo
+
+# Linha de aviso pequena sob um botão do menu.
+func _menu_note(text: String, color: Color) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.add_theme_font_size_override("font_size", 20)
+	l.add_theme_color_override("font_color", color)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return l
 
 func _make_menu_button(text: String, _bg_color: Color, border_color: Color) -> Button:
 	var btn = Button.new()
@@ -196,6 +220,8 @@ func _start_run() -> void:
 	SceneTransition.go(MAP_SCENE_PATH)
 
 func _on_meta_pressed() -> void:
+	if not MetaProgress.grimorio_unlocked:
+		return
 	SceneTransition.go(META_SCENE_PATH)
 
 func _on_tutorial_pressed() -> void:

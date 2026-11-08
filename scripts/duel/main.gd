@@ -388,7 +388,7 @@ func _setup_ui() -> void:
 	skip_extra_btn.custom_minimum_size = Vector2(SKIP_EXTRA_W, SKIP_EXTRA_H)
 	skip_extra_btn.focus_mode = Control.FOCUS_NONE
 	skip_extra_btn.visible = false
-	PixelUI.skin_button(skip_extra_btn, Color(0.85, 0.64, 0.25))
+	PixelUI.skin_button(skip_extra_btn, PixelUI.AZUL_QUADRO)
 	skip_extra_btn.pressed.connect(func(): turn_controller.skip_extra())
 	var skip_box := VBoxContainer.new()
 	skip_box.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -437,6 +437,7 @@ func _setup_controllers() -> void:
 	add_child(turn_controller)
 	turn_controller.setup(self)
 
+	coin_flip_view.play_result_sound = false   # a moeda que decide as cores não toca som de ganhar/perder
 	coin_flip_view.flip_completed.connect(turn_controller.on_coin_flip_completed)
 	sudden_death_mgr.match_finished_by_points.connect(turn_controller.on_sudden_death_ended)
 
@@ -568,6 +569,7 @@ func _tutorial_spot_rect(id: String) -> Rect2:
 # acaba de começar. NÃO é ligado ao sinal sudden_death_triggered de propósito:
 # sinais não fazem quem emite esperar, e a IA jogaria em cima das moedas.
 func _on_sudden_death_triggered() -> void:
+	_apply_sudden_death_start_laws()
 	if TutorialManager.is_active and tutorial_guide_view != null \
 			and TutorialManager.current_step == TutorialManager.Step.DUEL_1_BASICS \
 			and not TutorialManager.duel1_sudden_death_done:
@@ -575,6 +577,31 @@ func _on_sudden_death_triggered() -> void:
 		await tutorial_guide_view.play_sequence(TutorialManager.get_sudden_death_started_lines())
 	await sudden_death_view.play_intro(sudden_death_mgr.turns_left, sudden_death_mgr.triggered_by_stall, self)
 	await _resolve_impossible_tie()
+	if _has_player_law("adrenaline") and action_cards != null and action_cards.card_deck_mgr != null:
+		board.rule_fired.emit("adrenaline")
+		action_cards.card_deck_mgr.draw_cards(2)
+
+# ---- Leis que mexem na Morte Súbita (só do jogador) ----
+func _has_player_law(rule_id: String) -> bool:
+	if board == null or board.rule_pipeline == null:
+		return false
+	for r in board.rule_pipeline.active_rules:
+		if r.id == rule_id and r.applies_to_team(human_team, board.human_team_color):
+			return true
+	return false
+
+# No começo do duelo: Pavio Curto muda o gatilho por nº de peças.
+func apply_sudden_death_duel_rules() -> void:
+	if _has_player_law("short_fuse"):
+		sudden_death_mgr.trigger_threshold = 3
+
+# Quando a Morte Súbita liga (antes da abertura, para o relógio já sair certo).
+func _apply_sudden_death_start_laws() -> void:
+	if _has_player_law("borrowed_time"):
+		sudden_death_mgr.extend(3)
+		board.rule_fired.emit("borrowed_time")
+	if _has_player_law("golden_queen"):
+		sudden_death_mgr.human_king_value = 5
 
 # Lei Empate Impossível: ao começar a Morte Súbita, cada time ao qual a Lei
 # se aplica joga 3 moedas; cada moeda que cair na cor do time promove uma peça comum aleatória sua.
@@ -643,12 +670,17 @@ func boss_say(event: String) -> void:
 		boss_banter.react(event)
 
 func _on_board_piece_destroyed(grid_pos: Vector2i, destroyed_piece: BoardPiece) -> void:
+	# Perdeu uma peça por QUALQUER causa (captura, carta como Duelo de Sorte,
+	# Cara ou Coroa Triplo...): libera cartas de "perdeu uma peça" (Retaliação).
+	if destroyed_piece != null and not destroyed_piece.is_tree and destroyed_piece.owner_team == human_team:
+		lost_piece_last_enemy_turn = true
 	if destroyed_piece != null and not is_game_over:
 		boss_say("piece_lost" if destroyed_piece.owner_team == ai_team else "capture_boss")
 	var piece_center = board_offset + Vector2(grid_pos.x * cell_size + cell_size / 2.0, grid_pos.y * cell_size + cell_size / 2.0)
 	piece_shatter_view.shatter_piece(piece_center, destroyed_piece, cell_size)
 
 func _on_board_capture_prevented(grid_pos: Vector2i, _piece: BoardPiece) -> void:
+	Sfx.play("bloqueio")
 	var tile_center = board_offset + Vector2(grid_pos.x * cell_size + cell_size / 2.0, grid_pos.y * cell_size + cell_size / 2.0)
 	var preventer_id: String = board.rule_pipeline.last_preventer_id if board.rule_pipeline != null else ""
 	rule_banner_view.pop_rule_trigger(tile_center, "CAPTURA BLOQUEADA!", Color(0.45, 0.75, 1.0), preventer_id)
@@ -657,6 +689,7 @@ func _on_board_capture_prevented(grid_pos: Vector2i, _piece: BoardPiece) -> void
 func _on_rule_fired(rule_id: String) -> void:
 	if rule_id == "":
 		return
+	Sfx.play("lei")
 	if hud_bar != null and hud_bar.flash_rule(rule_id):
 		return
 	if enemy_hud_bar != null:
@@ -890,6 +923,7 @@ func debug_toggle_rule(rule_id: String, make_rule: Callable) -> void:
 # impacto aqui (poeira, tremor curto e hit-stop); a explosão em si vem da peça
 # se despedaçando, sem clarão nem anéis.
 func _on_piece_landed(center: Vector2, is_capture: bool) -> void:
+	Sfx.play("captura" if is_capture else "mover")
 	# Movimento comum: sem partículas, anel, clarão ou tremor.
 	if not is_capture:
 		return

@@ -88,6 +88,7 @@ func show_game_over(won: bool, rewards: Dictionary = {}, custom_title: String = 
 	for child in stats_container.get_children():
 		child.queue_free()
 
+	Sfx.play("vitoria" if won else "derrota")
 	if won:
 		var title_txt = custom_title if custom_title != "" else "VITORIA NO DUELO!"
 		title_label.text = title_txt
@@ -200,6 +201,7 @@ func _run_rewards_animation() -> void:
 
 				await get_tree().create_timer(current_delay).timeout
 				if is_instance_valid(coin):
+					Sfx.play("moeda_conta", 0.0, minf(1.0 + 0.03 * float(c), 1.9))   # sobe de tom a cada moeda
 					victory_fx.pop_at(coin.global_position + coin.size * 0.5, 1)
 				current_delay = max(0.02, current_delay * 0.88)
 			else:
@@ -218,6 +220,8 @@ func _run_rewards_animation() -> void:
 	total_label.pivot_offset = total_label.size * 0.5
 	total_label.scale = Vector2(1.25, 1.25)
 	create_tween().tween_property(total_label, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if not skip_requested:
+		Sfx.play("moeda")
 	victory_fx.pop_at(total_label.global_position + total_label.size * 0.5, 8)
 	is_counting = false
 	confirm_btn.disabled = false

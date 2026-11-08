@@ -39,6 +39,17 @@ var player_pawn: MapPlayerPawn
 var pawn_rest_node: MapNode = null
 var is_traveling: bool = false
 
+# Rolagem manual do mapa (roda do mouse, setas/W/S, arrastar, touchpad).
+const SCROLL_STEP: float = 110.0
+const SCROLL_KEY_SPEED: float = 700.0
+var _cam_tween: Tween = null
+var _drag_scroll: bool = false      # arrastando com botão do meio/direito
+var _lmb_down: bool = false         # botão esquerdo pressionado em área arrastável
+var _lmb_origin: Vector2 = Vector2.ZERO
+var _lmb_dragging: bool = false     # passou do limiar: é arrasto, não clique
+var _drag_end_msec: int = 0
+const DRAG_THRESHOLD: float = 8.0
+
 var inventory_ui: InventoryUI
 var hud_bar: HUDBar
 
@@ -108,6 +119,8 @@ func toggle_inventory() -> void:
 
 func _input(event: InputEvent) -> void:
 	if is_traveling:
+		return
+	if _handle_scroll_input(event):
 		return
 
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -258,10 +271,17 @@ func _show_biome_title() -> void:
 	title.text = String(RunManager.BIOME_TITLES.get(_current_biome(), ""))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 72)
-	title.add_theme_color_override("font_color", Color(0.95, 0.82, 0.5))
-	title.add_theme_color_override("font_shadow_color", Color(0.12, 0.07, 0.05, 0.9))
-	title.add_theme_constant_override("shadow_offset_x", 4)
-	title.add_theme_constant_override("shadow_offset_y", 4)
+	# Cores por bioma: texto claro + contorno grosso escuro da mesma família.
+	var desert: bool = _current_biome() == "deserto"
+	var fill: Color = Color("#f6d98a") if desert else Color("#b9e28a")
+	var edge: Color = Color("#5a2a10") if desert else Color("#10301a")
+	title.add_theme_color_override("font_color", fill)
+	title.add_theme_color_override("font_outline_color", edge)
+	title.add_theme_constant_override("outline_size", 22)
+	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+	title.add_theme_constant_override("shadow_offset_x", 5)
+	title.add_theme_constant_override("shadow_offset_y", 6)
+	title.add_theme_constant_override("shadow_outline_size", 22)
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(title)
 	var tw := create_tween()
@@ -333,7 +353,15 @@ const _NODE_SPRITES: Dictionary = {
 	MapNode.NodeType.Evento: "nodo_evento",
 	MapNode.NodeType.Aposta: "nodo_aposta",
 	MapNode.NodeType.Altar: "nodo_lei",
+	MapNode.NodeType.Arcano: "nodo_carta",   # sem a arte ainda, cai no "nodo_lei"
 }
+
+# Nome do sprite do soquete do nó; se o arquivo ainda não existe, usa o do Altar.
+func _node_sprite_name(type: int) -> String:
+	var n: String = _NODE_SPRITES.get(type, "nodo_batalha")
+	if not ResourceLoader.exists(MapNodeArt.MAP_SPRITE_DIR + n + ".png"):
+		return "nodo_lei"
+	return n
 
 var node_art: Dictionary = {}        # MapNode -> {"base": TextureRect, "ind": TextureRect}
 var _hovered_node: MapNode = null
@@ -348,7 +376,7 @@ func _instantiate_node_ui(layers: Array[Array]) -> void:
 	for layer in layers:
 		for node in layer:
 			var is_boss = node.type == MapNode.NodeType.Chefe
-			var base_tex = _map_sprite(_NODE_SPRITES.get(node.type, "nodo_batalha"))
+			var base_tex = _map_sprite(_node_sprite_name(node.type))
 			var node_px: Vector2 = base_tex.get_size() if base_tex != null else Vector2(64, 64)
 
 			# Botão invisível só pra receber o clique/hover; o visual são
@@ -442,7 +470,7 @@ func _update_nodes_visual_state() -> void:
 		var ind: TextureRect = art["ind"]
 		var size_label: Label = node_size_labels.get(node)
 		var boss_suffix = "_boss" if node.type == MapNode.NodeType.Chefe else ""
-		var sprite_name: String = _NODE_SPRITES.get(node.type, "nodo_batalha")
+		var sprite_name: String = _node_sprite_name(node.type)
 		var ind_name = ""
 		var base_mod = Color.WHITE
 		var label_col = Color(1.0, 0.92, 0.7)
@@ -478,7 +506,7 @@ func _update_nodes_visual_state() -> void:
 			ind_name = overlay_name
 
 		base.modulate = base_mod
-		MapNodeArt.apply(btn, base, ind, _NODE_SPRITES.get(node.type, "nodo_batalha"), sprite_name, ind_name, overlay_name, boss_suffix, node == pawn_rest_node)
+		MapNodeArt.apply(btn, base, ind, _node_sprite_name(node.type), sprite_name, ind_name, overlay_name, boss_suffix, node == pawn_rest_node)
 		if size_label:
 			size_label.add_theme_color_override("font_color", label_col)
 		var layout_label: Label = node_layout_labels.get(node)
@@ -487,6 +515,8 @@ func _update_nodes_visual_state() -> void:
 	_refresh_lines()
 
 func _on_node_clicked(node: MapNode) -> void:
+	if Time.get_ticks_msec() - _drag_end_msec < 150:
+		return   # soltou um arrasto em cima de um nó: não é clique
 	if is_traveling:
 		return
 
@@ -525,6 +555,8 @@ func _on_node_clicked(node: MapNode) -> void:
 			SceneTransition.go("res://scenes/event_view.tscn")
 		MapNode.NodeType.Altar:
 			SceneTransition.go("res://scenes/altar_view.tscn")
+		MapNode.NodeType.Arcano:
+			SceneTransition.go("res://scenes/arcano_view.tscn")
 		_:
 			is_traveling = false
 
@@ -543,8 +575,79 @@ func _camera_target_y(target_y: float) -> float:
 		return r.get_center().y
 	return clampf(target_y, r.position.y + half_h, r.end.y - half_h)
 
+# Rolar o mapa para ver trechos acima/abaixo do nó atual. Qualquer rolagem
+# cancela o deslize automático da câmera e respeita os limites do mapa.
+func _scroll_camera(dy: float) -> void:
+	if camera == null:
+		return
+	if _cam_tween != null and _cam_tween.is_valid():
+		_cam_tween.kill()
+	camera.position.y = _camera_target_y(camera.position.y + dy)
+
+func _modal_open() -> bool:
+	return inventory_ui != null and inventory_ui.visible
+
+func _handle_scroll_input(event: InputEvent) -> bool:
+	if _modal_open():
+		return false
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_scroll_camera(-SCROLL_STEP)
+			return true
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_scroll_camera(SCROLL_STEP)
+			return true
+		if mb.button_index == MOUSE_BUTTON_MIDDLE or mb.button_index == MOUSE_BUTTON_RIGHT:
+			_drag_scroll = mb.pressed
+			return true
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed:
+				# Só começa a arrastar sobre o mapa (fundo ou nós), nunca sobre a HUD.
+				var hov: Control = get_viewport().gui_get_hovered_control()
+				_lmb_down = hov == null or node_buttons.values().has(hov)
+				_lmb_origin = mb.position
+				_lmb_dragging = false
+			else:
+				var was_drag := _lmb_dragging
+				_lmb_down = false
+				_lmb_dragging = false
+				if was_drag:
+					_drag_end_msec = Time.get_ticks_msec()
+					# Não consome o evento (o botão precisa soltar); o clique que
+					# terminou o arrasto é ignorado em _on_node_clicked.
+	elif event is InputEventMouseMotion:
+		var mm := event as InputEventMouseMotion
+		if _drag_scroll:
+			_scroll_camera(-mm.relative.y / CAMERA_ZOOM)
+			return true
+		if _lmb_down:
+			if not _lmb_dragging and mm.position.distance_to(_lmb_origin) >= DRAG_THRESHOLD:
+				_lmb_dragging = true
+			if _lmb_dragging:
+				_scroll_camera(-mm.relative.y / CAMERA_ZOOM)
+				return true
+	elif event is InputEventPanGesture:
+		_scroll_camera((event as InputEventPanGesture).delta.y * 40.0)
+		return true
+	return false
+
+func _process(delta: float) -> void:
+	if is_traveling or _modal_open():
+		return
+	var dir := 0.0
+	if Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_W):
+		dir -= 1.0
+	if Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S):
+		dir += 1.0
+	if dir != 0.0:
+		_scroll_camera(dir * SCROLL_KEY_SPEED * delta)
+
 func _move_camera_to_node(target_node: MapNode) -> void:
+	if _cam_tween != null and _cam_tween.is_valid():
+		_cam_tween.kill()
 	var tween = create_tween()
+	_cam_tween = tween
 	tween.tween_property(camera, "position:y", _camera_target_y(target_node.position.y), 0.85)\
 		.set_trans(Tween.TRANS_SINE)\
 		.set_ease(Tween.EASE_OUT)

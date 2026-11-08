@@ -1,6 +1,10 @@
 class_name GuideFaceControl
 extends Control
 
+func _init() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+
 # Rosto animado de um personagem do tutorial: O Guia (sorridente) ou o Irmão
 # (maligno). Cada um é uma tira de 8 quadros de 32x32 — quadro 0 = boca
 # fechada (parado), 1..6 = formas de boca da fala.
@@ -80,17 +84,12 @@ func _draw_aura(center: Vector2, side: float) -> void:
 		var ang: float = _t * 0.35 + TAU * k / rays
 		var half: float = 0.11 + 0.03 * sin(_t * 1.7 + k * 1.3)
 		var len: float = side * (0.78 + 0.10 * sin(_t * 1.3 + k * 2.1))
-		var pts := PackedVector2Array([
-			center,
-			center + Vector2.from_angle(ang - half) * len,
-			center + Vector2.from_angle(ang + half) * len,
-		])
-		draw_colored_polygon(pts, Color(aura_color, 0.10 + 0.05 * pulse))
+		PixelBeam.beam(self, center, ang, len, half * 0.7, Color(aura_color, 0.35 + 0.15 * pulse))
 	# Halo em degraus (visual pixel-art): círculos concêntricos de alfa crescente.
 	var steps := 6
 	for i in steps:
 		var r: float = side * (0.74 - i * 0.075) + pulse * u * 1.5
-		draw_circle(center, r, Color(aura_color.lightened(i * 0.05), 0.05 + i * 0.03))
+		PixelBeam.disc(self, center, r, Color(aura_color.lightened(i * 0.05), 0.05 + i * 0.03), maxf(u, 2.0))
 	# Brasas subindo.
 	for k in 12:
 		var ph: float = fposmod(_t * (0.18 + 0.05 * (k % 3)) + k * 0.137, 1.0)

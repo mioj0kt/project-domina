@@ -32,6 +32,13 @@ var turns_left: int = 6
 var initial_kings_count: int = 0
 # Pausa: quantos fechamentos de turno ainda NÃO descontam o relógio.
 var pause_ticks: int = 0
+# Quantas peças restantes (de UM lado) ligam a Morte Súbita. Padrão 1; a Lei Pavio Curto sobe.
+var trigger_threshold: int = 1
+# Carta Hora H: pede para a Morte Súbita ligar na próxima checagem (logo após o efeito).
+var forced_start: bool = false
+# Valor de uma Dama na contagem final, por lado (Lei Dama Dourada sobe o do jogador).
+var human_king_value: int = 3
+var ai_king_value: int = 3
 
 # Preenchidos pelo main: contagem visual dos pontos no fim da Morte Súbita.
 var tally_view: ScoreTallyView = null
@@ -43,6 +50,10 @@ func reset() -> void:
 	turns_left = max_turns
 	initial_kings_count = 0
 	pause_ticks = 0
+	trigger_threshold = 1
+	forced_start = false
+	human_king_value = 3
+	ai_king_value = 3
 	_stall_plies = 0
 	_last_piece_total = -1
 	triggered_by_stall = false
@@ -87,7 +98,10 @@ func check_conditions(board: Board, human_team: int, ai_team: int) -> void:
 
 	var triggered: bool = false
 	if not stall_only:
-		triggered = human_count == 1 or ai_count == 1 or new_king_promoted
+		triggered = (human_count >= 1 and human_count <= trigger_threshold) or (ai_count >= 1 and ai_count <= trigger_threshold) or new_king_promoted
+	if forced_start:
+		forced_start = false
+		triggered = true
 	# O anti-impasse só existe no Chefe (stall_only); duelos normais seguem as
 	# regras de sempre (1 peça restante / nova Dama).
 	if stall_only and not triggered and _update_stall(board, human_count + ai_count - _count_inert_men(board)):
@@ -171,6 +185,21 @@ func process_turn_end(board: Board, human_team: int, ai_team: int) -> bool:
 # Carta Pausa: congela o relógio pelos próximos `ticks` fechamentos de turno
 # (2 = uma rodada: o seu turno e o da IA) e mostra a pausa NA HORA no contador
 # e nas bordas, sem esperar o próximo fechamento de turno.
+# Carta Hora H.
+func request_start() -> void:
+	forced_start = true
+
+# Carta Corte no Relógio: tira turnos (sempre sobra pelo menos 1).
+func shorten(turns: int) -> void:
+	turns_left = maxi(1, turns_left - turns)
+	_refresh_view()
+
+# Carta Prorrogação / Lei Tempo Emprestado: soma turnos ao relógio.
+func extend(turns: int) -> void:
+	turns_left += turns
+	max_turns = maxi(max_turns, turns_left)
+	_refresh_view()
+
 func apply_pause(ticks: int) -> void:
 	pause_ticks = ticks
 	_refresh_view()
@@ -180,6 +209,8 @@ func _resolve_points(board: Board, human_team: int, ai_team: int) -> void:
 	var ai_score = 0
 
 	if tally_view != null:
+		tally_view.human_king_value = human_king_value
+		tally_view.ai_king_value = ai_king_value
 		var res: Dictionary = await tally_view.play(board, tally_board_offset, tally_cell_size, human_team, ai_team)
 		human_score = res["human"]
 		ai_score = res["ai"]
@@ -192,7 +223,9 @@ func _resolve_points(board: Board, human_team: int, ai_team: int) -> void:
 		for c in range(board.cols):
 			var piece: BoardPiece = board.grid[r][c]
 			if piece != Board.EMPTY:
-				var val = 3 if piece.is_king else 1
+				var val = 1
+				if piece.is_king:
+					val = human_king_value if piece.owner_team == human_team else ai_king_value
 				if piece.owner_team == human_team:
 					human_score += val
 				elif piece.owner_team == ai_team:

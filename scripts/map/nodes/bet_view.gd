@@ -19,8 +19,6 @@ const COIN_RADIUS: float = 100.0
 
 enum StakeType { GOLD, CARD, LAW }
 
-var hud_bar: HUDBar
-var inventory_ui: InventoryUI
 var coin_flip_view: CoinFlipView
 var casino_fx: CasinoFx
 var table_panel: PanelContainer
@@ -49,14 +47,13 @@ var picker_cancel_btn: Button
 var preview_hbox: HBoxContainer
 var coin_spacer: Control
 
-var call_hbox: HBoxContainer
-var white_call_btn: Button
-var black_call_btn: Button
+var gold_value_labels: Array[Label] = []
+var gold_icon_boxes: Array[Control] = []
 
 var leave_btn: Button
 var step_panels: Array[PanelContainer] = []
 var step_labels: Array[Label] = []
-var coin_hint: Label
+var coin_hint: CoinSlot
 var tutorial_guide_view: TutorialGuideView
 
 var current_stake_type: int = StakeType.GOLD
@@ -78,15 +75,6 @@ func _setup_ui() -> void:
 	add_child(canvas)
 
 	add_child(BiomeBackground.new())
-
-	hud_bar = HUDBar.new()
-	canvas.add_child(hud_bar)
-	hud_bar.open_laws_requested.connect(func(): inventory_ui.open_on_tab(InventoryUI.Tab.LAWS))
-	hud_bar.open_cards_requested.connect(func(): inventory_ui.open_on_tab(InventoryUI.Tab.CARDS))
-
-	inventory_ui = InventoryUI.new()
-	add_child(inventory_ui)
-	inventory_ui.setup()
 
 	discard_modal = RuleDiscardModal.new()
 	discard_modal.rule_replaced.connect(_on_reward_law_replaced)
@@ -114,7 +102,7 @@ func _setup_ui() -> void:
 
 	var content_box = VBoxContainer.new()
 	content_box.add_theme_constant_override("separation", 12)
-	content_box.custom_minimum_size = Vector2(960, 0)
+	content_box.custom_minimum_size = Vector2(1080, 850)
 	panel.add_child(content_box)
 
 	var header = Label.new()
@@ -152,27 +140,44 @@ func _setup_ui() -> void:
 		step_panels.append(sp)
 		step_labels.append(sl)
 
+	# Bolsa: sem a HUD do canto, o ouro vive aqui, em destaque.
+	var purse := HBoxContainer.new()
+	purse.alignment = BoxContainer.ALIGNMENT_CENTER
+	purse.add_theme_constant_override("separation", 14)
+	content_box.add_child(purse)
+	var purse_icon := TextureRect.new()
+	purse_icon.texture = load("res://assets/sprites/hud/icone_dinheiro.png")
+	purse_icon.custom_minimum_size = Vector2(56, 56)
+	purse_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	purse_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	purse_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	purse.add_child(purse_icon)
+	var purse_col := VBoxContainer.new()
+	purse_col.add_theme_constant_override("separation", -4)
+	purse.add_child(purse_col)
+	var purse_cap := Label.new()
+	purse_cap.text = "SUA BOLSA"
+	purse_cap.add_theme_font_size_override("font_size", 20)
+	purse_cap.add_theme_color_override("font_color", Color(0.7, 0.62, 0.4))
+	purse_col.add_child(purse_cap)
 	gold_label = Label.new()
-	gold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	gold_label.add_theme_font_size_override("font_size", 36)
-	gold_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5))
-	content_box.add_child(gold_label)
+	gold_label.add_theme_font_size_override("font_size", 46)
+	gold_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.35))
+	gold_label.add_theme_color_override("font_outline_color", Color(0.05, 0.05, 0.08, 1.0))
+	gold_label.add_theme_constant_override("outline_size", 8)
+	purse_col.add_child(gold_label)
 
 	# Espaço reservado onde a moeda gira — a posição real dela é calculada
 	# a partir do centro DESTE controle no momento do lance (não um valor
 	# fixo de tela), então ela sempre cai exatamente aqui, nunca por cima
 	# de texto.
 	coin_spacer = Control.new()
-	coin_spacer.custom_minimum_size = Vector2(10, 250)
+	coin_spacer.custom_minimum_size = Vector2(10, 320)
+	coin_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_box.add_child(coin_spacer)
-	coin_hint = Label.new()
-	coin_hint.text = "?"
+	coin_hint = CoinSlot.new()
 	coin_hint.set_anchors_preset(Control.PRESET_FULL_RECT)
-	coin_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	coin_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	coin_hint.add_theme_font_size_override("font_size", 160)
-	coin_hint.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 0.18))
-	coin_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	coin_hint.piece_clicked.connect(_on_call_selected)
 	coin_spacer.add_child(coin_hint)
 
 	status_label = Label.new()
@@ -205,15 +210,44 @@ func _setup_ui() -> void:
 	gold_wager_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	gold_wager_hbox.add_theme_constant_override("separation", 24)
 	stake_box.add_child(gold_wager_hbox)
-	for amount in GOLD_WAGER_OPTIONS:
+	for gi in range(GOLD_WAGER_OPTIONS.size()):
+		var amount: int = GOLD_WAGER_OPTIONS[gi]
 		var btn = Button.new()
-		btn.text = "%d OURO" % amount
-		btn.custom_minimum_size = Vector2(250, 90)
-		btn.add_theme_font_size_override("font_size", 36)
+		btn.custom_minimum_size = Vector2(250, 96)
 		PixelUI.skin_button(btn, Color(0.4, 0.85, 0.45))
 		btn.pressed.connect(_on_gold_stake_selected.bind(amount))
-		gold_wager_hbox.add_child(btn)
+		# Conteúdo visual: pilha de ícones de dinheiro (1 / 2 / 3) + o valor.
+		var row := HBoxContainer.new()
+		row.set_anchors_preset(Control.PRESET_FULL_RECT)
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override("separation", 10)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		btn.add_child(row)
+		var icons := HBoxContainer.new()
+		icons.add_theme_constant_override("separation", -26)
+		icons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(icons)
+		for k in range(gi + 1):
+			var ic := TextureRect.new()
+			ic.texture = load("res://assets/sprites/hud/icone_dinheiro.png")
+			ic.custom_minimum_size = Vector2(52, 52)
+			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			icons.add_child(ic)
+		var val := Label.new()
+		val.text = str(amount)
+		val.add_theme_font_size_override("font_size", 46)
+		val.add_theme_color_override("font_color", Color(1.0, 0.92, 0.5))
+		val.add_theme_color_override("font_outline_color", Color(0.05, 0.1, 0.05, 1.0))
+		val.add_theme_constant_override("outline_size", 8)
+		val.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(val)
 		gold_buttons.append(btn)
+		gold_icon_boxes.append(row)
+		gold_value_labels.append(val)
+		wager_box_add(btn)
 
 	var special_title = Label.new()
 	special_title.text = "OU ARRISQUE ALGO SEU por uma versão melhor"
@@ -231,7 +265,7 @@ func _setup_ui() -> void:
 	card_stake_btn.text = "ESCOLHER UMA CARTA\npra arriscar"
 	card_stake_btn.custom_minimum_size = Vector2(380, 90)
 	card_stake_btn.add_theme_font_size_override("font_size", 25)
-	PixelUI.skin_button(card_stake_btn, Color(0.6, 0.4, 0.85))
+	PixelUI.skin_button(card_stake_btn, Color(0.6, 0.4, 0.85), "", "icone_cartas")
 	card_stake_btn.pressed.connect(_open_card_picker)
 	special_stake_hbox.add_child(card_stake_btn)
 
@@ -239,7 +273,7 @@ func _setup_ui() -> void:
 	law_stake_btn.text = "ESCOLHER UMA LEI\npra arriscar"
 	law_stake_btn.custom_minimum_size = Vector2(380, 90)
 	law_stake_btn.add_theme_font_size_override("font_size", 25)
-	PixelUI.skin_button(law_stake_btn, Color(0.3, 0.7, 0.9))
+	PixelUI.skin_button(law_stake_btn, Color(0.3, 0.7, 0.9), "", "icone_leis")
 	law_stake_btn.pressed.connect(_open_law_picker)
 	special_stake_hbox.add_child(law_stake_btn)
 
@@ -283,28 +317,6 @@ func _setup_ui() -> void:
 	call_label.visible = false
 	content_box.add_child(call_label)
 
-	call_hbox = HBoxContainer.new()
-	call_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	call_hbox.add_theme_constant_override("separation", 40)
-	call_hbox.visible = false
-	content_box.add_child(call_hbox)
-
-	white_call_btn = Button.new()
-	white_call_btn.text = "BRANCA"
-	white_call_btn.custom_minimum_size = Vector2(320, 110)
-	white_call_btn.add_theme_font_size_override("font_size", 42)
-	PixelUI.skin_button(white_call_btn, Color(0.85, 0.85, 0.9))
-	white_call_btn.pressed.connect(_on_call_selected.bind(true))
-	call_hbox.add_child(white_call_btn)
-
-	black_call_btn = Button.new()
-	black_call_btn.text = "PRETA"
-	black_call_btn.custom_minimum_size = Vector2(320, 110)
-	black_call_btn.add_theme_font_size_override("font_size", 42)
-	PixelUI.skin_button(black_call_btn, Color(0.2, 0.2, 0.28))
-	black_call_btn.pressed.connect(_on_call_selected.bind(false))
-	call_hbox.add_child(black_call_btn)
-
 	leave_btn = Button.new()
 	leave_btn.text = "IR EMBORA"
 	leave_btn.custom_minimum_size = Vector2(340, 58)
@@ -322,6 +334,9 @@ func _setup_ui() -> void:
 
 	coin_flip_view = CoinFlipView.new()
 	coin_flip_view.win_text = "BRANCA!"
+	coin_flip_view.sfx_spin = "cassino_girar"
+	coin_flip_view.sfx_land = "cassino_pousa"
+	coin_flip_view.play_result_sound = false   # o som de acerto/erro depende da APOSTA, não da cor
 	coin_flip_view.lose_text = "PRETA!"
 	# Um lado é a peça comum branca, o outro a peça comum preta (padrão da moeda).
 	coin_flip_view.flip_completed.connect(_on_flip_completed)
@@ -359,16 +374,19 @@ func _pop_status(won: bool) -> void:
 	var tw := create_tween()
 	tw.tween_property(status_label, "scale", Vector2(1.0, 1.0), 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
+func wager_box_add(btn: Button) -> void:
+	gold_wager_hbox.add_child(btn)
+
 func _refresh_gold_label() -> void:
 	var current_gold = RunManager.gold if RunManager != null else 0
-	gold_label.text = "Ouro atual: %d" % current_gold
+	gold_label.text = str(current_gold)
 
 func _update_stake_buttons_state() -> void:
 	var current_gold = RunManager.gold if RunManager != null else 0
 	for i in range(gold_buttons.size()):
 		var wager: int = GOLD_WAGER_OPTIONS[i]
 		gold_buttons[i].disabled = is_flipping or current_gold < wager or wager > max_wager_for(current_gold)
-		gold_buttons[i].text = "%d OURO" % wager
+		gold_icon_boxes[i].modulate = Color(1, 1, 1, 0.4) if gold_buttons[i].disabled else Color.WHITE
 
 	var has_cards = RunManager != null and not RunManager.player_deck.is_empty()
 	var has_rules = RunManager != null and not RunManager.active_rules.is_empty()
@@ -549,9 +567,9 @@ func _labeled_law_visual(caption: String, rule: RuleCard, tint: Color) -> Contro
 func _go_to_call_phase() -> void:
 	stake_box.visible = false
 	picker_box.visible = false
-	call_label.text = "Qual lado vai cair?"
+	call_label.text = "Clique na peça do lado que vai cair!"
 	call_label.visible = true
-	call_hbox.visible = true
+	coin_hint.clickable = true
 	_set_step(1)
 
 func _on_call_selected(called_white: bool) -> void:
@@ -561,7 +579,7 @@ func _on_call_selected(called_white: bool) -> void:
 	_set_step(2)
 	player_called_white = called_white
 	TutorialManager.report_event("bet_call")
-	call_hbox.visible = false
+	coin_hint.clickable = false
 	call_label.text = "Voce chamou %s..." % ("BRANCA" if called_white else "PRETA")
 	leave_btn.disabled = true
 
@@ -575,7 +593,7 @@ func _on_call_selected(called_white: bool) -> void:
 	# espera o layout assentar para a moeda cair EXATAMENTE no centro do holofote.
 	await get_tree().process_frame
 	await get_tree().process_frame
-	var coin_center = coin_spacer.global_position + coin_spacer.size / 2.0 + Vector2(0.0, 10.0)
+	var coin_center = coin_spacer.global_position + coin_spacer.size / 2.0
 	coin_flip_view.play_toss(coin_center, COIN_RADIUS)
 
 func _get_better_rarity_card(min_rarity: int) -> ActionCard:
@@ -604,6 +622,7 @@ func _get_better_rarity_rule(min_rarity: int, exclude_ids: Array[String]) -> Rul
 
 func _on_flip_completed(landed_white: bool) -> void:
 	var bet_won = (landed_white == player_called_white)
+	Sfx.play("cassino_acerto" if bet_won else "cassino_erro")
 	_clear_preview()
 
 	if bet_won:
@@ -659,11 +678,9 @@ func _on_flip_completed(landed_white: bool) -> void:
 				preview_hbox.add_child(_labeled_law_visual("PERDIDA", current_staked_rule, Color(1.0, 0.4, 0.4, 0.7)))
 				RunManager.remove_rule(current_staked_rule.id)
 
-	if hud_bar != null:
-		hud_bar.update_gold()
 	_refresh_gold_label()
 	if casino_fx != null:
-		casino_fx.celebrate(coin_spacer.global_position + coin_spacer.size / 2.0 + Vector2(0.0, 10.0), bet_won)
+		casino_fx.celebrate(coin_spacer.global_position + coin_spacer.size / 2.0, bet_won)
 	_pop_status(bet_won)
 	if not bet_won:
 		_shake_table()
@@ -702,7 +719,6 @@ func _setup_tutorial() -> void:
 	if RunManager.gold < GOLD_WAGER_OPTIONS[0]:
 		RunManager.gold = GOLD_WAGER_OPTIONS[0]
 		_refresh_gold_label()
-		hud_bar.update_gold()
 		_update_stake_buttons_state()
 	tutorial_guide_view = TutorialGuideView.new()
 	tutorial_guide_view.spot_resolver = _tutorial_spot_rect
@@ -731,7 +747,7 @@ func _tutorial_spot_rect(id: String) -> Rect2:
 		"bet_special":
 			return special_stake_hbox.get_global_rect().grow(8.0)
 		"bet_call":
-			return call_hbox.get_global_rect().grow(8.0)
+			return coin_hint.get_global_rect().grow(8.0)
 		"bet_leave":
 			return leave_btn.get_global_rect().grow(6.0)
 	return Rect2()
@@ -745,4 +761,5 @@ func _set_step(active: int) -> void:
 		step_panels[i].add_theme_stylebox_override("panel", PixelUI.make_flat_panel(fill, border, 8))
 		step_labels[i].add_theme_color_override("font_color", Color(1.0, 0.95, 0.6) if is_on else Color(0.5, 0.52, 0.6))
 	if coin_hint != null:
-		coin_hint.visible = active != 2
+		coin_hint.show_center = active != 2
+		coin_hint.pulse_pieces = active == 1

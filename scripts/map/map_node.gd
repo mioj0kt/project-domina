@@ -9,7 +9,8 @@ enum NodeType {
 	Loja,
 	Chefe,
 	Aposta,
-	Altar
+	Altar,
+	Arcano   # acervo de Cartas (escolhe 1 de 3 / 2 de 5 / 1 dupla de 3)
 }
 
 var id: Vector2i

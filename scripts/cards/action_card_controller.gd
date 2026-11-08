@@ -30,6 +30,7 @@ func setup(host: Node2D, hud_bar: HUDBar) -> void:
 	_hud_bar = hud_bar
 
 	card_deck_mgr = CardDeckManager.new()
+	card_deck_mgr.play_sounds = true
 
 	var starting_deck: Array[ActionCard] = []
 	if RunManager != null:
@@ -119,6 +120,7 @@ func _on_card_drag_started(card: ActionCard, idx: int) -> void:
 
 	selected_action_card = card
 	selected_action_card_idx = idx
+	Sfx.play("carta_pegar")
 	TutorialManager.report_event("card_selected")
 	_host.clear_board_selection()
 	_host.queue_redraw()
@@ -145,6 +147,7 @@ func _on_card_selected_from_hand(card: ActionCard, idx: int) -> void:
 
 	selected_action_card = card
 	selected_action_card_idx = idx
+	Sfx.play("carta_pegar")
 	# O clique (não só o arrastar) também conta como "selecionar uma Carta"
 	# pro objetivo do tutorial — antes só o arrastar reportava, e o objetivo
 	# nunca concluía quando o jogador clicava.

@@ -41,7 +41,14 @@ const STARTER_RULES: Array[String] = [
 # Monte de Leis: o preço é a MÉDIA do custo de desbloqueio do que ainda resta
 # no monte (o sorteio é uniforme), então um monte com peças raras sai mais caro.
 
-var coroas: int = 0
+var _coroas: int = 0
+# Com DebugFlags ligadas: infinitas (leitura fixa, escritas ignoradas; o save usa _coroas).
+var coroas: int:
+	get:
+		return DebugFlags.INFINITE_VALUE if DebugFlags.infinite_resources() else _coroas
+	set(v):
+		if not DebugFlags.infinite_resources():
+			_coroas = v
 var unlocked_rules: Array[String] = []
 var unlocked_cards: Array[String] = []
 # Mochila da próxima run: [{"t": "card"|"rule", "id", "paid": int}]
@@ -51,6 +58,9 @@ var run_over_tour_seen: bool = false   # mini guia das Coroas (1ª tela de fim d
 var alpha_end_seen: bool = false      # mensagem de fim da alpha (1º Chefe derrotado) já exibida
 var tutorial_warned: bool = false     # jogador escolheu 'jogar mesmo assim' sem o tutorial (aviso não volta)
 var tutorial_done: bool = false       # jogador já concluiu o tutorial até o fim
+# O Grimório começa BLOQUEADO e abre ao fim da 1ª run (derrota ou vitória).
+var grimorio_unlocked: bool = false
+var grimorio_just_unlocked: bool = false   # só na sessão: mostra o aviso "desbloqueado" uma vez
 
 # Estatísticas da run em andamento (zeradas em RunManager.start_new_run).
 var run_duels_won: int = 0
@@ -71,7 +81,7 @@ func load_data() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SAVE_PATH) != OK:
 		return
-	coroas = int(cfg.get_value("meta", "coroas", cfg.get_value("meta", "selos", 0)))
+	_coroas = int(cfg.get_value("meta", "coroas", cfg.get_value("meta", "selos", 0)))
 	unlocked_rules = _to_str_array(cfg.get_value("meta", "unlocked_rules", []))
 	unlocked_cards = _to_str_array(cfg.get_value("meta", "unlocked_cards", []))
 	bag.clear()
@@ -85,11 +95,14 @@ func load_data() -> void:
 	run_over_tour_seen = bool(cfg.get_value("meta", "run_over_tour_seen", false))
 	alpha_end_seen = bool(cfg.get_value("meta", "alpha_end_seen", false))
 	tutorial_warned = bool(cfg.get_value("meta", "tutorial_warned", false))
+	# Saves antigos (sem a chave) já jogaram: quem tem qualquer progresso começa com o Grimório aberto.
+	var legacy_open: bool = _coroas > 0 or not unlocked_rules.is_empty() or not unlocked_cards.is_empty() or oficina_tour_seen or run_over_tour_seen or alpha_end_seen
+	grimorio_unlocked = bool(cfg.get_value("meta", "grimorio_unlocked", legacy_open))
 	_sanitize()
 
 func save_data() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("meta", "coroas", coroas)
+	cfg.set_value("meta", "coroas", _coroas)
 	cfg.set_value("meta", "unlocked_rules", unlocked_rules)
 	cfg.set_value("meta", "unlocked_cards", unlocked_cards)
 	cfg.set_value("meta", "bag", bag)
@@ -98,6 +111,7 @@ func save_data() -> void:
 	cfg.set_value("meta", "run_over_tour_seen", run_over_tour_seen)
 	cfg.set_value("meta", "alpha_end_seen", alpha_end_seen)
 	cfg.set_value("meta", "tutorial_warned", tutorial_warned)
+	cfg.set_value("meta", "grimorio_unlocked", grimorio_unlocked)
 	cfg.save(SAVE_PATH)
 
 func _to_str_array(v) -> Array[String]:
@@ -137,7 +151,7 @@ func mark_tutorial_done() -> void:
 		save_data()
 
 func reset_all() -> void:
-	coroas = 0
+	_coroas = 0
 	unlocked_rules.clear()
 	unlocked_cards.clear()
 	bag.clear()
@@ -146,6 +160,8 @@ func reset_all() -> void:
 	run_over_tour_seen = false
 	alpha_end_seen = false
 	tutorial_warned = false
+	grimorio_unlocked = false
+	grimorio_just_unlocked = false
 	last_summary = {}
 	reset_run_stats()
 	save_data()
@@ -166,8 +182,7 @@ func is_card_unlocked(id: String) -> bool:
 func rule_unlock_cost(rule: RuleCard) -> int:
 	return RULE_UNLOCK_COST[clampi(int(rule.rarity), 0, 3)]
 
-# ---- Montes de desbloqueio ----
-# Cartas: um monte por RARIDADE (0..3). Leis: um monte por CATEGORIA (RuleCard.Category).
+# ---- Itens ainda bloqueados ----
 func locked_cards(rarity: int) -> Array[ActionCard]:
 	var out: Array[ActionCard] = []
 	for c in LootTables.get_all_action_cards():
@@ -175,20 +190,10 @@ func locked_cards(rarity: int) -> Array[ActionCard]:
 			out.append(c)
 	return out
 
-func locked_rules(category: int) -> Array[RuleCard]:
-	var out: Array[RuleCard] = []
-	for r in LootTables.get_all_rules():
-		if int(r.category) == category and not is_rule_unlocked(r.id):
-			out.append(r)
-	return out
-
-# ---- Baús (gacha) ----
-# Dois baús: Cartas e Leis. A raridade é sorteada por chance; o item é sorteado
-# entre os AINDA BLOQUEADOS dessa raridade (nunca repete). Se a raridade
-# sorteada estiver esgotada, cai para a mais próxima que ainda tenha itens.
-const CHEST_ODDS: Array[int] = [60, 28, 10, 2]   # comum, rara, épica, lendária (pesos)
-const CARD_CHEST_PRICE: int = 10
-const RULE_CHEST_PRICE: int = 14
+# ---- Sorteio (Oráculo) ----
+# Raridade sorteada por peso; o item sai dos AINDA BLOQUEADOS dessa raridade
+# (nunca repete). Raridade esgotada cai para a mais próxima com itens.
+const ODDS: Array[int] = [60, 28, 10, 2]   # comum, rara, épica, lendária (pesos)
 
 func locked_rules_of_rarity(rarity: int) -> Array[RuleCard]:
 	var out: Array[RuleCard] = []
@@ -198,59 +203,76 @@ func locked_rules_of_rarity(rarity: int) -> Array[RuleCard]:
 	return out
 
 func locked_of(is_rule: bool, rarity: int) -> Array:
-	return locked_rules_of_rarity(rarity) if is_rule else locked_cards(rarity)
+	if is_rule:
+		return locked_rules_of_rarity(rarity)
+	return locked_cards(rarity)
 
-func chest_price(is_rule: bool) -> int:
-	return RULE_CHEST_PRICE if is_rule else CARD_CHEST_PRICE
-
-# Quantos itens ainda faltam desbloquear naquele baú.
-func chest_remaining(is_rule: bool) -> int:
+# Quantos itens (Cartas ou Leis) ainda faltam desbloquear.
+func remaining_of(is_rule: bool) -> int:
 	var n := 0
 	for r in range(4):
 		n += locked_of(is_rule, r).size()
 	return n
 
-# Sorteia a raridade com pesos; raridade esgotada -> a mais próxima disponível.
-# roll: número em [0, total) opcional (para testes determinísticos); -1 = aleatório.
-func roll_chest_rarity(is_rule: bool, roll: int = -1) -> int:
+# ---- MÁQUINA (um sorteio só: Carta OU Lei) ----
+# A raridade é sorteada pelas mesmas chances (ODDS)
+# considerando TUDO que ainda está bloqueado (Cartas + Leis); o item é sorteado
+# uniformemente entre os bloqueados dessa raridade, seja Carta ou Lei.
+const MACHINE_PRICE: int = 25   # ~2 sorteios por run completa (3/duelo, 7/forte, 30/chefe)
+
+# Itens bloqueados de uma raridade: [{"id", "is_rule", "rarity"}]
+func machine_items_of(rarity: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for c in locked_cards(rarity):
+		out.append({"id": c.id, "is_rule": false, "rarity": rarity})
+	for r in locked_rules_of_rarity(rarity):
+		out.append({"id": r.id, "is_rule": true, "rarity": rarity})
+	return out
+
+# Tudo que ainda falta desbloquear (para a máquina mostrar em órbita).
+func machine_all_items() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for r in range(4):
+		out.append_array(machine_items_of(r))
+	return out
+
+func machine_remaining() -> int:
+	return machine_all_items().size()
+
+func roll_machine_rarity(roll: int = -1) -> int:
 	var total := 0
 	for r in range(4):
-		total += CHEST_ODDS[r]
+		if not machine_items_of(r).is_empty():
+			total += ODDS[r]
+	if total <= 0:
+		return -1
 	var x: int = randi() % total if roll < 0 else roll
-	var rolled := 3
 	var acc := 0
 	for r in range(4):
-		acc += CHEST_ODDS[r]
+		if machine_items_of(r).is_empty():
+			continue
+		acc += ODDS[r]
 		if x < acc:
-			rolled = r
-			break
-	if not locked_of(is_rule, rolled).is_empty():
-		return rolled
-	# fallback: raridade disponível mais próxima (empate -> a mais comum)
-	for d in range(1, 4):
-		for cand in [rolled - d, rolled + d]:
-			if cand >= 0 and cand < 4 and not locked_of(is_rule, cand).is_empty():
-				return cand
+			return r
 	return -1
 
-# Abre o baú. Devolve {"id": String, "rarity": int}; vazio = falhou (sem Coroas ou esgotado).
-func draw_chest(is_rule: bool, roll: int = -1) -> Dictionary:
-	var price := chest_price(is_rule)
-	if coroas < price:
+# Usa a máquina. Devolve {"id", "is_rule", "rarity"}; vazio = sem Coroas ou esgotada.
+func draw_machine(roll: int = -1) -> Dictionary:
+	if coroas < MACHINE_PRICE:
 		return {}
-	var rarity := roll_chest_rarity(is_rule, roll)
+	var rarity := roll_machine_rarity(roll)
 	if rarity < 0:
 		return {}
-	var items := locked_of(is_rule, rarity)
-	var pick = items[randi() % items.size()]
-	coroas -= price
-	if is_rule:
-		unlocked_rules.append(pick.id)
+	var items := machine_items_of(rarity)
+	var pick: Dictionary = items[randi() % items.size()]
+	coroas -= MACHINE_PRICE
+	if bool(pick["is_rule"]):
+		unlocked_rules.append(pick["id"])
 	else:
-		unlocked_cards.append(pick.id)
+		unlocked_cards.append(pick["id"])
 	save_data()
 	changed.emit()
-	return {"id": pick.id, "rarity": rarity}
+	return pick
 
 # ---------------------------------------------------------------------
 # Mochila da próxima run
@@ -376,7 +398,8 @@ func _snapshot_names(items: Array) -> Array:
 
 # Paga as Coroas da run, guarda o resumo em last_summary e zera as estatísticas
 # (não paga duas vezes). `won` = a run terminou com o Chefe derrotado.
-func settle_run(won: bool = false) -> int:
+# `ends_run`: false ao ABANDONAR a run (paga o que rendeu, mas não abre o Grimório).
+func settle_run(won: bool = false, ends_run: bool = true) -> int:
 	var amount := preview_run_coroas()
 	last_summary = {
 		"won": won, "duels": run_duels_won, "strong": run_strong_won,
@@ -384,8 +407,14 @@ func settle_run(won: bool = false) -> int:
 		"gold": RunManager.gold, "laws": _snapshot_names(RunManager.active_rules),
 		"cards": _snapshot_names(RunManager.player_deck),
 	}
+	var opened := false
+	if ends_run and not grimorio_unlocked and not _tutorial_on():
+		grimorio_unlocked = true
+		grimorio_just_unlocked = true
+		opened = true
 	if amount > 0:
 		coroas += amount
+	if amount > 0 or opened:
 		save_data()
 		changed.emit()
 	reset_run_stats()

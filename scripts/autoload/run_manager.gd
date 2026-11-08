@@ -4,7 +4,14 @@ var current_board_size: Vector2i = Vector2i(8, 8)
 # Disposição inicial das peças do duelo atual (Board.LAYOUT_*); só duelos sorteados usam outra.
 var current_board_layout: String = Board.LAYOUT_CLASSIC
 var current_node_type: int = 1
-var gold: int = 0
+var _gold: int = 0
+# Com DebugFlags ligadas: ouro infinito (leitura fixa, escritas ignoradas).
+var gold: int:
+	get:
+		return DebugFlags.INFINITE_VALUE if DebugFlags.infinite_resources() else _gold
+	set(v):
+		if not DebugFlags.infinite_resources():
+			_gold = v
 
 # Inflação da Loja: cada Lei/Carta comprada na run encarece as próximas em 6%
 # (até 8 compras). Fora do tutorial. Reroll/remoção têm escalada própria.
@@ -20,6 +27,7 @@ func get_shop_price(base_cost: int) -> int:
 
 func register_shop_purchase() -> void:
 	shop_purchases += 1
+	Sfx.play("compra")   # som de loja (cobrança)
 
 # Bioma do mapa desta run ("floresta" | "deserto"; ver ForestBackground.THEMES).
 var map_biome: String = "floresta"
@@ -28,7 +36,7 @@ var biome_intro_pending: bool = false
 
 # Nomes e ordem dos biomas da run (a floresta vem primeiro; o último termina a run).
 const BIOME_ORDER: Array[String] = ["floresta", "deserto"]
-const BIOME_TITLES: Dictionary = {"floresta": "FLORESTA", "deserto": "DESERTO DAS TORRES"}
+const BIOME_TITLES: Dictionary = {"floresta": "FLORESTA ANTIGA", "deserto": "DESERTO DAS TORRES"}
 
 func has_next_biome() -> bool:
 	return BIOME_ORDER.find(map_biome) >= 0 and BIOME_ORDER.find(map_biome) < BIOME_ORDER.size() - 1
@@ -117,6 +125,7 @@ func can_add_card_to_deck() -> bool:
 func add_rule(rule: RuleCard) -> bool:
 	var added = rule_pipeline.add_rule(rule)
 	if added:
+		Sfx.play("item")
 		rules_updated.emit()
 	return added
 
@@ -137,7 +146,7 @@ func start_new_run():
 	desert_boss_law_id = ""
 	# DebugFlags.MAP_BIOME_OVERRIDE força o bioma inicial (mapa, fundos, transições).
 	map_biome = DebugFlags.MAP_BIOME_OVERRIDE if BIOME_ORDER.has(DebugFlags.MAP_BIOME_OVERRIDE) else "floresta"
-	biome_intro_pending = false
+	biome_intro_pending = true   # o 1º mapa também mostra o nome do bioma (FLORESTA)
 	clear_ambush()
 	seen_event_ids.clear()
 	rule_pipeline.clear_rules()
@@ -165,6 +174,8 @@ func _init_default_deck() -> void:
 	
 func add_gold(amount: int) -> void:
 	gold += amount
+	if amount > 0:
+		Sfx.play("moeda")
 
 # Ouro vindo de EFEITOS (Leis e Cartas: Carnificina, Vingança, Sacrifício,
 # Retaliação) tem teto por duelo, para não superar o ouro "normal" do duelo
@@ -180,6 +191,8 @@ func add_effect_gold(amount: int) -> int:
 	var granted: int = mini(amount, room)
 	effect_gold_this_duel += granted
 	gold += granted
+	if granted > 0:
+		Sfx.play("moeda")
 	return granted
 
 func spend_gold(amount: int) -> bool:
@@ -197,4 +210,5 @@ func add_card_to_deck(card: ActionCard) -> bool:
 	if not can_add_card_to_deck():
 		return false
 	player_deck.append(card)
+	Sfx.play("item")
 	return true

@@ -20,14 +20,18 @@ const RARITY_COLORS: Array[Color] = [
 	Color(0.81, 0.76, 0.65), Color(0.25, 0.5, 0.6), Color(0.54, 0.36, 0.75), Color(0.85, 0.64, 0.25)]
 const RARITY_NAMES: Array[String] = ["COMUM", "RARA", "ÉPICA", "LENDÁRIA"]
 
-enum Tab { LEIS, CARTAS }
-var _tab: int = Tab.LEIS
+enum Tab { MAQUINA, LEIS, CARTAS }
+var _tab: int = Tab.MAQUINA
+var _machine: OrbitalMachine = null
+var _machine_busy: bool = false
 
 var _coroas_label: Label
 var _coroas_panel: PanelContainer
 var _tabs_row: HBoxContainer
 var _scroll: ScrollContainer
 var _side_panel: PanelContainer
+var _window_panel: PanelContainer
+var _window_style: StyleBox
 var _tour: MetaTour
 var _canvas: CanvasLayer
 var _reveal: Control
@@ -92,7 +96,7 @@ func _ready() -> void:
 	_tabs_row = tabs
 	tabs.add_theme_constant_override("separation", 10)
 	v.add_child(tabs)
-	var names := ["LEIS", "CARTAS"]
+	var names := ["ORÁCULO", "LEIS", "CARTAS"]
 	for i in range(names.size()):
 		var b := _btn(names[i], Color.WHITE, Vector2(200, 48), 22)
 		b.pressed.connect(_set_tab.bind(i))
@@ -121,7 +125,9 @@ func _ready() -> void:
 	var window := PanelContainer.new()
 	window.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	window.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	window.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.14, 0.1, 0.17, 0.92), Color(0.49, 0.39, 0.54), 16))
+	_window_panel = window
+	_window_style = PixelUI.make_pixel_panel(Color(0.14, 0.1, 0.17, 0.92), Color(0.49, 0.39, 0.54), 16)
+	window.add_theme_stylebox_override("panel", _window_style)
 	body.add_child(window)
 	window.add_child(scroll)
 	_grid_holder = VBoxContainer.new()
@@ -181,13 +187,20 @@ func _on_back() -> void:
 
 func _refresh() -> void:
 	_coroas_label.text = str(MetaProgress.coroas)
+	if _machine_busy:
+		return   # não reconstrói a tela no meio da animação da máquina
 	for i in range(_tab_btns.size()):
 		PixelUI.skin_button(_tab_btns[i], C_GREEN if i == _tab else Color.WHITE)
 	for c in _grid_holder.get_children():
 		c.queue_free()
 	match _tab:
+		Tab.MAQUINA: _build_machine()
 		Tab.LEIS: _build_rules()
 		Tab.CARTAS: _build_cards()
+	_side_panel.visible = _tab != Tab.MAQUINA   # a mochila só aparece em Leis/Cartas
+	# No Oráculo o quadro de fundo também some: só o painel da máquina.
+	_window_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new() if _tab == Tab.MAQUINA else _window_style)
+	_grid_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_build_side()
 
 func _new_grid(cols: int) -> GridContainer:
@@ -230,10 +243,10 @@ func _make_visual(item, is_rule: bool, scale_f: float) -> Control:
 func _item_tile(item, is_rule: bool, scale_f: float, width: float) -> Control:
 	var id: String = item.id
 	var t: String = "rule" if is_rule else "card"
-	var wrap := VBoxContainer.new()
-	wrap.add_theme_constant_override("separation", 8)
+	var box_wrap := VBoxContainer.new()
+	box_wrap.add_theme_constant_override("separation", 8)
 	var holder := CenterContainer.new()
-	wrap.add_child(holder)
+	box_wrap.add_child(holder)
 	var vis := _make_visual(item, is_rule, scale_f)
 	holder.add_child(vis)
 	var btn: Button
@@ -247,8 +260,8 @@ func _item_tile(item, is_rule: bool, scale_f: float, width: float) -> Control:
 	vis.gui_input.connect(func(ev):
 		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
 			_on_item_pressed(id, is_rule))
-	wrap.add_child(btn)
-	return wrap
+	box_wrap.add_child(btn)
+	return box_wrap
 
 func _on_item_pressed(id: String, is_rule: bool) -> void:
 	var t: String = "rule" if is_rule else "card"
@@ -267,105 +280,13 @@ func _section_title(t: String) -> Label:
 	l.add_theme_color_override("font_color", C_GOLD)
 	return l
 
-# ---- Baú (gacha) ----
-var _chest_ref: Control = null   # painel do baú atual (alvo do guia)
-
-# Painel do baú: baú animado (clicável) + chances por raridade + botão de abrir.
-func _make_chest_panel(is_rule: bool) -> Control:
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.12, 0.08, 0.15, 0.97), C_GOLD, 14))
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 28)
-	panel.add_child(h)
-	var remaining: int = MetaProgress.chest_remaining(is_rule)
-	var price: int = MetaProgress.chest_price(is_rule)
-
-	var fx := ChestFx.new()
-	fx.kind = "leis" if is_rule else "cartas"
-	fx.chest_scale = 1.0
-	fx.custom_minimum_size = Vector2(330, 270)
-	h.add_child(fx)
-	if remaining <= 0:
-		fx.modulate = Color(0.4, 0.38, 0.45)
-		fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	var info := VBoxContainer.new()
-	info.add_theme_constant_override("separation", 10)
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.alignment = BoxContainer.ALIGNMENT_CENTER
-	h.add_child(info)
-	var nm := Label.new()
-	nm.text = "BAÚ DE LEIS" if is_rule else "BAÚ DE CARTAS"
-	nm.add_theme_font_size_override("font_size", 34)
-	nm.add_theme_color_override("font_color", C_GOLD)
-	info.add_child(nm)
-	var ds := Label.new()
-	ds.text = ("Abra e descubra uma LEI nova!" if is_rule else "Abra e descubra uma CARTA nova. A raridade é sorteada!")
-	ds.add_theme_font_size_override("font_size", 20)
-	ds.add_theme_color_override("font_color", C_CREAM)
-	ds.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info.add_child(ds)
-
-	# Chances efetivas (só entram as raridades que ainda têm algo bloqueado). Leis não mostram raridade (não é visível ao jogador).
-	if not is_rule:
-		var total_w := 0
-		for r in range(4):
-			if not MetaProgress.locked_of(is_rule, r).is_empty():
-				total_w += MetaProgress.CHEST_ODDS[r]
-		var chips := HBoxContainer.new()
-		chips.add_theme_constant_override("separation", 10)
-		info.add_child(chips)
-		for r in range(4):
-			var left: int = MetaProgress.locked_of(is_rule, r).size()
-			var pct: float = 0.0 if left == 0 or total_w == 0 else 100.0 * float(MetaProgress.CHEST_ODDS[r]) / float(total_w)
-			var chip := PanelContainer.new()
-			var col: Color = RARITY_COLORS[r] if left > 0 else Color(0.3, 0.28, 0.33)
-			chip.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.08, 0.06, 0.1, 0.95), col, 6))
-			chips.add_child(chip)
-			var cv := VBoxContainer.new()
-			cv.add_theme_constant_override("separation", 0)
-			chip.add_child(cv)
-			var l1 := Label.new()
-			l1.text = RARITY_NAMES[r]
-			l1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			l1.add_theme_font_size_override("font_size", 15)
-			l1.add_theme_color_override("font_color", col)
-			cv.add_child(l1)
-			var l2 := Label.new()
-			l2.text = ("%s%%" % _fmt_pct(pct)) if left > 0 else "—"
-			l2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			l2.add_theme_font_size_override("font_size", 22)
-			l2.add_theme_color_override("font_color", C_CREAM if left > 0 else C_DIM)
-			cv.add_child(l2)
-			var l3 := Label.new()
-			l3.text = "faltam %d" % left
-			l3.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			l3.add_theme_font_size_override("font_size", 13)
-			l3.add_theme_color_override("font_color", C_DIM)
-			cv.add_child(l3)
-
-	var cnt := Label.new()
-	cnt.text = ("%d %s ainda bloqueada%s" % [remaining, "Leis" if is_rule else "Cartas", "" if remaining == 1 else "s"]) if remaining > 0 else "TUDO DESBLOQUEADO!"
-	cnt.add_theme_font_size_override("font_size", 18)
-	cnt.add_theme_color_override("font_color", C_DIM if remaining > 0 else C_GREEN)
-	info.add_child(cnt)
-	if remaining > 0:
-		var b := _price_btn("ABRIR  %d" % price, 220.0, Color(0.3, 0.9, 0.4), MetaProgress.coroas < price)
-		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		b.pressed.connect(_on_open_chest.bind(is_rule))
-		info.add_child(b)
-		fx.pressed.connect(_on_open_chest.bind(is_rule))
-	_chest_ref = panel
-	_grid_holder.add_child(panel)
-	return panel
+# ---- Oráculo ----
+var _machine_ref: Control = null   # painel da máquina (alvo do guia)
 
 func _fmt_pct(p: float) -> String:
 	return str(int(round(p))) if absf(p - round(p)) < 0.05 else "%.1f" % p
 
 func _build_rules() -> void:
-	_grid_holder.add_child(_section_title("BAÚ DE LEIS  (pague para sortear uma Lei bloqueada)"))
-	_make_chest_panel(true)
-	_grid_holder.add_child(_spacer(18))
 	_grid_holder.add_child(_section_title("LEIS LIBERADAS"))
 	var g := _new_grid(RULE_COLS)
 	var rules: Array[RuleCard] = []
@@ -377,9 +298,6 @@ func _build_rules() -> void:
 		g.add_child(_item_tile(r, true, RULE_SCALE, RuleCardVisual.CARD_SIZE * RULE_SCALE))
 
 func _build_cards() -> void:
-	_grid_holder.add_child(_section_title("BAÚ DE CARTAS  (pague para sortear uma Carta bloqueada)"))
-	_make_chest_panel(false)
-	_grid_holder.add_child(_spacer(18))
 	_grid_holder.add_child(_section_title("CARTAS LIBERADAS"))
 	var g := _new_grid(CARD_COLS)
 	var cards: Array[ActionCard] = []
@@ -390,47 +308,236 @@ func _build_cards() -> void:
 	for c in cards:
 		g.add_child(_item_tile(c, false, CARD_SCALE, ActionCardVisual.CARD_WIDTH * CARD_SCALE))
 
-func _spacer(h: float) -> Control:
-	var c := Control.new()
-	c.custom_minimum_size = Vector2(0, h)
-	return c
+# ---- Máquina orbital (sorteia uma Carta OU uma Lei) ----
+func _build_machine() -> void:
+	var price: int = MetaProgress.MACHINE_PRICE
+	var cards_left: int = MetaProgress.remaining_of(false)
+	var rules_left: int = MetaProgress.remaining_of(true)
+	var remaining: int = cards_left + rules_left
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.09, 0.1, 0.14, 0.97), Color(0.35, 0.6, 0.85), 14))   # mesmo quadro do Arcano
+	var h := VBoxContainer.new()
+	h.add_theme_constant_override("separation", 6)
+	panel.add_child(h)
+	var m := OrbitalMachine.new()
+	m.cards_left = cards_left
+	m.rules_left = rules_left
+	m.items = MetaProgress.machine_all_items()
+	m.enabled = remaining > 0 and MetaProgress.coroas >= price
+	if remaining <= 0:
+		m.hint_text = "TUDO DESBLOQUEADO"
+	elif MetaProgress.coroas < price:
+		m.hint_text = "FALTAM %d COROAS" % (price - MetaProgress.coroas)
+	m.key_allowed = func() -> bool: return not _tour.is_running()
+	m.crown_source = func() -> Vector2: return _coroas_label.get_global_rect().get_center()
+	m.charge_complete.connect(_on_machine_charged)
+	m.burst.connect(_on_machine_burst)
+	m.sequence_done.connect(_on_machine_done)
+	m.charge_started.connect(_stage_up, CONNECT_DEFERRED)
+	m.cancelled.connect(_stage_down)
+	m.shake.connect(_on_machine_shake)
+	_machine = m
+	h.add_child(m)
 
-func _on_open_chest(is_rule: bool) -> void:
-	if _reveal != null:
-		return
-	var res: Dictionary = MetaProgress.draw_chest(is_rule)
+	var info := VBoxContainer.new()
+	info.add_theme_constant_override("separation", 12)
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.custom_minimum_size = Vector2(0, 0)
+	info.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_child(info)
+	var nm := Label.new()
+	nm.text = "ORÁCULO"
+	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	nm.add_theme_font_size_override("font_size", 34)
+	nm.add_theme_color_override("font_color", C_GOLD)
+	info.add_child(nm)
+	var ds := Label.new()
+	ds.text = "Cartas e Leis ainda bloqueadas giram ao redor dele. SEGURE o botão do mouse sobre o Oráculo (ou a BARRA DE ESPAÇO) até ele carregar por completo: ele sorteia uma CARTA ou uma LEI nova! Soltar antes cancela e não gasta nada."
+	ds.add_theme_font_size_override("font_size", 19)
+	ds.add_theme_color_override("font_color", C_CREAM)
+	ds.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	ds.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ds.custom_minimum_size = Vector2(720, 0)
+	info.add_child(ds)
+	# chances por raridade (Cartas + Leis juntas; só entram raridades com algo bloqueado)
+	var total_w := 0
+	for r in range(4):
+		if not MetaProgress.machine_items_of(r).is_empty():
+			total_w += MetaProgress.ODDS[r]
+	var chips := HBoxContainer.new()
+	chips.add_theme_constant_override("separation", 10)
+	chips.alignment = BoxContainer.ALIGNMENT_CENTER
+	info.add_child(chips)
+	for r in range(4):
+		var left: int = MetaProgress.machine_items_of(r).size()
+		var pct: float = 0.0 if left == 0 or total_w == 0 else 100.0 * float(MetaProgress.ODDS[r]) / float(total_w)
+		var chip := PanelContainer.new()
+		var col: Color = RARITY_COLORS[r] if left > 0 else Color(0.3, 0.28, 0.33)
+		chip.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.08, 0.06, 0.1, 0.95), col, 6))
+		chips.add_child(chip)
+		var cv := VBoxContainer.new()
+		cv.add_theme_constant_override("separation", 0)
+		chip.add_child(cv)
+		var l1 := Label.new()
+		l1.text = RARITY_NAMES[r]
+		l1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l1.add_theme_font_size_override("font_size", 15)
+		l1.add_theme_color_override("font_color", col)
+		cv.add_child(l1)
+		var l2 := Label.new()
+		l2.text = ("%s%%" % _fmt_pct(pct)) if left > 0 else "—"
+		l2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l2.add_theme_font_size_override("font_size", 22)
+		l2.add_theme_color_override("font_color", C_CREAM if left > 0 else C_DIM)
+		cv.add_child(l2)
+	var cnt := Label.new()
+	cnt.text = ("Faltam %d Cartas e %d Leis" % [cards_left, rules_left]) if remaining > 0 else "TUDO DESBLOQUEADO!"
+	cnt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cnt.add_theme_font_size_override("font_size", 18)
+	cnt.add_theme_color_override("font_color", C_DIM if remaining > 0 else C_GREEN)
+	info.add_child(cnt)
+	if remaining > 0:
+		# Preço (sem botão: o sorteio é segurando o clique no próprio Oráculo).
+		var prow := HBoxContainer.new()
+		prow.alignment = BoxContainer.ALIGNMENT_CENTER
+		prow.add_theme_constant_override("separation", 10)
+		info.add_child(prow)
+		var pl := Label.new()
+		pl.text = "CUSTO POR SORTEIO"
+		pl.add_theme_font_size_override("font_size", 20)
+		pl.add_theme_color_override("font_color", C_DIM)
+		prow.add_child(pl)
+		var crown: Texture2D = PixelUI.hud_texture("icone_coroa", 1)
+		if crown != null:
+			var ci := TextureRect.new()
+			ci.texture = crown
+			ci.custom_minimum_size = Vector2(30, 30)
+			ci.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			ci.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			ci.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			prow.add_child(ci)
+		var pv := Label.new()
+		pv.text = str(price)
+		pv.add_theme_font_size_override("font_size", 30)
+		pv.add_theme_color_override("font_color", C_GOLD if MetaProgress.coroas >= price else C_RED)
+		prow.add_child(pv)
+	_machine_ref = panel
+	var cc := CenterContainer.new()
+	cc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	cc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cc.add_child(panel)
+	_grid_holder.add_child(cc)
+
+func _on_machine_charged() -> void:
+	_machine_busy = true
+	var res: Dictionary = MetaProgress.draw_machine()
 	if res.is_empty():
+		_machine_busy = false
+		_machine.abort()
 		_say("Coroas insuficientes.")
 		return
-	_show_chest_opening(String(res["id"]), is_rule, int(res["rarity"]))
+	_pending = res
+	Sfx.play("compra")   # pagou pelo sorteio
+	var rarity: int = int(res["rarity"])
+	# Leis: raridade invisível ao jogador -> efeito dourado de intensidade média.
+	var tier: int = 1 if bool(res["is_rule"]) else rarity
+	var col: Color = _fx_color(3 if bool(res["is_rule"]) else rarity)
+	_machine.resolve(tier, col)
 
-# Sequência de abertura (baú + efeitos em código) e, no fim, a carta virando.
-func _show_chest_opening(id: String, is_rule: bool, rarity: int) -> void:
+# ---- Palco em tela cheia (a máquina sai do painel e toma a tela) ----
+var _stage: CanvasLayer = null
+var _stage_root: Control = null
+var _stage_dim: ColorRect = null
+var _stage_flash: ColorRect = null
+var _stage_ph: Control = null
+
+func _stage_up() -> void:
+	if _stage != null or _machine == null or not is_instance_valid(_machine):
+		return
+	_machine_busy = true
+	_stage = CanvasLayer.new()
+	_stage.layer = 90
+	add_child(_stage)
+	_stage_root = Control.new()
+	_stage_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_stage_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stage.add_child(_stage_root)
+	_stage_dim = ColorRect.new()
+	_stage_dim.color = Color(0.02, 0.01, 0.04, 0.0)
+	_stage_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_bleed(_stage_dim)
+	_stage_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stage_root.add_child(_stage_dim)
+	create_tween().tween_property(_stage_dim, "color:a", 0.92, 0.35)
+	# mantém o espaço da máquina no painel
+	var host := _machine.get_parent()
+	_stage_ph = Control.new()
+	_stage_ph.custom_minimum_size = _machine.custom_minimum_size
+	var idx := _machine.get_index()
+	host.add_child(_stage_ph)
+	host.move_child(_stage_ph, idx)
+	_machine.reparent(_stage_root, false)
+	_machine.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_machine.offset_left = 0.0
+	_machine.offset_top = 0.0
+	_machine.offset_right = 0.0
+	_machine.offset_bottom = 0.0
+	_stage_flash = ColorRect.new()
+	_stage_flash.color = Color(1, 1, 1, 0.0)
+	_stage_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_bleed(_stage_flash)
+	_stage_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stage_root.add_child(_stage_flash)
+
+# Cobre além das bordas da tela, para o tremor do palco não revelar o que está atrás.
+func _bleed(c: Control) -> void:
+	c.offset_left = -120.0
+	c.offset_top = -120.0
+	c.offset_right = 120.0
+	c.offset_bottom = 120.0
+
+func _stage_down() -> void:
+	Engine.time_scale = 1.0
+	if _stage != null:
+		_stage.queue_free()
+		_stage = null
+	_machine_busy = false
+	_pending = {}
+	_refresh()
+
+func _on_machine_shake(amount: float) -> void:
+	if _stage != null:
+		_stage.offset = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * amount
+
+func _on_machine_burst() -> void:
+	if _pending.is_empty() or _stage == null:
+		return
+	var p := _pending
+	var fx: Color = _fx_color(3 if bool(p["is_rule"]) else int(p["rarity"]))
+	_stage_flash.color = Color(fx.lerp(Color.WHITE, 0.7), 0.9)
+	create_tween().tween_property(_stage_flash, "color:a", 0.0, 0.7)
+	await get_tree().create_timer(1.1).timeout   # deixa a explosão aparecer antes do prêmio
+	if _stage == null:
+		return
 	var layer := Control.new()
 	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	layer.mouse_filter = Control.MOUSE_FILTER_STOP
 	_reveal = layer
-	_canvas.add_child(layer)
+	_stage_root.add_child(layer)
 	var dim := ColorRect.new()
-	dim.color = Color(0.03, 0.02, 0.05, 0.88)
+	dim.color = Color(0.03, 0.02, 0.05, 0.0)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_bleed(dim)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(dim)
-	var fx := ChestFx.new()
-	fx.idle_mode = false
-	fx.kind = "leis" if is_rule else "cartas"
-	fx.set_anchors_preset(Control.PRESET_FULL_RECT)
-	layer.add_child(fx)
-	# cores de raridade do jogo são sóbrias; para os efeitos usa versões mais vivas
-	# Leis: raridade invisível ao jogador -> efeitos dourados e de intensidade fixa.
-	if is_rule:
-		fx.play(1, _fx_color(3))
-	else:
-		fx.play(rarity, _fx_color(rarity))
-	fx.opened.connect(func():
-		await get_tree().create_timer(0.35).timeout
-		if is_instance_valid(layer):
-			_build_reveal_content(layer, id, is_rule, rarity))
+	create_tween().tween_property(dim, "color:a", 0.6, 0.4)
+	_build_reveal_content(layer, String(p["id"]), bool(p["is_rule"]), int(p["rarity"]))
+	Sfx.play_variant("maquina_revela", 1 if bool(p["is_rule"]) else int(p["rarity"]))
+
+func _on_machine_done() -> void:
+	pass
+
+var _pending: Dictionary = {}
 
 func _fx_color(rarity: int) -> Color:
 	match rarity:
@@ -495,7 +602,8 @@ func _build_reveal_content(layer: Control, id: String, is_rule: bool, rarity: in
 	layer.gui_input.connect(func(ev):
 		if armed[0] and ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
 			layer.queue_free()
-			_reveal = null)
+			_reveal = null
+			_stage_down())
 
 func _find_rule(id: String) -> RuleCard:
 	for r in LootTables.get_all_rules():
@@ -562,13 +670,13 @@ func _bag_row(e: Dictionary) -> Control:
 	if not is_rule:
 		var card := _find_card(e["id"])
 		if card != null and card.icon_path != "" and ResourceLoader.exists(card.icon_path):
-			var tr := TextureRect.new()
-			tr.texture = load(card.icon_path)
-			tr.custom_minimum_size = Vector2(40, 40)
-			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			tr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-			row.add_child(tr)
+			var icon_rect := TextureRect.new()
+			icon_rect.texture = load(card.icon_path)
+			icon_rect.custom_minimum_size = Vector2(40, 40)
+			icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			row.add_child(icon_rect)
 	else:
 		var tag := _side_line("LEI")
 		tag.add_theme_color_override("font_color", C_GOLD)
@@ -639,12 +747,25 @@ func _tour_target(id: String) -> Rect2:
 	var c: Control = null
 	match id:
 		"coroas": c = _coroas_panel
-		"tabs": c = _tabs_row
+		"tabs":
+			# Só os 3 botões das abas (a linha inteira é bem mais larga que eles).
+			if not _tab_btns.is_empty():
+				var tabs_rect: Rect2 = _tab_btns[0].get_global_rect()
+				for tb in _tab_btns:
+					tabs_rect = tabs_rect.merge(tb.get_global_rect())
+				return tabs_rect
+			c = _tabs_row
+		"help":
+			if _help_btn != null and is_instance_valid(_help_btn) and _help_btn.is_inside_tree():
+				return _help_btn.get_global_rect()
 		"grid": c = _scroll
 		"side": c = _side_panel
+		"machine":
+			if _machine != null and is_instance_valid(_machine) and _machine.is_inside_tree():
+				return _machine.get_global_rect()
 		"piles":
-			if _chest_ref != null and is_instance_valid(_chest_ref) and _chest_ref.is_inside_tree():
-				return _chest_ref.get_global_rect()
+			if _machine_ref != null and is_instance_valid(_machine_ref) and _machine_ref.is_inside_tree():
+				return _machine_ref.get_global_rect()
 	return c.get_global_rect() if c != null else Rect2()
 
 func _on_tour_finished() -> void:

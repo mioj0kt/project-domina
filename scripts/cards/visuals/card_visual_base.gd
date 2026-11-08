@@ -237,6 +237,7 @@ func _play_flip_reveal(delay: float, flip_out_duration: float, flip_in_duration:
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 
 	flip_tween.tween_callback(func():
+		Sfx.play("carta_virar")
 		back_view.visible = false
 		front_view.visible = true
 		is_face_up = true

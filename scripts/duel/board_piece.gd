@@ -7,6 +7,8 @@ const TEXTURE_WHITE_KING_PATH: String = "res://assets/sprites/pieces/white-king.
 const TEXTURE_BLACK_KING_PATH: String = "res://assets/sprites/pieces/black-king.png"
 const TEXTURE_MUMMY_PATH: String = "res://assets/sprites/pieces/mumia.png"
 const TEXTURE_MUMMY_KING_PATH: String = "res://assets/sprites/pieces/mumia-king.png"
+const TEXTURE_MUMMY_WHITE_PATH: String = "res://assets/sprites/pieces/mumia-branca.png"
+const TEXTURE_MUMMY_WHITE_KING_PATH: String = "res://assets/sprites/pieces/mumia-king-branca.png"
 
 var owner_team: int = Board.WHITE
 var is_king: bool = false
@@ -57,6 +59,9 @@ func _init(p_owner: int = Board.WHITE, p_is_king: bool = false) -> void:
 
 func get_texture() -> String:
 	if is_mummy:
+		# Múmia da cor do dono: branca (borda clara) ou preta (borda escura).
+		if owner_team == Board.WHITE:
+			return TEXTURE_MUMMY_WHITE_KING_PATH if is_king else TEXTURE_MUMMY_WHITE_PATH
 		return TEXTURE_MUMMY_KING_PATH if is_king else TEXTURE_MUMMY_PATH
 	if owner_team == Board.WHITE:
 		return TEXTURE_WHITE_KING_PATH if is_king else TEXTURE_WHITE_PATH

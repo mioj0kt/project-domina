@@ -23,6 +23,11 @@ var display_mode: int = 0
 var resolution: Vector2i = Vector2i(1920, 1080)
 var screen_fx: bool = true   # tremor de tela + hit-stop (Juice.screen_fx)
 var _fx_btn: Button
+# Volumes (0..1) por canal de áudio; ver Sfx.ensure_buses().
+var volumes: Dictionary = {"Master": 1.0, "SFX": 1.0, "Music": 0.8}
+const VOLUME_LABELS: Dictionary = {"Master": "VOLUME GERAL", "SFX": "EFEITOS SONOROS", "Music": "MÚSICA"}
+var _vol_sliders: Dictionary = {}
+var _vol_values: Dictionary = {}
 
 var _close_x: Button
 var _exit_sep: ColorRect
@@ -49,6 +54,7 @@ func _ready() -> void:
 		project_theme.merge_with(scroll_theme)
 	else:
 		get_tree().root.theme = scroll_theme
+	Sfx.boot()
 	_load_settings()
 	_build_ui()
 	_apply_display()
@@ -61,13 +67,21 @@ func _load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SAVE_PATH) != OK:
 		_sync_mode_from_window()
+		_apply_volumes()
 		return
+	for k in volumes.keys():
+		volumes[k] = clampf(float(cfg.get_value("audio", String(k), volumes[k])), 0.0, 1.0)
+	_apply_volumes()
 	display_mode = clampi(int(cfg.get_value("display", "mode", 0)), 0, 2)
 	screen_fx = bool(cfg.get_value("display", "screen_fx", true))
 	Juice.screen_fx = screen_fx
 	var r = cfg.get_value("display", "resolution", resolution)
 	if r is Vector2i:
 		resolution = r
+
+func _apply_volumes() -> void:
+	for k in volumes.keys():
+		Sfx.set_bus_volume(String(k), float(volumes[k]))
 
 func _sync_mode_from_window() -> void:
 	match DisplayServer.window_get_mode():
@@ -80,6 +94,8 @@ func _save_settings() -> void:
 	cfg.set_value("display", "mode", display_mode)
 	cfg.set_value("display", "resolution", resolution)
 	cfg.set_value("display", "screen_fx", screen_fx)
+	for k in volumes.keys():
+		cfg.set_value("audio", String(k), volumes[k])
 	cfg.save(SAVE_PATH)
 
 func _apply_display() -> void:
@@ -178,28 +194,28 @@ func _build_ui() -> void:
 	center.add_child(_panel)
 
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 18)
-	v.custom_minimum_size = Vector2(620, 0)
+	v.add_theme_constant_override("separation", 28)
+	v.custom_minimum_size = Vector2(900, 0)
 	_panel.add_child(v)
 
 	var title := Label.new()
 	title.text = "CONFIGURAÇÕES"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_font_size_override("font_size", 46)
 	title.add_theme_color_override("font_color", BW_WHITE)
 	v.add_child(title)
 
 	v.add_child(_section_label("MODO DE TELA"))
 	var mode_row := HBoxContainer.new()
-	mode_row.add_theme_constant_override("separation", 8)
+	mode_row.add_theme_constant_override("separation", 14)
 	v.add_child(mode_row)
 	for i in range(MODE_NAMES.size()):
 		var b := Button.new()
 		b.text = MODE_NAMES[i]
 		b.toggle_mode = true
-		b.custom_minimum_size = Vector2(0, 52)
+		b.custom_minimum_size = Vector2(0, 72)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.add_theme_font_size_override("font_size", 20)
+		b.add_theme_font_size_override("font_size", 26)
 		b.focus_mode = Control.FOCUS_NONE
 		b.pressed.connect(_on_mode_pressed.bind(i))
 		mode_row.add_child(b)
@@ -207,7 +223,7 @@ func _build_ui() -> void:
 
 	v.add_child(_section_label("RESOLUÇÃO"))
 	var res_row := HBoxContainer.new()
-	res_row.add_theme_constant_override("separation", 8)
+	res_row.add_theme_constant_override("separation", 14)
 	v.add_child(res_row)
 	_res_prev = _small_button("<")
 	_res_prev.pressed.connect(_on_res_step.bind(-1))
@@ -216,18 +232,52 @@ func _build_ui() -> void:
 	_res_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_res_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_res_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_res_label.add_theme_font_size_override("font_size", 28)
+	_res_label.add_theme_font_size_override("font_size", 36)
 	_res_label.add_theme_color_override("font_color", BW_WHITE)
 	res_row.add_child(_res_label)
 	_res_next = _small_button(">")
 	_res_next.pressed.connect(_on_res_step.bind(1))
 	res_row.add_child(_res_next)
 
+	v.add_child(_section_label("ÁUDIO"))
+	for k in ["Master", "SFX", "Music"]:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 20)
+		v.add_child(row)
+		var name_l := Label.new()
+		name_l.text = String(VOLUME_LABELS[k])
+		name_l.custom_minimum_size = Vector2(300, 0)
+		name_l.add_theme_font_size_override("font_size", 26)
+		name_l.add_theme_color_override("font_color", BW_WHITE)
+		row.add_child(name_l)
+		var sl := PixelSlider.new()
+		sl.min_value = 0.0
+		sl.max_value = 1.0
+		sl.step = 0.05
+		sl.value = float(volumes[k])
+		sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		sl.focus_mode = Control.FOCUS_NONE
+		row.add_child(sl)
+		var val_l := Label.new()
+		val_l.custom_minimum_size = Vector2(96, 0)
+		val_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		val_l.add_theme_font_size_override("font_size", 26)
+		val_l.add_theme_color_override("font_color", BW_WHITE)
+		val_l.text = "%d%%" % roundi(float(volumes[k]) * 100.0)
+		row.add_child(val_l)
+		_vol_sliders[k] = sl
+		_vol_values[k] = val_l
+		sl.value_changed.connect(_on_volume_changed.bind(k))
+		# Solta o slider de efeitos = toca um som de exemplo.
+		if k == "SFX":
+			sl.drag_ended.connect(func(_c): Sfx.play("mover"))
+
 	v.add_child(_section_label("EFEITOS DE TELA (TREMOR E IMPACTO)"))
 	_fx_btn = Button.new()
 	_fx_btn.toggle_mode = true
-	_fx_btn.custom_minimum_size = Vector2(0, 52)
-	_fx_btn.add_theme_font_size_override("font_size", 22)
+	_fx_btn.custom_minimum_size = Vector2(0, 72)
+	_fx_btn.add_theme_font_size_override("font_size", 28)
 	_fx_btn.focus_mode = Control.FOCUS_NONE
 	_fx_btn.pressed.connect(func():
 		screen_fx = not screen_fx
@@ -239,7 +289,7 @@ func _build_ui() -> void:
 	var hint := Label.new()
 	hint.name = "Hint"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 16)
+	hint.add_theme_font_size_override("font_size", 21)
 	hint.add_theme_color_override("font_color", BW_GRAY)
 	v.add_child(hint)
 
@@ -250,8 +300,8 @@ func _build_ui() -> void:
 	v.add_child(sep)
 
 	_exit_btn = Button.new()
-	_exit_btn.custom_minimum_size = Vector2(0, 56)
-	_exit_btn.add_theme_font_size_override("font_size", 24)
+	_exit_btn.custom_minimum_size = Vector2(0, 76)
+	_exit_btn.add_theme_font_size_override("font_size", 30)
 	_exit_btn.focus_mode = Control.FOCUS_NONE
 	_color_button(_exit_btn, C_RED)
 	_exit_btn.pressed.connect(_on_exit_pressed)
@@ -309,15 +359,15 @@ const C_RED := Color(0.9, 0.32, 0.36)
 func _section_label(t: String) -> Label:
 	var l := Label.new()
 	l.text = t
-	l.add_theme_font_size_override("font_size", 18)
+	l.add_theme_font_size_override("font_size", 23)
 	l.add_theme_color_override("font_color", BW_GRAY)
 	return l
 
 func _small_button(t: String) -> Button:
 	var b := Button.new()
 	b.text = t
-	b.custom_minimum_size = Vector2(64, 52)
-	b.add_theme_font_size_override("font_size", 26)
+	b.custom_minimum_size = Vector2(88, 72)
+	b.add_theme_font_size_override("font_size", 34)
 	b.focus_mode = Control.FOCUS_NONE
 	_color_button(b, C_GOLD)
 	return b
@@ -374,6 +424,12 @@ func close() -> void:
 	_backdrop.visible = false
 	get_tree().paused = false
 
+func _on_volume_changed(val: float, k: String) -> void:
+	volumes[k] = val
+	Sfx.set_bus_volume(k, val)
+	(_vol_values[k] as Label).text = "%d%%" % roundi(val * 100.0)
+	_save_settings()
+
 func _on_mode_pressed(i: int) -> void:
 	display_mode = i
 	_apply_display()
@@ -398,5 +454,5 @@ func _on_exit_pressed() -> void:
 	if TutorialManager != null and TutorialManager.is_active:
 		TutorialManager.end_tutorial()
 	else:
-		MetaProgress.settle_run()  # abandonar a run também paga o que ela rendeu
+		MetaProgress.settle_run(false, false)  # abandonar a run também paga o que ela rendeu
 	get_tree().call_deferred("change_scene_to_file", MAIN_MENU_PATH)

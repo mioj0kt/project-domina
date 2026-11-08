@@ -126,7 +126,7 @@ func _build_ui() -> void:
 	# --- Caixa de diálogo principal (sequência de falas, bloqueia até
 	# o jogador clicar "continuar") ---
 	dialogue_panel = PanelContainer.new()
-	dialogue_panel.add_theme_stylebox_override("panel", PixelUI.make_dialogue_panel(Color("#efe6cf"), 14, 4))
+	dialogue_panel.add_theme_stylebox_override("panel", PixelUI.make_dialogue_panel(Color("#efe6cf"), 14, 4, PixelUI.FUNDO_QUADRO))
 	dialogue_panel.visible = false
 	dialogue_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	dialogue_panel.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -199,7 +199,7 @@ func _build_ui() -> void:
 
 	# --- Dica pontual (menor, some sozinha, não bloqueia input) ---
 	tip_panel = PanelContainer.new()
-	tip_panel.add_theme_stylebox_override("panel", PixelUI.make_dialogue_panel(Color("#d9a441"), 10, 3))
+	tip_panel.add_theme_stylebox_override("panel", PixelUI.make_dialogue_panel(Color(0.71, 0.82, 0.93), 10, 3, PixelUI.FUNDO_QUADRO))
 	tip_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	tip_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	tip_panel.offset_top = 24.0
@@ -226,7 +226,7 @@ func _build_ui() -> void:
 
 	# --- Quadro de objetivo (não bloqueia input) ---
 	objective_panel = PanelContainer.new()
-	objective_panel.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.08, 0.09, 0.13, 0.95), Color(0.9, 0.75, 0.3), 12))
+	objective_panel.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(PixelUI.FUNDO_QUADRO, PixelUI.AZUL_QUADRO, 12))
 	objective_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	objective_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	objective_panel.offset_left = 40.0
@@ -288,9 +288,12 @@ func _dock_dialogue(at_top: bool) -> void:
 # Toca uma sequência de falas, uma de cada vez, esperando o jogador clicar
 # "continuar" em cada uma. Aguardável — quem chama espera até a última
 # fala ser fechada. Itens: String ou {"t", "spot", "caption"}.
-func play_sequence(new_lines: Array) -> void:
+func play_sequence(new_lines: Array, allow_skip: bool = true) -> void:
 	if new_lines.is_empty():
 		return
+	# allow_skip = false: esconde o PULAR (o final do tutorial, com a cutscene
+	# do Guia virando o Irmão, não pode ser pulado).
+	skip_btn.visible = allow_skip
 	lines = new_lines
 	current_line_index = -1
 	is_showing_sequence = true
@@ -347,7 +350,7 @@ func _set_speaker(who: String) -> void:
 	name_label.text = SPEAKER_NAMES.get(who, "O GUIA")
 	name_label.add_theme_color_override("font_color", SPEAKER_COLORS.get(who, Color(0.9, 0.75, 0.3)))
 	if who == "evil":
-		dialogue_panel.add_theme_stylebox_override("panel", PixelUI.make_dialogue_panel(Color(0.95, 0.2, 0.2), 14, 4))
+		dialogue_panel.add_theme_stylebox_override("panel", PixelUI.make_dialogue_panel(Color(0.95, 0.2, 0.2), 14, 4, PixelUI.FUNDO_QUADRO))
 	elif _guide_style != null:
 		dialogue_panel.add_theme_stylebox_override("panel", _guide_style)
 
@@ -366,6 +369,7 @@ func _run_flip_line(line: Dictionary) -> void:
 	portrait.talking = false
 
 	# 1) Pressentimento: o Guia treme, relâmpagos, tudo escurece em vermelho.
+	Sfx.play("irmao_pressentimento")
 	var tw1 = create_tween().set_parallel(true)
 	tw1.tween_property(self, "_evil_amt", 0.55, 0.9)
 	tw1.tween_property(self, "_shake", 7.0, 0.9)
@@ -399,6 +403,7 @@ func _run_flip_line(line: Dictionary) -> void:
 		_big_on = false
 		portrait.modulate.a = 1.0
 		return
+	Sfx.play("moeda_girar_longa")
 	var coin = create_tween().set_parallel(true)
 	coin.tween_property(self, "_big_toss", 1.9, 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	coin.tween_property(self, "_big_toss", 1.0, 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN).set_delay(0.8)
@@ -416,6 +421,7 @@ func _run_flip_line(line: Dictionary) -> void:
 		return
 
 	# 3) IMPACTO: vira o Irmão, clarão, onda de choque, brasas, 
+	Sfx.play("irmao_impacto")
 	_big_who = str(line["flip"])
 	_set_speaker(_big_who)
 	_flash = 1.0
@@ -429,6 +435,7 @@ func _run_flip_line(line: Dictionary) -> void:
 	tw3.tween_property(self, "_evil_amt", 1.0, 0.8)
 	await tw3.finished
 	# O rosto malvado "encolhe" de volta ao retrato, com tranco.
+	Sfx.play("boss_encolhe")
 	var back = create_tween().set_parallel(true)
 	var slot = portrait.get_global_rect().get_center()
 	back.tween_property(self, "_big_pos", slot, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
@@ -548,6 +555,8 @@ func _on_continue_pressed() -> void:
 
 # Pula o resto da sequência atual (quem já conhece o jogo não precisa ler tudo).
 func _on_skip_pressed() -> void:
+	if not skip_btn.visible:
+		return
 	_typing = false
 	current_line_index = lines.size() - 1
 	_advance_line()
@@ -666,7 +675,7 @@ func play_title_card(kicker: String, title: String, subtitle: String = "") -> vo
 	if _title_card != null and is_instance_valid(_title_card):
 		_title_card.queue_free()
 	_title_card = PanelContainer.new()
-	_title_card.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.06, 0.07, 0.1, 0.96), Color(0.9, 0.75, 0.3), 28))
+	_title_card.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(PixelUI.FUNDO_QUADRO, PixelUI.AZUL_QUADRO, 28))
 	_title_card.set_anchors_preset(Control.PRESET_CENTER)
 	_title_card.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_title_card.grow_vertical = Control.GROW_DIRECTION_BOTH
@@ -737,14 +746,24 @@ func _process(delta: float) -> void:
 			var s := 1.0 + 0.012 * sin(_talk_phase * 3.0)
 			portrait.scale = Vector2(s, s)
 	if _typing:
+		var prev_chars: int = int(_type_pos)
 		_type_pos += delta * TYPE_SPEED
 		var total: int = text_label.text.length()
+		_blip_for_new_chars(prev_chars, mini(int(_type_pos), total))
 		if _type_pos >= total:
 			_typing = false
 			text_label.visible_characters = -1
 		else:
 			text_label.visible_characters = int(_type_pos)
 	_overlay.queue_redraw()
+
+# "Blip" de voz por letra revelada (estilo Undertale); pula espaços/pontuação.
+func _blip_for_new_chars(from_i: int, to_i: int) -> void:
+	var txt: String = text_label.text
+	for i in range(from_i, to_i):
+		if i >= 0 and i < txt.length() and not " .,;:!?…-—\n".contains(txt[i]):
+			Sfx.play("voz_irmao" if _speaker == "evil" else "voz_guia")
+			return
 
 # Jogador parado há um tempo sem cumprir o objetivo (ex.: não percebeu que é pra
 # mover uma peça): mostra a dica do objetivo e pulsa o trecho indicado, uma vez.

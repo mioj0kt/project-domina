@@ -228,12 +228,14 @@ func go(path: String, style: String = "auto") -> void:
 	_apply_biome_colors(_is_menu_transition(path))
 	var t: Array = TIMINGS[_style]
 	_canvas.mouse_filter = Control.MOUSE_FILTER_STOP   # bloqueia cliques durante a transição
+	Sfx.play("transicao_in", 0.0, 0.8 / maxf(float(t[0]), 0.2))
 	await _animate(1.0, float(t[0]))
 	get_tree().change_scene_to_file(path)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	if float(t[2]) > 0.0:
 		await get_tree().create_timer(float(t[2])).timeout
+	Sfx.play("transicao_out", 0.0, 0.8 / maxf(float(t[1]), 0.2))
 	await _animate(0.0, float(t[1]))
 	_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	busy = false

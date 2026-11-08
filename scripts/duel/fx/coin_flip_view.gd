@@ -7,6 +7,14 @@ extends Node2D
 # usam play_toss_for_team() pra tornar favorável a cor do time beneficiado).
 signal flip_completed(favorable: bool)
 
+# false = não toca o som de acerto/erro no fim (usado na moeda que decide as cores).
+var play_result_sound: bool = true
+# Grupos de som (a Mesa de Apostas usa os do cassino).
+var sfx_spin: String = "moeda_girar"
+var sfx_land: String = "moeda_pousa"
+var sfx_win: String = "acerto"
+var sfx_lose: String = "erro"
+
 # Troca os sprites das duas faces da moeda (padrão: peça comum branca vs peça
 # comum preta). Só usado em casos especiais; os efeitos de jogo mantêm o par
 # padrão pra a moeda sempre significar BRANCA x PRETA.
@@ -113,6 +121,7 @@ static func color_word(is_white: bool) -> String:
 
 func play_toss(p_center: Vector2, p_cell_size: float) -> void:
 	_kill_tweens()
+	Sfx.play(sfx_spin)
 
 	coin_center = p_center
 	cell_size = p_cell_size
@@ -166,6 +175,8 @@ func _finish_flip(lands_white: bool) -> void:
 	is_finished = true
 	is_animating = false
 	_kill_tweens()
+	Sfx.stop(sfx_spin)   # se a animação foi pulada, o som do giro para junto
+	Sfx.play(sfx_land)
 
 	landed_white = lands_white
 	var favorable = (lands_white == favorable_is_white)
@@ -189,6 +200,8 @@ func _finish_flip(lands_white: bool) -> void:
 		show_coin = false
 	queue_redraw()
 
+	if play_result_sound:
+		Sfx.play(sfx_win if favorable else sfx_lose)
 	flip_completed.emit(favorable)
 
 func _draw() -> void:
@@ -231,7 +244,7 @@ func _draw() -> void:
 		draw_rect(dest_rect, Color(0.08, 0.08, 0.1), false, 2.0)
 
 # Halo dourado pulsante (camadas de círculos) + 6 faíscas quadradas orbitando.
-func _draw_rigged_aura(diameter: float, coin_w: float) -> void:
+func _draw_rigged_aura(diameter: float, _coin_w: float) -> void:
 	var pulse: float = 0.5 + 0.5 * sin(_fx_t * 7.0)
 	for i in range(4):
 		var r: float = diameter * (0.58 + 0.13 * i + 0.05 * pulse)

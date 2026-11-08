@@ -17,25 +17,25 @@ const PANEL_BG := Color(0.08, 0.09, 0.13, 0.97)
 const ARROW: float = 22.0
 const GAP: float = 30.0
 
-# target: "coroas" | "tabs" | "grid" | "side" | "" ; place: onde fica a caixa em relação ao alvo
+# target: "coroas" | "tabs" | "grid" | "side" | "machine" | "help" | "" ; place: onde fica a caixa em relação ao alvo
 # ("below" | "left" | "inside" | "center"); tab: -1 mantém, 0 Leis, 1 Cartas
 const STEPS: Array[Dictionary] = [
 	{"text": "Bem-vindo ao GRIMÓRIO! Aqui você usa as COROAS para desbloquear Leis e Cartas novas, que passam a poder aparecer nas suas próximas runs.",
 		"target": "", "place": "center", "tab": 0},
 	{"text": "Estas são as suas COROAS. Você ganha Coroas vencendo duelos, e mesmo que perca a run, as que ganhou continuam com você.",
 		"target": "coroas", "place": "below", "tab": 0},
-	{"text": "Esta aba guarda as LEIS. O BAÚ DE LEIS guarda Leis que você ainda não conhece.",
-		"target": "piles", "place": "below", "tab": 0},
-	{"text": "Clique no baú e pague com Coroas para abrir: a Lei é sorteada entre as que você ainda não tem. Ela fica desbloqueada para sempre e nunca repete.",
-		"target": "piles", "place": "below", "tab": 0},
-	{"text": "A aba de CARTAS tem o seu próprio baú e funciona do mesmo jeito. Comum, rara, épica ou lendária: quanto mais rara, mais difícil de sair!",
-		"target": "piles", "place": "below", "tab": 1},
+	{"text": "Este é o ORÁCULO. Cartas e Leis que você ainda não tem ficam girando em órbita ao redor do núcleo.",
+		"target": "machine", "place": "below", "tab": 0},
+	{"text": "SEGURE o botão do mouse sobre o Oráculo até ele carregar (soltar antes cancela) e pague com Coroas: ele sorteia uma CARTA ou uma LEI nova. Quanto mais rara, mais difícil de sair, e nunca repete!",
+		"target": "machine", "place": "below", "tab": 0},
+	{"text": "Nas abas LEIS e CARTAS você vê tudo que já desbloqueou e escolhe o que levar na mochila.",
+		"target": "tabs", "place": "below", "tab": 2},
 	{"text": "Depois de desbloquear algo, você pode LEVAR para a MOCHILA. O que estiver na mochila já começa a próxima run com você.",
-		"target": "side", "place": "left", "tab": 1},
+		"target": "side", "place": "left", "tab": 2},
 	{"text": "Levar custa Coroas a cada run, e cada item na mochila deixa o próximo mais caro. Escolha com cuidado o que vale a pena levar.",
-		"target": "side", "place": "left", "tab": 1},
-	{"text": "É isso! Se quiser rever este guia depois, clique no botão \"?\" do Grimório.",
-		"target": "", "place": "center", "tab": -1},
+		"target": "side", "place": "left", "tab": 2},
+	{"text": "É isso! Para rever este guia quando quiser, clique neste botão de informação.",
+		"target": "help", "place": "below", "tab": -1},
 ]
 
 # Passos do guia: por padrão os do Grimório; outras telas (ex.: fim de run)
@@ -179,6 +179,9 @@ func _place_panel(place: String) -> void:
 				pos = Vector2(r.get_center().x - sz.x / 2.0, r.end.y - sz.y - 50.0)
 				var tip3 := Vector2(r.get_center().x, r.position.y + 150.0)
 				_set_arrow(tip3, Vector2(0, 1), pos, sz)
+	# Rede de segurança: a caixa nunca sai da tela, qualquer que seja o alvo.
+	pos.x = clampf(pos.x, 20.0, maxf(20.0, vp.x - sz.x - 20.0))
+	pos.y = clampf(pos.y, 20.0, maxf(20.0, vp.y - sz.y - 20.0))
 	_panel.position = pos
 
 # Seta: ponta em `tip`; sai da borda da caixa que olha para o alvo.

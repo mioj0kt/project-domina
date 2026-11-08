@@ -259,7 +259,7 @@ static func _make_tile(cfg: Dictionary, tile_pattern: String = "losango") -> Ima
 					var bx: int = (x + (6 if brow % 2 == 1 else 0)) % 12
 					if y % 6 == 0 or bx == 0:
 						img.set_pixel(x, y, line)
-					elif (brow + (x + (6 if brow % 2 == 1 else 0)) / 12) % 3 == 0:
+					elif (brow + floori((x + (6 if brow % 2 == 1 else 0)) / 12.0)) % 3 == 0:
 						img.set_pixel(x, y, fill)
 					if bx == 6 and y % 6 == 3 and brow % 2 == 0:
 						img.set_pixel(x, y, dot)

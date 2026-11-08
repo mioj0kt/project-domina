@@ -78,7 +78,7 @@ static func _draw_move_marker_sprite(canvas: CanvasItem, dest_rect: Rect2, is_ca
 			tex = base
 	if tex == null:
 		return false
-	var frames: int = maxi(1, int(tex.get_width() / _MARKER_FRAME_PX))
+	var frames: int = maxi(1, int(tex.get_width() / float(_MARKER_FRAME_PX)))
 	var f: int = int(Time.get_ticks_msec() / 1000.0 * _MARKER_FPS) % frames
 	# A arte tem ~3 px de margem transparente por lado: corta a margem pra o
 	# marcador cobrir a casa inteira (o pulso entre os quadros continua).

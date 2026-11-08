@@ -14,7 +14,13 @@ extends RefCounted
 #   teclas no duelo  -> DebugRuleConsole (vencer, perder, alternar leis...)
 #   (o reset de progresso agora é o botão RESETAR PROGRESSO nas configurações)
 # Continua exigindo build de debug onde já exigia (OS.is_debug_build()).
+#   COM SHORTCUTS = true (e build de debug): COROAS e OURO INFINITOS. Os gastos não
+#   descontam e o save real de Coroas não é alterado.
 const SHORTCUTS: bool = false
+const INFINITE_VALUE: int = 999999
+
+static func infinite_resources() -> bool:
+	return SHORTCUTS and OS.is_debug_build()
 
 # Pré-visualização de bioma do mapa: "" = segue o RunManager (floresta);
 # "deserto" força o Deserto das Torres em qualquer run NOVA (mapa, fundos dos

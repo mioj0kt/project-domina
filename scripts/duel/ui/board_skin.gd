@@ -459,7 +459,7 @@ static func _draw_segmented_edges(canvas: CanvasItem, d: Dictionary, outer_pos: 
 
 # Casas: sorteio determinístico por posição (não pisca entre redraws), sem
 # repetir a mesma arte na casa de cima nem na da esquerda da mesma cor.
-static func _desert_pick(r: int, c: int, is_light: bool, count: int) -> int:
+static func _desert_pick(r: int, c: int, _is_light: bool, count: int) -> int:
 	var i: int = _variant_index(r + 3, c + 17, count)
 	var k := 0
 	while k < count:

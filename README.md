@@ -6,7 +6,7 @@
 
 Roguelite de damas. Você atravessa um mapa de ilhas flutuantes, duela em tabuleiros que mudam de regra a cada partida e monta o seu jogo com **Leis** (que alteram as regras) e **Cartas de Ação** (que quebram as regras na hora certa).
 
-> **Status:** alpha `0.2.5`. Feito com Godot e GDScript, em desenvolvimento ativo. Muita coisa ainda vai mudar.
+> **Status:** alpha `0.3.2`. Feito com Godot e GDScript, em desenvolvimento ativo. Muita coisa ainda vai mudar.
 
 <p align="center">
   <img src="docs/domina_jogando.gif" alt="Duelo em tabuleiro 6x6 com as Leis Escudo e Movimento Reverso, sem cartas" width="640">
@@ -26,9 +26,9 @@ Uma partida de damas comum termina quando um lado fica sem peças. Em DOMINA, o 
 - **Grimório:** a progressão entre runs. Você ganha Coroas no fim de uma run, desbloqueia novas Leis ou Cartas e ainda tem a opção de escolher o que levar na mochila para iniciar o jogo preparado.
 
 <p align="center">
-  <img src="docs/domina_bau.gif" alt="Abrindo um baú de Leis no Grimório e desbloqueando uma Lei nova" width="640">
+  <img src="docs/oraculo.gif" alt="Oráculo sendo usado para desbloquear uma lei nova" width="640">
   <br>
-  <sub>No Grimório, gaste Coroas para abrir um baú e desbloquear uma Leis ou Cartas nova.</sub>
+  <sub>No Grimório, gaste Coroas para sortear no Oráculo e desbloquear uma Lei ou Carta nova.</sub>
 </p>
 
 <p align="center">
@@ -105,5 +105,4 @@ Ainda é um projeto pessoal em alpha. Sugestões e relatos de bug são bem-vindo
 - Design, programação e sprites: Wrong Moon
 - Fonte: [m5x7](https://managore.itch.io/m5x7), de Daniel Linssen
 - Engine: [Godot Engine](https://godotengine.org) (licença MIT)
-
-O jogo ainda não tem música nem efeitos sonoros.
+- Efeitos sonoros: criados do zero pela Wrong Moon, sintetizados por código (Python + NumPy), sem samples nem bibliotecas de som de terceiros.

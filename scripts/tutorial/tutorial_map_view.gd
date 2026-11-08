@@ -108,13 +108,14 @@ func _ready() -> void:
 		return
 
 	if entry_index >= steps.size() - 1 and TutorialManager.last_duel_won:
-		await guide_view.play_sequence(TutorialManager.get_real_map_lines())
-		await guide_view.play_sequence(TutorialManager.get_finished_lines())
+		# Depois do cassino, as falas NÃO podem ser puladas (a cutscene do Irmão).
+		await guide_view.play_sequence(TutorialManager.get_real_map_lines(), false)
+		await guide_view.play_sequence(TutorialManager.get_finished_lines(), false)
 		if TutorialManager.FLIP_ENDING:
 			_busy = true  # esconde a seta de "próxima lição"
-			await guide_view.play_sequence(TutorialManager.get_flip_walk_lines())
+			await guide_view.play_sequence(TutorialManager.get_flip_walk_lines(), false)
 			await _guide_walks_ahead()
-			await guide_view.play_sequence(TutorialManager.get_flip_lines())
+			await guide_view.play_sequence(TutorialManager.get_flip_lines(), false)
 		TutorialManager.advance_to(TutorialManager.Step.FINISHED)
 		MetaProgress.mark_tutorial_done()
 		TutorialManager.end_tutorial()

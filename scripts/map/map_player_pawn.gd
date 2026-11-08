@@ -88,6 +88,7 @@ func _do_single_diagonal_hop(to_world_pos: Vector2) -> void:
 	, 0.0, 1.0, hop_duration)
 
 	await tween.finished
+	Sfx.play("salto")
 	current_world_pos = to_world_pos
 	position = to_world_pos
 	jump_offset_y = 0.0

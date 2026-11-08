@@ -52,6 +52,7 @@ static func spawn(main, pos: Vector2i, team: int) -> void:
 		return
 	if "piece_spawn_scales" in main:
 		main.piece_spawn_scales[pos] = 0.0
+	Sfx.play("nascer")
 	var c := center_of(main, pos)
 	var col := team_color(team)
 	Juice.ring(main, c, main.cell_size * 0.9, col, 5.0, 0.4)

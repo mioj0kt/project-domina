@@ -653,21 +653,21 @@ func _set_fit_text(label: Label, text: String, base_size: int) -> void:
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	var width: float = label.custom_minimum_size.x
 	var font: Font = label.get_theme_font("font")
-	var size := base_size
-	var wrapped := _wrap_text(font, text, width, size)
-	while size > MIN_TEXT_FONT and font.get_multiline_string_size(wrapped, HORIZONTAL_ALIGNMENT_CENTER, -1, size).y > MAX_TEXT_H:
-		size -= 2
-		wrapped = _wrap_text(font, text, width, size)
-	label.add_theme_font_size_override("font_size", size)
+	var font_size := base_size
+	var wrapped := _wrap_text(font, text, width, font_size)
+	while font_size > MIN_TEXT_FONT and font.get_multiline_string_size(wrapped, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size).y > MAX_TEXT_H:
+		font_size -= 2
+		wrapped = _wrap_text(font, text, width, font_size)
+	label.add_theme_font_size_override("font_size", font_size)
 	label.text = wrapped
 
-func _wrap_text(font: Font, text: String, width: float, size: int) -> String:
+func _wrap_text(font: Font, text: String, width: float, font_size: int) -> String:
 	var out: Array[String] = []
 	for para in text.split("\n"):
 		var line := ""
 		for word in para.split(" "):
 			var trial := word if line == "" else line + " " + word
-			if line != "" and font.get_string_size(trial, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > width:
+			if line != "" and font.get_string_size(trial, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > width:
 				out.append(line)
 				line = word
 			else:

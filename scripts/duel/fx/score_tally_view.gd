@@ -7,6 +7,9 @@ extends Node2D
 
 const COMMON_VALUE: int = 1
 const KING_VALUE: int = 3
+# Valor de uma Dama por lado (Lei Dama Dourada); o SuddenDeathManager preenche antes de play().
+var human_king_value: int = KING_VALUE
+var ai_king_value: int = KING_VALUE
 const MAX_COUNT_TIME: float = 3.2   # teto da contagem inteira (muitas peças aceleram)
 const HOLD_TIME: float = 1.1        # pausa com o resultado final na tela
 
@@ -148,6 +151,8 @@ func play(board: Board, board_offset: Vector2, cell_size: float, human_team: int
 
 	# Resultado: o vencedor do placar brilha, o outro apaga.
 	_result = signi(_human_score - _ai_score)
+	if not _skip:
+		Sfx.play("placar")
 	_result_t = 0.0
 	await _sleep(0.15)
 	if not _skip:
@@ -167,7 +172,7 @@ func play(board: Board, board_offset: Vector2, cell_size: float, human_team: int
 
 func _count_piece(cell: Vector2i, piece: BoardPiece, board_offset: Vector2, is_human: bool, step: float) -> void:
 	var king: bool = piece.is_king
-	var value: int = KING_VALUE if king else COMMON_VALUE
+	var value: int = (human_king_value if is_human else ai_king_value) if king else COMMON_VALUE
 	if _skip:
 		# Pulando: soma direto, sem "+1"/anéis nem espera.
 		if is_human:
@@ -177,6 +182,10 @@ func _count_piece(cell: Vector2i, piece: BoardPiece, board_offset: Vector2, is_h
 		queue_redraw()
 		return
 	_streak += 1
+	if king:
+		Sfx.play("contagem_dama")
+	else:
+		Sfx.play("contagem", 0.0, 1.0 + 0.06 * minf(_streak, 12.0))   # sobe de tom a cada peça
 	var center = board_offset + Vector2(cell.x * _cell + _cell * 0.5, cell.y * _cell + _cell * 0.5)
 	var col: Color = COL_KING if king else COL_COMMON
 	var p = Pop.new()
@@ -224,10 +233,10 @@ func _draw() -> void:
 		if g[3]:
 			# estrela de 4 pontas girando sobre a Dama
 			var sc: Color = Color(1.0, 0.95, 0.7, (1.0 - kg))
-			var len: float = _cell * (0.35 + 0.35 * sin(minf(kg * 3.0, 1.0) * PI))
+			var arm: float = _cell * (0.35 + 0.35 * sin(minf(kg * 3.0, 1.0) * PI))
 			var ang: float = g[1] * 2.5
 			for q in range(2):
-				var d := Vector2.from_angle(ang + q * PI * 0.5) * len
+				var d := Vector2.from_angle(ang + q * PI * 0.5) * arm
 				draw_line(g[0] - d, g[0] + d, sc, 3.0)
 	for r in _rings:
 		if r[1] < 0.0:

@@ -45,9 +45,13 @@ static func make_pixel_panel(bg_color: Color = Color(0.08, 0.09, 0.12, 0.96), bo
 # Caixa de diálogo estilo "RPG clássico" (à la Undertale): fundo quase preto
 # ameixa e moldura clara grossa, cantos retos, sem sombra. Usada nas falas do
 # Guia e dicas do tutorial.
-static func make_dialogue_panel(border_color: Color = Color("#efe6cf"), padding: int = 16, border_px: int = 4) -> StyleBoxFlat:
+# Azul-noite do quadro do Oráculo/Arcano (o mesmo dos painéis de pixel com acento AZUL_QUADRO).
+const AZUL_QUADRO := Color(0.35, 0.6, 0.85)
+const FUNDO_QUADRO := Color(0.09, 0.1, 0.14, 0.97)
+
+static func make_dialogue_panel(border_color: Color = Color("#efe6cf"), padding: int = 16, border_px: int = 4, bg: Color = Color("#0c080f")) -> StyleBoxFlat:
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color("#0c080f")
+	style.bg_color = bg
 	style.set_corner_radius_all(0)
 	style.set_border_width_all(border_px)
 	style.border_color = border_color
