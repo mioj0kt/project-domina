@@ -2,7 +2,7 @@ class_name ForestBackground
 extends Node2D
 
 # Fundo procedural do mapa da floresta: um tabuleiro de casas (alternando
-# claras = grama/madeira e escuras = terra/musgo) com moldura de madeira,
+# claras = terra/grama e escuras = terra escura/musgo) com moldura de madeira,
 # árvores e detalhes espalhados (mais árvores nas bordas, nada em cima das
 # trilhas) e uma clareira sob cada nó. Tudo é gerado a partir dos sprites de
 # res://assets/sprites/biomas/floresta/ com uma semente derivada do próprio mapa,
@@ -19,11 +19,17 @@ const FRAME_SRC_ROWS: int = 13
 # Arte do tabuleiro da floresta (cream/ameixa): casas + detalhes pequenos em
 # res://assets/sprites/biomas/floresta/tabuleiro/<pasta>/<nome>.png
 const LIGHT_TILES: Array[String] = [
-	"casas/casa_clara_grama", "casas/casa_clara_grama", "casas/casa_clara_tabuas",
-	"casas/casa_madeira_textura_1", "casas/casa_madeira_textura_2", "casas/casa_madeira_textura_3",
-	"casas/casa_madeira_textura_4", "casas/casa_madeira_textura_5", "casas/casa_madeira_textura_6",
+	"casas/casa_clara_00_lisa", "casas/casa_clara_00_lisa", "casas/casa_clara_01_tufos",
+	"casas/casa_clara_02_falhas", "casas/casa_clara_03_pedrinha", "casas/casa_clara_04_folha_seca",
+	"casas/casa_clara_05_terra_batida", "casas/casa_clara_06_trevos", "casas/casa_clara_07_pedrinhas",
+	"casas/casa_clara_08_folhas", "casas/casa_clara_09_terra_rachada", "casas/casa_clara_10_agulhas",
+	"casas/casa_clara_11_trilha",
 ]
-const DARK_TILES: Array[String] = ["casas/casa_escura"]
+const DARK_TILES: Array[String] = [
+	"casas/casa_escura_00_lisa", "casas/casa_escura_00_lisa", "casas/casa_escura_01_pedrinhas",
+	"casas/casa_escura_02_raizes", "casas/casa_escura_03_musgo", "casas/casa_escura_04_folhas",
+	"casas/casa_escura_05_revolvida", "casas/casa_escura_06_rachaduras",
+]
 
 # Árvores e arbustos (pixel art sem chão: servem em casa clara e escura).
 const TREES: Array[String] = [
