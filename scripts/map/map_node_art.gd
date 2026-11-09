@@ -19,6 +19,10 @@ static func sprite(file: String) -> Texture2D:
 # do soquete já com sufixo de estado (ex.: "_escura"); `ind_name` o anel ou, se
 # `overlay_name` não for vazio, o selo (concluído/bloqueado) que vai por cima.
 static func apply(btn: Control, base: TextureRect, ind: TextureRect, node_sprite: String, sprite_name: String, ind_name: String, overlay_name: String, boss_suffix: String, with_pawn: bool) -> void:
+	# Anel que não existe como arquivo (ex.: o estado "disponível", que não tem mais
+	# anel) = sem anel: mostra só o nodo, sem erro de carregamento.
+	if ind_name != "" and overlay_name == "" and not ResourceLoader.exists(MAP_SPRITE_DIR + ind_name + boss_suffix + ".png"):
+		ind_name = ""
 	var base_tex = sprite(sprite_name)
 	if base_tex == null:
 		# Variante (_escura) ausente no projeto: usa o soquete com símbolo
@@ -84,14 +88,11 @@ static func socket_with_pawn(sprite_name: String) -> Texture2D:
 # arquivo (medido pelo centróide dos pixels de cada PNG), então não bastam
 # "centralizar o arquivo". Valor em px nativos; ampliado por NODE_SPRITE_SCALE.
 const _RING_DROP_NATIVE := {
-	"ind_atual": 2.0, "ind_atual_boss": 3.0,
-	"ind_disponivel": 1.0, "ind_disponivel_boss": 2.0,
-	"ind_selecionado": 1.0, "ind_selecionado_boss": 2.0,
 	"ind_concluido": 1.5, "ind_concluido_boss": 2.5,
 	"ind_bloqueado": 1.5, "ind_bloqueado_boss": 2.5,
 }
 
-const _RING_CUT_ROW := {"ind_atual": 22, "ind_atual_boss": 25}
+const _RING_CUT_ROW := {}   # anéis novos são simétricos: sem corte de linha
 
 static func ring_nudge(ind_file: String) -> Vector2:
 	return Vector2(0.0, float(_RING_DROP_NATIVE.get(ind_file, 0.0)) * NODE_SPRITE_SCALE)
@@ -125,7 +126,7 @@ static func socket_with_ring(sprite_name: String, ring_name: String, with_pawn: 
 	var drop: int = int(_RING_DROP_NATIVE.get(ring_name, 0.0))
 	var rh: int = rimg.get_height()
 	var rw: int = rimg.get_width()
-	if ring_name.begins_with("ind_atual"):
+	if _RING_CUT_ROW.has(ring_name):
 		# O interior do anel é 1 px mais baixo que a peça: tira UMA linha do
 		# equador (parte reta dos lados, sem perda visual) e encaixa as duas
 		# metades, o que encolhe o anel 1 px só na vertical.

@@ -16,7 +16,7 @@ extends RefCounted
 # Continua exigindo build de debug onde já exigia (OS.is_debug_build()).
 #   COM SHORTCUTS = true (e build de debug): COROAS e OURO INFINITOS. Os gastos não
 #   descontam e o save real de Coroas não é alterado.
-const SHORTCUTS: bool = false
+const SHORTCUTS: bool = true
 const INFINITE_VALUE: int = 999999
 
 static func infinite_resources() -> bool:

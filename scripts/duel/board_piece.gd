@@ -33,6 +33,10 @@ var rooted_turns: int = 0
 var temp_king_turns: int = 0
 # Lei do Luto: turnos (do dono) com escudo — a próxima captura contra a peça falha.
 var shield_turns: int = 0
+# Estopim: marcada; quando capturada, ela e as diagonais pegam fogo.
+var fuse: bool = false
+# Lei da Ponte de Recuo: esta peça já usou o seu recuo em ponte.
+var back_hop_used: bool = false
 # Lei da Guarda Real: Dama inicial que NÃO conta para ativar a Morte Súbita.
 var sd_exempt: bool = false
 
@@ -80,5 +84,7 @@ func clone() -> BoardPiece:
 	copy.rooted_turns = rooted_turns
 	copy.temp_king_turns = temp_king_turns
 	copy.shield_turns = shield_turns
+	copy.fuse = fuse
+	copy.back_hop_used = back_hop_used
 	copy.sd_exempt = sd_exempt
 	return copy

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://0o2w2kfv0vip"
-path="res://.godot/imported/ind_disponivel_boss.png-16e7c348b0a72d44e572387c17f29480.ctex"
+uid="uid://cwj5p7p2slc36"
+path="res://.godot/imported/squire.png-9ccf00a014e00daf1c27d2607aeb75a0.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/mapa/nodos/ind_disponivel_boss.png"
-dest_files=["res://.godot/imported/ind_disponivel_boss.png-16e7c348b0a72d44e572387c17f29480.ctex"]
+source_file="res://assets/sprites/cards/icons/squire.png"
+dest_files=["res://.godot/imported/squire.png-9ccf00a014e00daf1c27d2607aeb75a0.ctex"]
 
 [params]
 

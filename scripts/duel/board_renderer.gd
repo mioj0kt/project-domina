@@ -78,6 +78,7 @@ func _draw() -> void:
 		PixelRenderer.draw_pixel_corners(self, tile_rect, Color(1.0, 0.75, 0.1, 0.95), 8.0, 2.5)
 
 	_draw_fire_tiles(board, board_offset, cell_size)
+	_draw_trap_tiles(board, board_offset, cell_size)
 	_draw_quicksand_tiles(board, board_offset, cell_size)
 	_draw_desert_boss_telegraph(board_offset, cell_size)
 	_draw_light_tile_laws(board, board_offset, cell_size)
@@ -224,7 +225,7 @@ func _boss_fx(rel: String) -> Texture2D:
 
 # Desenha um quadro (26x26) de uma folha horizontal de animação.
 func _draw_fx_frame(tex: Texture2D, rect: Rect2, pos: Vector2i, fps: float) -> void:
-	var frames: int = maxi(1, int(tex.get_width() / BOSS_FX_FRAME))
+	var frames: int = maxi(1, int(tex.get_width() / float(BOSS_FX_FRAME)))
 	var f: int = (int(Time.get_ticks_msec() / 1000.0 * fps) + pos.x * 3 + pos.y * 5) % frames
 	draw_texture_rect_region(tex, rect, Rect2(f * BOSS_FX_FRAME, 0, BOSS_FX_FRAME, BOSS_FX_FRAME))
 
@@ -294,6 +295,38 @@ func _draw_desert_boss_telegraph(board_offset: Vector2, cell_size: float) -> voi
 		draw_rect(rect, fill)
 		PixelRenderer.draw_pixel_corners(self, rect, edge, 8.0, 2.0)
 
+# Mãos Sombrias: uma mão escura de dedos curvados brotando da casa, com brilho
+# violeta (visível só para o dono, o jogador).
+func _draw_trap_tiles(board: Board, board_offset: Vector2, cell_size: float) -> void:
+	if board.trap_tiles.is_empty():
+		return
+	var t = Time.get_ticks_msec() / 1000.0
+	for pos in board.trap_tiles.keys():
+		if int(board.trap_tiles[pos]["team"]) != board.human_team_color:
+			continue   # armadilha da IA: escondida do jogador
+		var rect = Rect2(board_offset.x + pos.x * cell_size, board_offset.y + pos.y * cell_size, cell_size, cell_size)
+		var glow = 0.5 + 0.5 * sin(t * 3.0 + pos.x + pos.y)
+		draw_rect(rect.grow(-cell_size * 0.1), Color(0.35, 0.18, 0.5, 0.18 + 0.12 * glow))
+		var u: float = cell_size / 16.0
+		var o: Vector2 = rect.position
+		var dark = Color(0.12, 0.07, 0.18, 0.95)
+		var mid = Color(0.28, 0.16, 0.4, 0.95)
+		var lit = Color(0.62, 0.42, 0.85, 0.9)
+		# Pulso e palma
+		draw_rect(Rect2(o + Vector2(6, 10) * u, Vector2(4, 5) * u), dark)
+		draw_rect(Rect2(o + Vector2(5, 7) * u, Vector2(6, 4) * u), mid)
+		# Dedos curvados (balançam de leve)
+		var sway: float = sin(t * 2.5 + pos.x) * 0.4
+		for i in range(4):
+			var fx: float = 5.0 + i * 1.7
+			var fh: float = 4.0 - abs(i - 1.5) * 0.7
+			draw_rect(Rect2(o + Vector2(fx + sway * (i - 1.5) * 0.3, 7.0 - fh) * u, Vector2(1.2, fh) * u), mid)
+			draw_rect(Rect2(o + Vector2(fx + sway * (i - 1.5) * 0.3, 7.0 - fh) * u, Vector2(1.2, 1.0) * u), lit)
+		# Polegar
+		draw_rect(Rect2(o + Vector2(3.6, 8) * u, Vector2(1.6, 2.2) * u), mid)
+		draw_rect(Rect2(o + Vector2(3.6, 8) * u, Vector2(1.6, 0.9) * u), lit)
+		PixelRenderer.draw_pixel_corners(self, rect, Color(0.75, 0.55, 0.95, 0.9), 8.0, 2.0)
+
 func _draw_fire_tiles(board: Board, board_offset: Vector2, cell_size: float) -> void:
 	if _fire_tex == null and ResourceLoader.exists(FIRE_SHEET):
 		_fire_tex = load(FIRE_SHEET)
@@ -325,6 +358,13 @@ func _draw_piece_status(piece: BoardPiece, center: Vector2, size: float) -> void
 			var x = center.x - half + half * i
 			draw_line(Vector2(x, center.y - half), Vector2(x, center.y + half), col, 3.0)
 		draw_rect(Rect2(center - Vector2(half, half), Vector2(half * 2.0, half * 2.0)), col, false, 3.0)
+	if piece.fuse:
+		# Estopim: pavio aceso no canto superior esquerdo.
+		var fc = center + Vector2(-size * 0.3, -size * 0.3)
+		var fp = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 90.0)
+		draw_circle(fc, size * 0.13, Color(0.14, 0.08, 0.06))
+		draw_arc(fc, size * 0.13, 0, TAU, 16, Color(1.0, 0.55, 0.15), 2.0)
+		draw_circle(fc + Vector2(size * 0.04, -size * 0.09), size * (0.05 + 0.03 * fp), Color(1.0, 0.85, 0.3))
 	if piece.shield_turns > 0:
 		# Escudo (Lei do Luto): bolha azul pulsante + contorno ao redor da peça.
 		var pulse = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 220.0)

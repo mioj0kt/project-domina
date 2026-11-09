@@ -31,7 +31,17 @@ static func get_all_rules() -> Array[RuleCard]:
 		RuleBorrowedTime.new(),
 		RuleShortFuse.new(),
 		RuleGoldenQueen.new(),
-		RuleAdrenaline.new()
+		RuleAdrenaline.new(),
+		RuleTrail.new(),
+		RuleCinders.new(),
+		RuleInferno.new(),
+		RuleUsury.new(),
+		RuleRetreatBridge.new(),
+		RulePressure.new(),
+		RuleFrenzy.new(),
+		RuleRunningAccount.new(),
+		RuleCharge.new(),
+		RuleDomino.new()
 	]
 	return rules
 
@@ -84,7 +94,13 @@ static func get_all_action_cards() -> Array[ActionCard]:
 		CardFrogBait.new(),
 		CardSuddenStart.new(),
 		CardClockCut.new(),
-		CardExtension.new()
+		CardExtension.new(),
+		CardEmber.new(),
+		CardFlameWall.new(),
+		CardFuse.new(),
+		CardAshes.new(),
+		CardShadowHand.new(),
+		CardSquire.new()
 	]
 	return cards
 
@@ -127,7 +143,9 @@ static func get_random_rules(count: int, exclude_ids: Array[String] = []) -> Arr
 const AI_ELIGIBLE_RULE_IDS: Array[String] = [
 	"reverse_movement", "optional_capture", "early_promotion",
 	"ally_hop", "advance", "shield", "sacred_zone",
-	"ascension_law", "impossible_tie_law"
+	"ascension_law", "impossible_tie_law",
+	# Escolhem o time pelo hook/pela peça (applies_to_team), então valem para a IA:
+	"mourning", "weight", "retreat_bridge", "pressure", "trail"
 ]
 
 static func get_random_ai_rules(count: int) -> Array[RuleCard]:
@@ -151,7 +169,8 @@ const AI_ELIGIBLE_CARD_IDS: Array[String] = [
 	"recruit", "rebuild", "extra_turn", "retreat", "heroic_advance",
 	"coin_of_destiny", "lucky_duel", "second_chance",
 	"rebellion", "demote", "heir", "guillotine", "ambush",
-	"coronation", "plant_tree", "restock", "triple_toss"
+	"coronation", "plant_tree", "restock", "triple_toss",
+	"plant_cactus", "light_up", "ember", "scorched_earth", "shadow_hand", "squire", "fuse"
 ]
 
 # Pesos de raridade [comum, rara, épica, lendária] das cartas do inimigo por

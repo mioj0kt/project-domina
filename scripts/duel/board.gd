@@ -7,6 +7,9 @@ signal capture_prevented(grid_pos: Vector2i, piece: BoardPiece)
 # Uma Lei acabou de agir (id da Lei): a HUD faz o slot dela tremer/brilhar (game juice).
 @warning_ignore("unused_signal")   # emitido pelas Leis (rules/catalog/*)
 signal rule_fired(rule_id: String)
+# Mão Sombria acionada: a UI mostra o aviso na casa.
+@warning_ignore("unused_signal")
+signal trap_sprung(grid_pos: Vector2i)
 
 const EMPTY: BoardPiece = null
 const NEUTRAL: int = 0
@@ -43,6 +46,20 @@ var scorched_tiles: Dictionary = {}
 # Diferente de scorched_tiles (que BLOQUEIA a casa), aqui a casa é livre para
 # andar, mas qualquer peça que POUSE nela é destruída.
 var fire_tiles: Dictionary = {}
+
+# Mãos Sombrias (carta Mão Sombria): Vector2i(col, row) -> {"turns": restantes, "team": dono}.
+# Peça do time ADVERSÁRIO que pousa ali fica presa e perde a próxima jogada; o
+# alçapão some. A IA não os enxerga (não vão para o clone da simulação).
+var trap_tiles: Dictionary = {}
+
+# Acende uma casa. `by_player`: chama gerada pelo jogador (cartas/leis) — a Lei
+# do Incêndio soma turnos a todas elas. Nunca encurta uma chama já acesa.
+func ignite(pos: Vector2i, turns: int, by_player: bool = false) -> void:
+	if by_player and rule_pipeline != null:
+		var inferno = rule_pipeline.get_rule("inferno")
+		if inferno != null:
+			turns += inferno.EXTRA_TURNS
+	fire_tiles[pos] = maxi(int(fire_tiles.get(pos, 0)), turns)
 
 # Casas claras acesas (carta Acender Casa): Vector2i(col, row) ->
 # {"turns": turnos restantes, "team": time protegido}. As peças DESSE time nas
@@ -164,6 +181,7 @@ func clear_board() -> void:
 			grid[r][c] = EMPTY
 	scorched_tiles.clear()
 	fire_tiles.clear()
+	trap_tiles.clear()
 	lit_tiles.clear()
 	last_chance_piece = null
 	extra_move_piece = null
@@ -197,10 +215,16 @@ func tick_scorched_tiles() -> void:
 		scorched_tiles[pos] -= 1
 		if scorched_tiles[pos] <= 0:
 			scorched_tiles.erase(pos)
+	# Lei das Cinzas: toda chama some 1 turno mais cedo.
+	var fire_decay: int = 2 if (rule_pipeline != null and rule_pipeline.has_rule("cinders")) else 1
 	for pos in fire_tiles.keys():
-		fire_tiles[pos] -= 1
+		fire_tiles[pos] -= fire_decay
 		if fire_tiles[pos] <= 0:
 			fire_tiles.erase(pos)
+	for pos in trap_tiles.keys():
+		trap_tiles[pos]["turns"] -= 1
+		if trap_tiles[pos]["turns"] <= 0:
+			trap_tiles.erase(pos)
 	for pos in lit_tiles.keys():
 		lit_tiles[pos]["turns"] -= 1
 		if lit_tiles[pos]["turns"] <= 0:
@@ -648,7 +672,24 @@ func get_piece_moves(r: int, c: int) -> Array:
 	_append_bonus_moves(r, c, moves)
 	_append_vine_moves(r, c, piece_obj, directions, moves)
 	_append_bridge_moves(r, c, piece_obj, directions, moves)
+	_append_retreat_hops(r, c, piece_obj, moves)
 	return moves
+
+# Lei da Ponte de Recuo: peça comum recua UMA vez em linha reta, 2 casas para
+# trás (por cima da casa clara, como numa ponte). Uma vez por peça.
+func _append_retreat_hops(r: int, c: int, piece_obj: BoardPiece, moves: Array) -> void:
+	if piece_obj.is_king or piece_obj.back_hop_used or rule_pipeline == null:
+		return
+	if not rule_pipeline.can_retreat_hop(piece_obj, human_team_color):
+		return
+	var back_dy: int = 1 if piece_obj.owner_team == human_team_color else -1
+	var dest := Vector2i(c, r + back_dy * 2)
+	if not is_valid_pos(dest.y, dest.x) or grid[dest.y][dest.x] != EMPTY or scorched_tiles.has(dest):
+		return
+	for m in moves:
+		if m["to"] == dest:
+			return
+	moves.append({"from": Vector2i(c, r), "to": dest, "is_capture": false, "captured": Vector2i(-1, -1), "via_bridge": true, "retreat_hop": true})
 
 # Cipós: a peça ao lado de um cipó (casa clara) atravessa em linha reta até a casa
 # escura do outro lado. Na horizontal vale sempre; na vertical, ir "para trás"
@@ -782,6 +823,8 @@ func make_move(move_dict: Dictionary) -> bool:
 	var piece: BoardPiece = grid[from_pos.y][from_pos.x]
 	grid[from_pos.y][from_pos.x] = EMPTY
 	grid[to_pos.y][to_pos.x] = piece
+	if move_dict.get("retreat_hop", false):
+		piece.back_hop_used = true
 
 	if _protected_piece != null and piece.owner_team != _protected_attacker_team:
 		_protected_piece = null
@@ -823,6 +866,14 @@ func make_move(move_dict: Dictionary) -> bool:
 		else:
 			grid[cap_pos.y][cap_pos.x] = EMPTY
 			piece_destroyed.emit(cap_pos, cap_piece)
+			# Estopim: a peça marcada explode em chamas (ela e as 4 diagonais).
+			if cap_piece.fuse:
+				var fuse_by_player: bool = cap_piece.owner_team == human_team_color
+				ignite(cap_pos, 2, fuse_by_player)
+				for d in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
+					var fp: Vector2i = cap_pos + d
+					if is_valid_pos(fp.y, fp.x):
+						ignite(fp, 2, fuse_by_player)
 			if not is_simulation and hungry_roots_team != 0 and piece.owner_team == hungry_roots_team and not _capturers.has(piece):
 				_capturers.append(piece)
 
@@ -832,6 +883,7 @@ func make_move(move_dict: Dictionary) -> bool:
 					"attacker": piece,
 					"victim": cap_piece,
 					"attacker_pos": to_pos,
+					"attacker_from": from_pos,
 					"victim_pos": cap_pos
 				}, self)
 				# Dispara evento de peça perdida
@@ -849,9 +901,20 @@ func make_move(move_dict: Dictionary) -> bool:
 
 	# Terra Queimada: quem POUSA numa casa em chamas é destruído.
 	if fire_tiles.has(to_pos):
+		if pipeline != null:
+			pipeline.emit_event(&"landed_on_fire", {"piece": piece, "pos": to_pos}, self)
 		grid[to_pos.y][to_pos.x] = EMPTY
 		piece_destroyed.emit(to_pos, piece)
 		return false
+
+	# Mão Sombria: peça do time adversário que pousa fica presa e perde a próxima jogada.
+	if trap_tiles.has(to_pos) and grid[to_pos.y][to_pos.x] == piece and int(trap_tiles[to_pos]["team"]) != piece.owner_team:
+		trap_tiles.erase(to_pos)
+		piece.rooted_turns = HUNGRY_ROOTS_TURNS
+		if not is_simulation and get_all_valid_moves(piece.owner_team).is_empty():
+			piece.rooted_turns = 0
+		else:
+			trap_sprung.emit(to_pos)
 
 	# Areia Movediça: quem POUSA nela fica preso e perde a próxima jogada (nunca
 	# deixa o time sem nenhuma jogada, como as Raízes Famintas).

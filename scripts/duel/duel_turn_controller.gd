@@ -23,6 +23,9 @@ extends Node
 #   action_cards, update_gold_display()
 
 var _host: Node2D
+# Capturas reais do jogador na cadeia (multissalto) do turno atual: o COMBO
+# termina quando a cadeia acaba (ver _end_combo).
+var _combo_captures: int = 0
 var ai_deck_mgr: CardDeckManager
 
 func setup(host: Node2D) -> void:
@@ -56,6 +59,7 @@ func start_match_flow() -> void:
 		_host.enemy_hud_bar.setup_deck_manager(ai_deck_mgr)
 
 	if _host.board.rule_pipeline != null:
+		_combo_captures = 0
 		_host.board.rule_pipeline.emit_event(&"duel_started", {}, _host.board)
 
 	var coin_center = _host.board_offset + Vector2((_host.board.cols * _host.cell_size) / 2.0, (_host.board.rows * _host.cell_size) / 2.0)
@@ -251,6 +255,9 @@ func handle_cell_click(pos: Vector2i) -> void:
 			if was_capture and not board.last_capture_prevented and not captured_p.is_tree:
 				host.current_duel.on_piece_captured(captured_p)
 				TutorialManager.report_event("capture")
+				_combo_captures += 1
+			elif not was_capture:
+				_combo_captures = 0
 
 			if host.current_duel is DuelBoss and (host.current_duel as DuelBoss).law_id == DuelBoss.LAW_FROG:
 				await host.frog_animation_view.hop_fly_at(m["from"])
@@ -290,6 +297,7 @@ func handle_cell_click(pos: Vector2i) -> void:
 					return
 
 			host.multi_jump_tile = Vector2i(-1, -1)
+			_end_combo(pos, moving_piece)
 
 			# Regra de Segundo Movimento (ou qualquer futura regra que conceda passo extra)
 			var used_extra_step = false
@@ -338,6 +346,16 @@ func handle_cell_click(pos: Vector2i) -> void:
 		host.valid_moves_for_selected = board.get_all_valid_moves(host.human_team).filter(func(m): return m["from"] == pos)
 		if not host.valid_moves_for_selected.is_empty():
 			TutorialManager.report_event("piece_selected")
+
+# Fim da cadeia de capturas do jogador. Com 2+ capturas seguidas é um COMBO:
+# avisa as Leis (evento "combo_ended") e atualiza o ouro.
+func _end_combo(pos: Vector2i, piece: BoardPiece) -> void:
+	var n: int = _combo_captures
+	_combo_captures = 0
+	if n < 2 or _host.board.rule_pipeline == null:
+		return
+	_host.board.rule_pipeline.emit_event(&"combo_ended", {"count": n, "pos": pos, "piece": piece, "main": _host}, _host.board)
+	_host.update_gold_display()
 
 # Pergunta a cada RuleCard ativa se ela quer exibir um banner de trigger para
 # este movimento simples. A regra decide sozinha (get_move_trigger_banner).
@@ -627,8 +645,16 @@ func _find_ai_card_target(card: ActionCard, board: Board, host: Node2D) -> Varia
 			return _ai_find_ambush_target(card, board, host)
 		"coronation":
 			return _ai_find_any_own_common_piece(board, host.ai_team)
-		"plant_tree":
+		"plant_tree", "plant_cactus":
 			return _ai_find_tree_target(card, board, host)
+		"ember", "scorched_earth", "shadow_hand":
+			return _ai_find_human_destination_target(card, board, host)
+		"squire":
+			return _ai_find_deployment_target(card, board, host.ai_team)
+		"fuse":
+			return _ai_find_fuse_target(card, board, host)
+		"light_up":
+			return _ai_find_light_target(card, board, host)
 		"restock":
 			# Só troca quando sobra carta na mão (3+), senão gasta uma boa.
 			@warning_ignore("incompatible_ternary")
@@ -638,6 +664,45 @@ func _find_ai_card_target(card: ActionCard, board: Board, host: Node2D) -> Varia
 			@warning_ignore("incompatible_ternary")
 			return Vector2i.ZERO if _ai_material(board, host.ai_team) < _ai_material(board, host.human_team) else null
 	return null
+
+# Brasa / Terra Queimada / Mão Sombria: casa livre para onde o jogador iria andar.
+func _ai_find_human_destination_target(card: ActionCard, board: Board, host: Node2D) -> Variant:
+	for m in board.get_all_valid_moves(host.human_team):
+		var pos: Vector2i = m["to"]
+		if board.grid[pos.y][pos.x] == Board.EMPTY and card.is_valid_target(board, pos, host.ai_team, {}):
+			return pos
+	return null
+
+# Estopim: uma peça da IA que o jogador consegue capturar agora (a captura queima o capturador).
+func _ai_find_fuse_target(card: ActionCard, board: Board, host: Node2D) -> Variant:
+	for m in board.get_all_valid_moves(host.human_team):
+		if not m.get("is_capture", false):
+			continue
+		var victim: Vector2i = m["captured"]
+		if card.is_valid_target(board, victim, host.ai_team, {}):
+			return victim
+	return null
+
+# Acender Casa: casa clara cercada por 2 ou mais peças da IA nas 4 casas escuras ao redor.
+func _ai_find_light_target(card: ActionCard, board: Board, host: Node2D) -> Variant:
+	var best: Variant = null
+	var best_n := 1
+	for r in range(board.rows):
+		for c in range(board.cols):
+			var pos := Vector2i(c, r)
+			if not card.is_valid_target(board, pos, host.ai_team, {}):
+				continue
+			var n := 0
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var q: Vector2i = pos + d
+				if board.is_valid_pos(q.y, q.x):
+					var p: BoardPiece = board.grid[q.y][q.x]
+					if p != Board.EMPTY and p.owner_team == host.ai_team and not p.is_tree:
+						n += 1
+			if n > best_n:
+				best_n = n
+				best = pos
+	return best
 
 func _ai_material(board: Board, team: int) -> int:
 	var total := 0

@@ -17,10 +17,10 @@ func is_valid_target(board: Board, target_pos: Vector2i, human_team: int, contex
 		return false
 	return not board.fire_tiles.has(target_pos)
 
-func execute(board: Board, target_pos: Vector2i, _human_team: int, context: Dictionary = {}) -> void:
-	board.fire_tiles[target_pos] = DURATION_TURNS
+func execute(board: Board, target_pos: Vector2i, team: int, context: Dictionary = {}) -> void:
+	board.ignite(target_pos, DURATION_TURNS, team == board.human_team_color)
 	for d in NEIGHBORS:
 		var n = target_pos + d
 		if board.is_valid_pos(n.y, n.x):
-			board.fire_tiles[n] = DURATION_TURNS
+			board.ignite(n, DURATION_TURNS, team == board.human_team_color)
 	_pop_banner(context, "TERRA QUEIMADA!", Color(1.0, 0.5, 0.15), target_pos)

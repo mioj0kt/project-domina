@@ -516,7 +516,8 @@ func _on_machine_burst() -> void:
 	var fx: Color = _fx_color(3 if bool(p["is_rule"]) else int(p["rarity"]))
 	_stage_flash.color = Color(fx.lerp(Color.WHITE, 0.7), 0.9)
 	create_tween().tween_property(_stage_flash, "color:a", 0.0, 0.7)
-	await get_tree().create_timer(1.1).timeout   # deixa a explosão aparecer antes do prêmio
+	var spd: float = _machine.speed() if (_machine != null and is_instance_valid(_machine)) else 1.0
+	await get_tree().create_timer(1.1 / spd).timeout   # deixa a explosão aparecer antes do prêmio
 	if _stage == null:
 		return
 	var layer := Control.new()
@@ -595,8 +596,9 @@ func _build_reveal_content(layer: Control, id: String, is_rule: bool, rarity: in
 	var pop := create_tween()
 	pop.tween_property(rl, "scale", Vector2(1.0, 1.0), 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	var tw := create_tween()
-	tw.tween_interval(1.0)
-	tw.tween_property(hint, "modulate:a", 1.0, 0.3)
+	var spd: float = _machine.speed() if (_machine != null and is_instance_valid(_machine)) else 1.0
+	tw.tween_interval(1.0 / spd)
+	tw.tween_property(hint, "modulate:a", 1.0, 0.3 / spd)
 	var armed := [false]
 	tw.tween_callback(func(): armed[0] = true)
 	layer.gui_input.connect(func(ev):

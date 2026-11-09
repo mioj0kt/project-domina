@@ -402,7 +402,7 @@ func _instantiate_node_ui(layers: Array[Array]) -> void:
 			btn.add_child(base)
 
 			# Indicador (anel/cadeado/check) centralizado no nó.
-			var ind = _make_map_rect(_map_sprite("ind_disponivel_boss" if is_boss else "ind_disponivel"))
+			var ind = _make_map_rect(_map_sprite("ind_selecionado_boss" if is_boss else "ind_selecionado"))
 			btn.add_child(ind)
 
 			node_art[node] = {"base": base, "ind": ind}
@@ -484,7 +484,7 @@ func _update_nodes_visual_state() -> void:
 			ind_name = "ind_atual"
 			btn.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		elif RunManager.current_node and node in RunManager.current_node.children:
-			ind_name = "ind_selecionado" if node == _hovered_node else "ind_disponivel"
+			ind_name = "ind_selecionado" if node == _hovered_node else ""
 			btn.mouse_filter = Control.MOUSE_FILTER_STOP
 		elif _is_node_completed(node):
 			overlay_name = "ind_concluido"

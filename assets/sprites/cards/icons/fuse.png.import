@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://komio5qw1v2n"
-path="res://.godot/imported/ind_disponivel.png-067f7f7650f46c14e73502bd01c4eeb0.ctex"
+uid="uid://fcw6uj43jgmu"
+path="res://.godot/imported/fuse.png-093ac8e31a6b75f6860026d453eaa3a0.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/mapa/nodos/ind_disponivel.png"
-dest_files=["res://.godot/imported/ind_disponivel.png-067f7f7650f46c14e73502bd01c4eeb0.ctex"]
+source_file="res://assets/sprites/cards/icons/fuse.png"
+dest_files=["res://.godot/imported/fuse.png-093ac8e31a6b75f6860026d453eaa3a0.ctex"]
 
 [params]
 

@@ -83,8 +83,8 @@ func _draw_aura(center: Vector2, side: float) -> void:
 	for k in rays:
 		var ang: float = _t * 0.35 + TAU * k / rays
 		var half: float = 0.11 + 0.03 * sin(_t * 1.7 + k * 1.3)
-		var len: float = side * (0.78 + 0.10 * sin(_t * 1.3 + k * 2.1))
-		PixelBeam.beam(self, center, ang, len, half * 0.7, Color(aura_color, 0.35 + 0.15 * pulse))
+		var ray_len: float = side * (0.78 + 0.10 * sin(_t * 1.3 + k * 2.1))
+		PixelBeam.beam(self, center, ang, ray_len, half * 0.7, Color(aura_color, 0.35 + 0.15 * pulse))
 	# Halo em degraus (visual pixel-art): círculos concêntricos de alfa crescente.
 	var steps := 6
 	for i in steps:

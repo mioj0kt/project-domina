@@ -79,6 +79,13 @@ func can_capture_backwards(piece: BoardPiece, human_team: int) -> bool:
 				return true
 	return false
 
+func can_retreat_hop(piece: BoardPiece, human_team: int) -> bool:
+	for rule in active_rules:
+		if rule.applies_to_team(piece.owner_team, human_team):
+			if rule.id == "retreat_bridge":
+				return true
+	return false
+
 func can_hop_allies(piece: BoardPiece, human_team: int) -> bool:
 	for rule in active_rules:
 		if rule.applies_to_team(piece.owner_team, human_team):

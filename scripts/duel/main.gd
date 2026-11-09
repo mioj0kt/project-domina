@@ -204,6 +204,7 @@ func _setup_board(size: Vector2i, node_type: int) -> void:
 	board.piece_destroyed.connect(_on_board_piece_destroyed)
 	board.capture_prevented.connect(_on_board_capture_prevented)
 	board.rule_fired.connect(_on_rule_fired)
+	board.trap_sprung.connect(_on_trap_sprung)
 
 # Leis e baralho da IA, conforme a dificuldade do duelo (ver DuelBase.get_enemy_*).
 # No tutorial o inimigo não recebe nada — só o que o roteiro pede.
@@ -685,6 +686,11 @@ func _on_board_capture_prevented(grid_pos: Vector2i, _piece: BoardPiece) -> void
 	var preventer_id: String = board.rule_pipeline.last_preventer_id if board.rule_pipeline != null else ""
 	rule_banner_view.pop_rule_trigger(tile_center, "CAPTURA BLOQUEADA!", Color(0.45, 0.75, 1.0), preventer_id)
 
+func _on_trap_sprung(grid_pos: Vector2i) -> void:
+	Sfx.play("bloqueio")
+	var tile_center = board_offset + Vector2(grid_pos.x * cell_size + cell_size / 2.0, grid_pos.y * cell_size + cell_size / 2.0)
+	rule_banner_view.pop_rule_trigger(tile_center, "AGARRADA!", Color(0.75, 0.55, 0.95))
+
 # Game juice: a Lei agiu -> o slot dela (no quadro do jogador ou do inimigo) treme e brilha.
 func _on_rule_fired(rule_id: String) -> void:
 	if rule_id == "":
@@ -827,10 +833,10 @@ func _process(delta: float) -> void:
 func _update_skip_extra_button(delta: float = 0.0) -> void:
 	if skip_extra_btn == null:
 		return
-	var show: bool = extra_skip_kind != "" and not is_game_over and not is_starting_match \
+	var should_show: bool = extra_skip_kind != "" and not is_game_over and not is_starting_match \
 		and current_turn == human_team and not _is_board_input_blocked()
-	skip_extra_btn.visible = show
-	if not show:
+	skip_extra_btn.visible = should_show
+	if not should_show:
 		_skip_extra_was_shown = false
 		return
 	var texts: Dictionary = {

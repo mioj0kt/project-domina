@@ -77,6 +77,14 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 			"title_color": Color(1.0, 0.5, 0.15)
 		})
 
+	if board.trap_tiles.has(pos) and int(board.trap_tiles[pos]["team"]) == board.human_team_color:
+		effects.append({
+			"title": "MÃO SOMBRIA",
+			"desc": "Uma mão de sombra espreita por %d turno(s) — a primeira peça inimiga que pousar aqui é agarrada e perde a próxima jogada." % board.trap_tiles[pos]["turns"],
+			"affects": "both",
+			"title_color": Color(0.75, 0.55, 0.95)
+		})
+
 	if board.quicksand_tiles.has(pos):
 		effects.append({
 			"title": "AREIA MOVEDIÇA",

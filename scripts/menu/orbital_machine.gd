@@ -30,6 +30,10 @@ const T_VORTEX: float = 1.0
 const T_CRACK: float = 0.3
 const T_BURST: float = 1.5
 const MAX_TOKENS: int = 44
+# Sorteios em sequência aceleram: 1º normal, depois mais rápidos. A sequência
+# esfria se o jogador ficar mais de STREAK_COOLDOWN_MS sem sortear de novo.
+const STREAK_SPEEDS: Array[float] = [1.0, 1.5, 2.0, 2.6, 3.2]
+const STREAK_COOLDOWN_MS: int = 7000
 const RARITY_COLS: Array[Color] = [
 	Color(0.92, 0.88, 0.75), Color(0.3, 0.7, 0.95), Color(0.72, 0.4, 1.0), Color(1.0, 0.8, 0.25)]
 const GOLD := Color(1.0, 0.8, 0.25)
@@ -51,6 +55,9 @@ var _glow: Glow
 var _overlay: Control
 var key_allowed: Callable = Callable()   # devolve false quando a tecla não deve valer (ex.: tutorial aberto)
 var _hold_key: bool = false
+var _streak: int = 0
+var _last_burst_ms: int = 0
+var _spd: float = 1.0          # velocidade do sorteio atual (fixada ao começar a carga)
 var crown_source: Callable = Callable()   # devolve a posição GLOBAL de onde as coroas saem
 var _crowns: Array[Dictionary] = []
 var _crown_acc: float = 0.0
@@ -188,9 +195,20 @@ func _input(ev: InputEvent) -> void:
 	elif _hold_key:
 		get_viewport().set_input_as_handled()
 
+# Velocidade do sorteio atual (1.0 = normal). A tela dona usa o mesmo fator
+# para encurtar as esperas dela (explosão, dica de "clique para continuar").
+func speed() -> float:
+	return _spd
+
+func _begin_speed() -> void:
+	if _last_burst_ms > 0 and Time.get_ticks_msec() - _last_burst_ms > STREAK_COOLDOWN_MS:
+		_streak = 0
+	_spd = STREAK_SPEEDS[clampi(_streak, 0, STREAK_SPEEDS.size() - 1)]
+
 func _play_charge() -> void:
+	_begin_speed()
 	# o riser dura ~1.9s; segurando (1.7s) acelera um pouco para fechar junto com a carga
-	Sfx.play("maquina_carga", 0.0, 1.0 if _auto else T_AUTO / T_CHARGE)
+	Sfx.play("maquina_carga", 0.0, (1.0 if _auto else T_AUTO / T_CHARGE) * minf(_spd, 2.2))
 
 func begin_auto() -> void:
 	if _st == St.IDLE and enabled:
@@ -231,7 +249,8 @@ func _ts(v: float, real_secs: float = 0.0) -> void:
 # ---- simulação ----
 func _process(dt: float) -> void:
 	_time += dt
-	_t += dt
+	var sdt: float = dt * (_spd if _st != St.IDLE else 1.0)   # tempo da sequência (acelera nos sorteios seguidos)
+	_t += sdt
 	_flash = maxf(_flash - dt * 1.8, 0.0)
 	_sc = clampf(minf(size.x / 760.0, size.y / 500.0) * 1.3, 1.1, 2.2)
 	var shk: float = 0.0
@@ -240,7 +259,7 @@ func _process(dt: float) -> void:
 			_charge = maxf(_charge - dt * 1.4, 0.0)
 			_show_t = minf(_show_t + dt * 1.5, 1.0)
 		St.CHARGING:
-			_hold_t += dt
+			_hold_t += sdt
 			# soltar o botão antes de encher cancela: só segurando desbloqueia
 			var still_down: bool = Input.is_key_pressed(KEY_SPACE) if _hold_key else Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 			if _holding and not still_down:
@@ -249,10 +268,10 @@ func _process(dt: float) -> void:
 					abort()
 					return
 			var rate: float = (1.0 / T_AUTO) if _auto else (1.0 / T_CHARGE)
-			_charge = minf(_charge + dt * rate, 1.0)
+			_charge = minf(_charge + sdt * rate, 1.0)
 			# sem tiques: o riser contínuo já constrói a tensão (os tiques soavam como chocalho)
 			shk = 9.0 * _charge * _charge
-			_crown_acc += dt
+			_crown_acc += sdt
 			var ci: float = lerpf(0.15, 0.045, _charge)
 			while _crown_acc >= ci and _charge < 1.0:
 				_crown_acc -= ci
@@ -352,6 +371,8 @@ func _do_burst() -> void:
 			"col": _color.lerp(Color.WHITE, randf() * 0.6), "sz": randf_range(2.5, 6.5) * _sc * 0.7,
 			"spark": spark})
 	burst.emit()
+	_streak += 1
+	_last_burst_ms = Time.get_ticks_msec()
 
 func _regen_bolts() -> void:
 	_bolts.clear()
