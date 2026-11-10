@@ -113,6 +113,12 @@ var _click_busy: bool = false
 
 func _ready() -> void:
 	var node_type: int = RunManager.current_node_type
+	# Trilha do duelo: só a floresta tem por enquanto (a do mapa some em fade nos outros).
+	if not TutorialManager.is_active and Music.DUEL_SECTIONS.has(RunManager.map_biome):
+		Music.play_duel(RunManager.map_biome)
+		Music.set_tension(0.6 if node_type == MapNode.NodeType.Chefe else 0.0)
+	else:
+		Music.play("")
 	var active_size: Vector2i = RunManager.current_board_size
 
 	if TutorialManager.is_active:
@@ -198,6 +204,8 @@ func _setup_board(size: Vector2i, node_type: int) -> void:
 		board.skin_id = BoardSkin.SKIN_TUTORIAL
 	elif RunManager.map_biome == "deserto":
 		board.skin_id = BoardSkin.SKIN_DESERT
+	elif RunManager.map_biome == "mina":
+		board.skin_id = BoardSkin.SKIN_MINE
 	else:
 		board.skin_id = BoardSkin.SKIN_WOOD
 	board.set_theme_for_duel(node_type == MapNode.NodeType.DueloForte or node_type == MapNode.NodeType.Chefe)
@@ -318,6 +326,7 @@ func _setup_modules(max_dim: int) -> void:
 	add_child(piece_shatter_view)
 
 	sudden_death_mgr = SuddenDeathManager.new()
+	sudden_death_mgr.sudden_death_triggered.connect(func(): Music.sudden_death())
 	add_child(sudden_death_mgr)
 	sudden_death_mgr.configure(max_dim)
 	sudden_death_view = SuddenDeathView.new()

@@ -11,6 +11,7 @@ static var fade_in_pending: bool = false
 const FADE_IN_SEC: float = 0.9
 
 func _ready() -> void:
+	Music.play("menu")
 	_setup_ui()
 	if fade_in_pending:
 		fade_in_pending = false

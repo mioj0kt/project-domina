@@ -1152,6 +1152,10 @@ func trigger_game_over(won: bool, rewards: Dictionary = {}, custom_title: String
 	if not TutorialManager.is_active and won:
 		MetaProgress.register_duel_win(RunManager.current_node_type)
 	host.boss_say("win" if won else "lose")
+	# Fim do duelo: a trilha do duelo some em fade. Na vitória entra a calma do mapa
+	# (continua direto no mapa, sem reiniciar); na derrota fica em silêncio.
+	if not TutorialManager.is_active:
+		Music.play(RunManager.map_biome if (won and Music.TRACKS.has(RunManager.map_biome)) else "", 2.0)
 	host.game_over_modal.show_game_over(won, rewards, custom_title, defeat_message)
 
 # Cartas (e outros efeitos fora de jogada) podem tirar a ÚLTIMA peça de um lado.

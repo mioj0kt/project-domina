@@ -25,15 +25,66 @@ var _tour: MetaTour
 var _skip: bool = false
 var _done: bool = false
 var _fx: VictoryFx
+var _center_box: Control
 
 func _ready() -> void:
+	Music.play("menu")
 	_summary = MetaProgress.last_summary.duplicate()
 	if _summary.is_empty():
 		_summary = {"won": false, "duels": 0, "strong": 0, "boss": false, "total": 0,
 			"before": MetaProgress.coroas, "after": MetaProgress.coroas}
 	add_child(SpaceBackground.new())
 	_build_ui()
+	_begin()
+
+func _begin() -> void:
+	if not bool(_summary["won"]):
+		await _defeat_intro()
 	_run_tally()
+
+# Derrota: a peça se parte como numa captura (mesmo efeito dos duelos) e só
+# então o resumo da run aparece. Clique pula.
+func _defeat_intro() -> void:
+	var canvas: CanvasLayer = _fx.get_parent() as CanvasLayer
+	var vp := get_viewport_rect().size
+	_center_box.modulate.a = 0.0
+	var piece := BoardPiece.new(Board.WHITE, true)
+	var tex: Texture2D = PixelRenderer.get_piece_texture(piece)
+	var centre := Vector2(vp.x * 0.5, vp.y * 0.5)
+	var side := 224.0
+	var spr := TextureRect.new()
+	spr.texture = tex
+	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	spr.stretch_mode = TextureRect.STRETCH_SCALE
+	spr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	spr.size = Vector2(side, side)
+	spr.pivot_offset = spr.size * 0.5
+	spr.position = centre - spr.size * 0.5
+	canvas.add_child(spr)
+	var shatter := PieceShatterView.new()
+	canvas.add_child(shatter)
+
+	var t := 0.0
+	while t < 1.1 and not _skip:
+		await get_tree().process_frame
+		var dt := get_process_delta_time()
+		t += dt
+		var k: float = clampf(t / 1.1, 0.0, 1.0)
+		spr.position = centre - spr.size * 0.5 + Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * (1.0 + 5.0 * k * k)
+	if not _skip:
+		spr.queue_free()
+		shatter.shatter_piece(centre, piece, side / 0.85)
+		Sfx.play("captura")
+		t = 0.0
+		while t < 1.1 and not _skip:
+			await get_tree().process_frame
+			t += get_process_delta_time()
+	if is_instance_valid(spr):
+		spr.queue_free()
+	shatter.queue_free()
+	_skip = false
+	var ptw := create_tween()
+	ptw.tween_property(_center_box, "modulate:a", 1.0, 0.5)
 
 func _build_ui() -> void:
 	var canvas := CanvasLayer.new()
@@ -42,6 +93,7 @@ func _build_ui() -> void:
 	_fx = VictoryFx.new()
 	canvas.add_child(_fx)
 	var center := CenterContainer.new()
+	_center_box = center
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	canvas.add_child(center)
 

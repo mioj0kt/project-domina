@@ -17,6 +17,17 @@ const DIM_DIALOGUE: float = 0.62        # escurecimento durante a fala
 const DIM_OBJECTIVE: float = 0.38       # escurecimento enquanto o objetivo está ativo
 # Folga entre a caixa de diálogo e o pé da tela (antes ficava colada embaixo).
 const DIALOGUE_BOTTOM_MARGIN: int = 110
+# Cores tiradas dos retratos: o Guia é carmesim suave (#943236/#b44a44); o Irmão
+# tem o mesmo corpo, mas olhos em brasa (#ff3a2a), então a caixa dele é mais
+# escura e incandescente.
+const GUIDE_TINT: Color = Color(1.0, 0.66, 0.62)
+const EVIL_TINT: Color = Color(1.0, 0.36, 0.28)
+
+static func _char_panel(tint: Color, padding: int) -> StyleBox:
+	var st: StyleBox = PixelUI.make_pixel_panel(PixelUI.FUNDO_QUADRO, Color.WHITE, padding)
+	if st is StyleBoxTexture:
+		(st as StyleBoxTexture).modulate_color = tint
+	return st
 const IDLE_HINT_SECONDS: float = 12.0   # parado sem cumprir o objetivo -> dica extra
 
 var spot_resolver: Callable = Callable()
@@ -58,7 +69,7 @@ var _big_toss: float = 1.0        # escala da moeda no ar (sobe e desce)
 var _big_who: String = "guide"
 
 const SPEAKER_NAMES := {"guide": "O GUIA", "evil": "O IRMÃO"}
-const SPEAKER_COLORS := {"guide": Color(0.9, 0.75, 0.3), "evil": Color(0.95, 0.25, 0.25)}
+const SPEAKER_COLORS := {"guide": Color("#e8857a"), "evil": Color("#ff4a36")}
 
 var tip_panel: PanelContainer
 var tip_label: Label
@@ -126,7 +137,7 @@ func _build_ui() -> void:
 	# --- Caixa de diálogo principal (sequência de falas, bloqueia até
 	# o jogador clicar "continuar") ---
 	dialogue_panel = PanelContainer.new()
-	dialogue_panel.add_theme_stylebox_override("panel", PixelUI.make_dialogue_panel(Color("#efe6cf"), 14, 4, PixelUI.FUNDO_QUADRO))
+	dialogue_panel.add_theme_stylebox_override("panel", _char_panel(GUIDE_TINT, 22))
 	dialogue_panel.visible = false
 	dialogue_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	dialogue_panel.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -155,25 +166,25 @@ func _build_ui() -> void:
 	dialogue_panel.add_child(hbox)
 
 	portrait = GuideFaceControl.new()
-	portrait.setup(112.0)
+	portrait.setup(136.0)
 	hbox.add_child(portrait)
 
 	var text_vbox = VBoxContainer.new()
-	text_vbox.custom_minimum_size = Vector2(1060, 0)
+	text_vbox.custom_minimum_size = Vector2(1180, 0)
 	text_vbox.add_theme_constant_override("separation", 8)
 	hbox.add_child(text_vbox)
 
 	name_label = Label.new()
 	name_label.text = "O GUIA"
-	name_label.add_theme_font_size_override("font_size", 22)
-	name_label.add_theme_color_override("font_color", Color(0.9, 0.75, 0.3))
+	name_label.add_theme_font_size_override("font_size", 30)
+	name_label.add_theme_color_override("font_color", Color("#e8857a"))
 	text_vbox.add_child(name_label)
 
 	text_label = Label.new()
 	text_label.text = ""
 	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-	text_label.custom_minimum_size = Vector2(1060, 72)
-	text_label.add_theme_font_size_override("font_size", 26)
+	text_label.custom_minimum_size = Vector2(1180, 112)
+	text_label.add_theme_font_size_override("font_size", 36)
 	text_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.97))
 	text_vbox.add_child(text_label)
 
@@ -183,23 +194,23 @@ func _build_ui() -> void:
 
 	continue_btn = Button.new()
 	continue_btn.text = "CONTINUAR"
-	continue_btn.custom_minimum_size = Vector2(220, 48)
-	continue_btn.add_theme_font_size_override("font_size", 22)
+	continue_btn.custom_minimum_size = Vector2(260, 56)
+	continue_btn.add_theme_font_size_override("font_size", 26)
 	PixelUI.skin_button(continue_btn, Color(0.4, 0.85, 0.45), "", "icone_confirmar")
 	continue_btn.pressed.connect(_on_continue_pressed)
 	btn_row.add_child(continue_btn)
 
 	skip_btn = Button.new()
 	skip_btn.text = "PULAR"
-	skip_btn.custom_minimum_size = Vector2(160, 48)
-	skip_btn.add_theme_font_size_override("font_size", 22)
+	skip_btn.custom_minimum_size = Vector2(190, 56)
+	skip_btn.add_theme_font_size_override("font_size", 26)
 	PixelUI.skin_button(skip_btn, Color(0.6, 0.6, 0.65))
 	skip_btn.pressed.connect(_on_skip_pressed)
 	btn_row.add_child(skip_btn)
 
 	# --- Dica pontual (menor, some sozinha, não bloqueia input) ---
 	tip_panel = PanelContainer.new()
-	tip_panel.add_theme_stylebox_override("panel", PixelUI.make_dialogue_panel(Color(0.71, 0.82, 0.93), 10, 3, PixelUI.FUNDO_QUADRO))
+	tip_panel.add_theme_stylebox_override("panel", _char_panel(GUIDE_TINT, 14))
 	tip_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	tip_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	tip_panel.offset_top = 24.0
@@ -213,14 +224,14 @@ func _build_ui() -> void:
 	tip_panel.add_child(tip_hbox)
 
 	var tip_portrait = GuideFaceControl.new()
-	tip_portrait.setup(56.0)
+	tip_portrait.setup(72.0)
 	tip_hbox.add_child(tip_portrait)
 
 	tip_label = Label.new()
 	tip_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-	tip_label.custom_minimum_size = Vector2(820, 0)
+	tip_label.custom_minimum_size = Vector2(900, 0)
 	tip_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	tip_label.add_theme_font_size_override("font_size", 24)
+	tip_label.add_theme_font_size_override("font_size", 30)
 	tip_label.add_theme_color_override("font_color", Color(0.9, 0.93, 1.0))
 	tip_hbox.add_child(tip_label)
 
@@ -348,9 +359,9 @@ func _set_speaker(who: String) -> void:
 	_speaker = who
 	portrait.set_who(who)
 	name_label.text = SPEAKER_NAMES.get(who, "O GUIA")
-	name_label.add_theme_color_override("font_color", SPEAKER_COLORS.get(who, Color(0.9, 0.75, 0.3)))
+	name_label.add_theme_color_override("font_color", SPEAKER_COLORS.get(who, Color("#e8857a")))
 	if who == "evil":
-		dialogue_panel.add_theme_stylebox_override("panel", PixelUI.make_dialogue_panel(Color(0.95, 0.2, 0.2), 14, 4, PixelUI.FUNDO_QUADRO))
+		dialogue_panel.add_theme_stylebox_override("panel", _char_panel(EVIL_TINT, 22))
 	elif _guide_style != null:
 		dialogue_panel.add_theme_stylebox_override("panel", _guide_style)
 

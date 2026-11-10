@@ -122,6 +122,7 @@ static func color_word(is_white: bool) -> String:
 func play_toss(p_center: Vector2, p_cell_size: float) -> void:
 	_kill_tweens()
 	Sfx.play(sfx_spin)
+	Music.muffle(true)   # a trilha abafa enquanto a moeda gira
 
 	coin_center = p_center
 	cell_size = p_cell_size
@@ -142,19 +143,34 @@ func play_toss(p_center: Vector2, p_cell_size: float) -> void:
 	active_tween.tween_property(self, "toss_scale", 1.85, 0.65).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	active_tween.tween_property(self, "toss_scale", 1.0, 0.65).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN).set_delay(0.65)
 
-	# 2. Giro da Moeda
-	var total_flips = 9
-	for i in range(total_flips):
-		var delay = i * 0.14
-		active_tween.tween_method(func(v): flip_scale_x = v; queue_redraw(), 1.0, 0.0, 0.07).set_delay(delay)
-		active_tween.tween_callback(func(): is_white_side = not is_white_side).set_delay(delay + 0.07)
-		active_tween.tween_method(func(v): flip_scale_x = v; queue_redraw(), 0.0, 1.0, 0.07).set_delay(delay + 0.07)
-
+	# O resultado é sorteado ANTES, e o giro é montado pra terminar nele: o nº de
+	# viradas tem a paridade certa pra moeda parar no lado sorteado, e cada virada
+	# dura mais que a anterior (a moeda vai desacelerando até assentar), então
+	# não existe "troca abrupta" no final.
 	# Precisa ser lido ANTES do _roll_lands_white(), que consome a moeda armada.
 	_rigged_toss = rigged_team != 0 and forced_result == -1
 	_fx_t = 0.0
 	var lands_white = _roll_lands_white()
 	_pending_lands_white = lands_white
+	var n_flips: int = 9
+	if (is_white_side != lands_white) != (n_flips % 2 == 1):
+		n_flips += 1
+	var total_time: float = 1.3
+	var weights: Array[float] = []
+	var wsum: float = 0.0
+	for i in n_flips:
+		var w: float = 0.6 + 1.9 * pow(float(i) / float(n_flips - 1), 2.2)
+		weights.append(w)
+		wsum += w
+	var t0: float = 0.0
+	for i in n_flips:
+		var dur: float = total_time * weights[i] / wsum
+		var half: float = dur * 0.5
+		var last: bool = i == n_flips - 1
+		active_tween.tween_method(func(v): flip_scale_x = v; queue_redraw(), 1.0, 0.0, half).set_delay(t0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		active_tween.tween_callback(func(): is_white_side = not is_white_side).set_delay(t0 + half)
+		active_tween.tween_method(func(v): flip_scale_x = v; queue_redraw(), 0.0, 1.0, half).set_delay(t0 + half).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT if last else Tween.EASE_IN_OUT)
+		t0 += dur
 	active_tween.chain().tween_callback(func(): _finish_flip(lands_white))
 
 func skip_spin() -> void:
@@ -177,6 +193,7 @@ func _finish_flip(lands_white: bool) -> void:
 	_kill_tweens()
 	Sfx.stop(sfx_spin)   # se a animação foi pulada, o som do giro para junto
 	Sfx.play(sfx_land)
+	Music.muffle(false, 0.15)
 
 	landed_white = lands_white
 	var favorable = (lands_white == favorable_is_white)

@@ -36,7 +36,9 @@ var biome_intro_pending: bool = false
 
 # Nomes e ordem dos biomas da run (a floresta vem primeiro; o último termina a run).
 const BIOME_ORDER: Array[String] = ["floresta", "deserto"]
-const BIOME_TITLES: Dictionary = {"floresta": "FLORESTA ANTIGA", "deserto": "DESERTO DAS TORRES"}
+# "mina" já tem arte e tema, mas ainda NÃO está em BIOME_ORDER (falta o chefe).
+# Para ver o bioma: DebugFlags.MAP_BIOME_OVERRIDE = "mina".
+const BIOME_TITLES: Dictionary = {"floresta": "FLORESTA ANTIGA", "deserto": "DESERTO DAS TORRES", "mina": "MINA DOS CRISTAIS"}
 
 func has_next_biome() -> bool:
 	return BIOME_ORDER.find(map_biome) >= 0 and BIOME_ORDER.find(map_biome) < BIOME_ORDER.size() - 1
@@ -133,7 +135,12 @@ func remove_rule(rule_id: String) -> void:
 	rule_pipeline.remove_rule(rule_id)
 	rules_updated.emit()
 
+# Verdadeiro quando uma run acabou de começar: o mapa abre com a peça se
+# refazendo do preto (consumido pelo MapView).
+var run_intro_pending: bool = false
+
 func start_new_run():
+	run_intro_pending = true
 	gold = 0
 	shop_purchases = 0
 	current_board_size = Vector2i(8, 8)
@@ -145,7 +152,7 @@ func start_new_run():
 	forest_boss_law_id = ""
 	desert_boss_law_id = ""
 	# DebugFlags.MAP_BIOME_OVERRIDE força o bioma inicial (mapa, fundos, transições).
-	map_biome = DebugFlags.MAP_BIOME_OVERRIDE if BIOME_ORDER.has(DebugFlags.MAP_BIOME_OVERRIDE) else "floresta"
+	map_biome = DebugFlags.MAP_BIOME_OVERRIDE if BIOME_TITLES.has(DebugFlags.MAP_BIOME_OVERRIDE) else "floresta"
 	biome_intro_pending = true   # o 1º mapa também mostra o nome do bioma (FLORESTA)
 	clear_ambush()
 	seen_event_ids.clear()

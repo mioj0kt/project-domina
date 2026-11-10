@@ -35,6 +35,18 @@ const BIOMES: Dictionary = {
 		"spores": Color("d9bb82"), "n_spores": 64,
 		"trans_a": Color("2b2118"), "trans_b": Color("5a4530"), "trans_boss": Color("3a1a14"), "trans_edge": Color("a8854f"),
 	},
+	"mina": {
+		"top": Color("0d1c22"), "bottom": Color("12272b"),
+		"line": Color("1d3a40"), "dot": Color("3f6f73"), "fill": Color("102329"),
+		"patterns": ["losango", "xadrez", "escamas", "estrelas", "diagonal", "chevron", "tijolos"],
+		# Brilhos de cristal azul-gelo no lugar dos vaga-lumes e poeira verde-água subindo.
+		"fireflies": Color("a9dcef"), "n_fireflies": 26,
+		"leaves": [Color("3f9b79"), Color("6fb6d8"), Color("7fd1a6")], "n_leaves": 0,
+		"spores": Color("7fcfc0"), "n_spores": 52,
+		# Estalactites (teto) e estalagmites (chão) no fundo: [rocha, rocha clara, ponta de cristal].
+		"cave": [Color("07131a"), Color("1a3a42"), Color("7fd1c0")],
+		"trans_a": Color("0d1c22"), "trans_b": Color("1d3a40"), "trans_boss": Color("2a1428"), "trans_edge": Color("4fb3a0"),
+	},
 	"tutorial": {
 		"top": Color("231a2a"), "bottom": Color("1a1420"),
 		"line": Color("3a2b41"), "dot": Color("5a4561"), "fill": Color("2a2031"),
@@ -306,6 +318,8 @@ func _draw_all() -> void:
 	for j in range(rows):
 		for i in range(cols):
 			_canvas.draw_texture_rect(_tile_tex, Rect2(Vector2(i * tile, j * tile) - Vector2(tile, tile) + off, Vector2(tile, tile)), false)
+	if _cfg.has("cave"):
+		draw_cave_spikes(_canvas, vp, u, _cfg["cave"], _t)
 	# Esporos subindo (mais ao fundo, bem discretos).
 	var spore_col: Color = _cfg["spores"]
 	for s in _spores:
@@ -413,3 +427,41 @@ func _draw_tumbleweed(vp: Vector2, u: float, tb: Dictionary) -> void:
 		for step in range(1, 4):
 			var p2 := Vector2(cx, cy) + Vector2(cos(a2), sin(a2)) * rad * (float(step) / 4.0)
 			_canvas.draw_rect(Rect2(floorf(p2.x), floorf(p2.y), px, px), tcol.darkened(0.15))
+
+
+# Mina: estalactites penduradas no teto e estalagmites subindo do chão, em
+# escadinha de pixels (duas camadas: fundo mais claro/baixo, frente escura).
+# Fixas, com um brilho lento na ponta de cristal de algumas.
+static func draw_cave_spikes(canvas: CanvasItem, vp: Vector2, u: float, cols: Array, t_now: float) -> void:
+	var rock: Color = cols[0]
+	var lite: Color = cols[1]
+	var tip: Color = cols[2]
+	var step: float = u * 2.0
+	for lyr in range(2):
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 777 + lyr * 31
+		var w_base: float = (150.0 if lyr == 0 else 230.0) * u / 4.0
+		var n: int = int(ceil(vp.x / w_base)) + 1
+		for side in range(2):   # 0 = teto, 1 = chão
+			for i in range(n):
+				var w: float = w_base * rng.randf_range(0.7, 1.3)
+				var h: float = (vp.y * (0.15 if lyr == 0 else 0.23)) * rng.randf_range(0.45, 1.25)
+				var cx: float = (float(i) + rng.randf()) * w_base
+				var col: Color = lite if lyr == 0 else rock
+				var rows: int = int(h / step)
+				for r in range(rows):
+					var frac: float = 1.0 - float(r) / float(rows)
+					var hw: float = roundf(w * 0.5 * frac / step) * step
+					if hw <= 0.0:
+						hw = step * 0.5
+					var y: float = float(r) * step if side == 0 else vp.y - float(r + 1) * step
+					canvas.draw_rect(Rect2(floorf(cx - hw), floorf(y), hw * 2.0, step), col)
+					# fio de luz do lado esquerdo (volume)
+					if lyr == 1:
+						canvas.draw_rect(Rect2(floorf(cx - hw), floorf(y), step, step), lite)
+				# Ponta de cristal brilhando em algumas.
+				if lyr == 1 and (i % 3 == 0):
+					var ty: float = float(rows) * step
+					var py: float = ty if side == 0 else vp.y - ty - step
+					var a: float = 0.45 + 0.45 * (sin(t_now * 1.2 + cx) * 0.5 + 0.5)
+					canvas.draw_rect(Rect2(floorf(cx - step * 0.5), floorf(py - (0.0 if side == 1 else step)), step, step * 2.0), Color(tip.r, tip.g, tip.b, a))

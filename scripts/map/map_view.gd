@@ -56,8 +56,10 @@ var hud_bar: HUDBar
 func _ready() -> void:
 	randomize()
 	z_index = 0
+	Music.play(_current_biome() if Music.TRACKS.has(_current_biome()) else "")
 	var sky := SpaceBackground.new()   # céu estrelado atrás do mapa
 	sky.floater_alpha = 0.55           # ilhas/peças discretas (há texto por cima)
+	sky.biome = _current_biome()
 	add_child(sky)
 	_setup_map_ui()
 	_setup_player_pawn()
@@ -85,6 +87,22 @@ func _ready() -> void:
 
 	if DebugFlags.SHORTCUTS:
 		_build_debug_hint()
+	if RunManager.run_intro_pending:
+		RunManager.run_intro_pending = false
+		_play_run_intro()
+	elif RunManager.biome_intro_pending:
+		RunManager.biome_intro_pending = false
+		_show_biome_title()
+
+# Início da run: tela preta, a peça volta aos pedaços e se encaixa no nodo
+# inicial com impacto; então o mapa surge com ela já no lugar (RunIntro).
+func _play_run_intro() -> void:
+	if RunManager.current_node == null or camera == null:
+		return
+	if _cam_tween != null and _cam_tween.is_valid():
+		_cam_tween.kill()
+	camera.position.y = _camera_target_y(RunManager.current_node.position.y)
+	await RunIntro.new().run(self, camera, RunManager.current_node.position, player_pawn.piece_px)
 	if RunManager.biome_intro_pending:
 		RunManager.biome_intro_pending = false
 		_show_biome_title()
@@ -273,8 +291,12 @@ func _show_biome_title() -> void:
 	title.add_theme_font_size_override("font_size", 72)
 	# Cores por bioma: texto claro + contorno grosso escuro da mesma família.
 	var desert: bool = _current_biome() == "deserto"
+	var mine: bool = _current_biome() == "mina"
 	var fill: Color = Color("#f6d98a") if desert else Color("#b9e28a")
 	var edge: Color = Color("#5a2a10") if desert else Color("#10301a")
+	if mine:
+		fill = Color("#d9c9ff")
+		edge = Color("#2a1a4a")
 	title.add_theme_color_override("font_color", fill)
 	title.add_theme_color_override("font_outline_color", edge)
 	title.add_theme_constant_override("outline_size", 22)

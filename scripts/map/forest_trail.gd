@@ -109,7 +109,13 @@ static var _recolor_cache: Dictionary = {}
 # Biomas em que o trecho "selecionado" NÃO ganha o dourado: usa a arte "normal"
 # (a cor original da trilha). O caminho disponível já é indicado pelos anéis dos
 # nós; o dourado da floresta destoava do mapa. Tire o bioma daqui para voltar.
-const SELECTED_KEEPS_ORIGINAL: Array[String] = ["floresta", "deserto"]
+const SELECTED_KEEPS_ORIGINAL: Array[String] = ["floresta", "deserto", "mina"]
+# Biomas sem o contorno pulsante no trecho selecionado (nos trilhos diagonais da
+# mina ele vira uma escadinha de quadrados).
+# Biomas cuja arte de trilha vem com a cor invertida (pasta casa_clara = trilho
+# escuro): aqui a trilha clara vai na casa clara e a escura na casa escura.
+const SWAP_TILE_COLOR: Array[String] = []
+const NO_SELECT_OUTLINE: Array[String] = ["mina"]
 
 static func _recolored(tex: Texture2D, st: String, key: String, biome_id: String = "") -> Texture2D:
 	if not STATE_RAMPS.has(st):
@@ -203,16 +209,18 @@ func _add_piece(g: Vector2i, piece: String, tile_px: float, s: float) -> void:
 func set_state(new_state: String) -> void:
 	state = new_state
 	var dir: String = String(ForestBackground.THEMES[biome]["trail_dir"])
+	var swap: bool = SWAP_TILE_COLOR.has(biome)
 	for i in range(_sprites.size()):
+		var lt: bool = (not _light[i]) if swap else _light[i]
 		var art_state: String = state
 		if state == "selecionado" and SELECTED_KEEPS_ORIGINAL.has(biome):
 			art_state = "normal"
-		var tex: Texture2D = _texture(_names[i], art_state, _light[i], dir)
+		var tex: Texture2D = _texture(_names[i], art_state, lt, dir)
 		var tint := Color.WHITE
 		if tex == null:
-			var base: Texture2D = _texture(_names[i], "normal", _light[i], dir)
+			var base: Texture2D = _texture(_names[i], "normal", lt, dir)
 			if base != null:
-				tex = _recolored(base, state, "%s|%s|%s" % [dir, _light[i], _names[i]], biome)
+				tex = _recolored(base, state, "%s|%s|%s" % [dir, lt, _names[i]], biome)
 		_sprites[i].texture = tex
 		_sprites[i].modulate = tint
-	_update_outlines(state == "selecionado")
+	_update_outlines(state == "selecionado" and not NO_SELECT_OUTLINE.has(biome))

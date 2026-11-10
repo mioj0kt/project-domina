@@ -49,7 +49,7 @@ var _col_edge := Color("5b8f4e")
 
 # Debug (DebugFlags.SHORTCUTS): pré-visualiza as transições sem trocar de cena.
 const DEBUG_STYLES := ["fade", "checker", "squares", "discs", "discs_c", "chain", "chain_sq"]
-const DEBUG_PALETTES := ["floresta", "deserto", "tutorial", "menu"]
+const DEBUG_PALETTES := ["floresta", "deserto", "mina", "tutorial", "menu"]
 var _dbg_idx: int = -1
 var _dbg_pal: int = 0
 var _dbg_boss: bool = false

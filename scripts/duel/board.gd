@@ -161,7 +161,7 @@ func set_theme_for_duel(is_hard_or_boss: bool) -> void:
 		light_tile_tint = Color(0.85, 0.55, 0.55)
 		dark_tile_tint = Color(0.55, 0.30, 0.32)
 		frame_tint = Color(0.9, 0.65, 0.65)
-		if skin_id == BoardSkin.SKIN_DESERT:
+		if skin_id == BoardSkin.SKIN_DESERT or skin_id == BoardSkin.SKIN_MINE:
 			# A areia clara tingida de vermelho vira rosa: no deserto o tom é
 			# só um leve escurecimento quente, sem lavar as casas de rosa.
 			light_tile_tint = Color(0.92, 0.80, 0.70)

@@ -23,6 +23,7 @@ static func infinite_resources() -> bool:
 	return SHORTCUTS and OS.is_debug_build()
 
 # Pré-visualização de bioma do mapa: "" = segue o RunManager (floresta);
-# "deserto" força o Deserto das Torres em qualquer run NOVA (mapa, fundos dos
+# "deserto" força o Deserto das Torres e "mina" a Mina dos Cristais (ainda sem chefe
+# próprio) em qualquer run NOVA (mapa, fundos dos
 # duelos/loja/aposta e cores das transições). Deixe "" na build final.
 const MAP_BIOME_OVERRIDE: String = ""

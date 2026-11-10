@@ -27,6 +27,9 @@ const SKIN_TUTORIAL := "tutorial"
 #    (ForestBackground), em qualquer tamanho. A borda é desenhada POR CIMA das
 #    casas (areia/pedra acumulada), como no mapa.
 const SKIN_DESERT := "desert"
+#  - SKIN_MINE: duelos da Mina dos Cristais. Mesma montagem do Deserto (casas e
+#    borda em folha do mapa do bioma), com a arte da mina.
+const SKIN_MINE := "mine"
 
 const _DESERT_DIR := "res://assets/sprites/biomas/deserto/tabuleiro/"
 const _DESERT_LIGHT: Array[String] = [
@@ -39,6 +42,23 @@ const _DESERT_DARK: Array[String] = [
 	"casa_escura_7", "casa_escura_8", "casa_escura_9", "casa_escura_10", "casa_escura_11", "casa_escura_12",
 ]
 const _DESERT_FRAME := "borda/borda_tabuleiro_13x12"
+const _MINE_DIR := "res://assets/sprites/biomas/mina/tabuleiro/"
+const _MINE_LIGHT: Array[String] = [
+	"casa_clara_1", "casa_clara_1", "casa_clara_2", "casa_clara_3", "casa_clara_4",
+	"casa_clara_5", "casa_clara_6", "casa_clara_7", "casa_clara_8",
+]
+const _MINE_DARK: Array[String] = [
+	"casa_escura_1", "casa_escura_1", "casa_escura_2", "casa_escura_3", "casa_escura_4",
+	"casa_escura_5", "casa_escura_6", "casa_escura_7", "casa_escura_8",
+]
+# Estilos montados a partir de casas + borda em folha (deserto, mina): mesma
+# geometria da folha 13x12, só muda a arte.
+const _SHEET_SKINS := {
+	SKIN_DESERT: {"dir": _DESERT_DIR, "light": _DESERT_LIGHT, "dark": _DESERT_DARK},
+	SKIN_MINE: {"dir": _MINE_DIR, "light": _MINE_LIGHT, "dark": _MINE_DARK},
+}
+static func _is_sheet(skin_id: String) -> bool:
+	return _SHEET_SKINS.has(skin_id)
 # Medidas nativas (px) da folha da borda; iguais às de ForestBackground.
 const _D_TILE: float = 26.0
 const _D_COLS: int = 13
@@ -223,34 +243,36 @@ static func _variant_index(r: int, c: int, count: int) -> int:
 		h = -h
 	return h % count
 
-static var _desert: Dictionary = {}
+static var _sheets: Dictionary = {}
 
-static func _ensure_desert() -> void:
-	if not _desert.is_empty():
+static func _ensure_sheet(skin_id: String) -> void:
+	if _sheets.has(skin_id):
 		return
+	var cfg: Dictionary = _SHEET_SKINS[skin_id]
+	var dir: String = cfg["dir"]
 	var light: Array = []
 	var dark: Array = []
-	for n in _DESERT_LIGHT:
-		var p: String = _DESERT_DIR + "casas/" + n + ".png"
+	for n in cfg["light"]:
+		var p: String = dir + "casas/" + n + ".png"
 		if ResourceLoader.exists(p):
 			light.append(load(p))
-	for n in _DESERT_DARK:
-		var p2: String = _DESERT_DIR + "casas/" + n + ".png"
+	for n in cfg["dark"]:
+		var p2: String = dir + "casas/" + n + ".png"
 		if ResourceLoader.exists(p2):
 			dark.append(load(p2))
-	var fp: String = _DESERT_DIR + _DESERT_FRAME + ".png"
+	var fp: String = dir + _DESERT_FRAME + ".png"
 	var frame: Texture2D = load(fp) if ResourceLoader.exists(fp) else null
-	_desert = {"light": light, "dark": dark, "frame": frame, "ok": not light.is_empty() and not dark.is_empty() and frame != null}
+	_sheets[skin_id] = {"light": light, "dark": dark, "frame": frame, "ok": not light.is_empty() and not dark.is_empty() and frame != null}
 
 # A borda deste estilo cobre a beirada das casas: quem desenha deve chamar
 # draw_tiles ANTES de draw_frame.
 static func frame_over_tiles(skin_id: String) -> bool:
-	return skin_id == SKIN_DESERT
+	return _is_sheet(skin_id)
 
 static func has_sprite(skin_id: String = SKIN_WOOD) -> bool:
-	if skin_id == SKIN_DESERT:
-		_ensure_desert()
-		return _desert["ok"]
+	if _is_sheet(skin_id):
+		_ensure_sheet(skin_id)
+		return _sheets[skin_id]["ok"]
 	_ensure_loaded(skin_id)
 	return _skins[skin_id] != null
 
@@ -258,7 +280,9 @@ static func has_sprite(skin_id: String = SKIN_WOOD) -> bool:
 # quem centraliza o tabuleiro na viewport, já que a moldura cresce PRA
 # FORA do retângulo das casinhas (ver draw_frame).
 static func get_frame_px(cell_size: float, skin_id: String = SKIN_WOOD) -> float:
-	if skin_id == SKIN_DESERT:
+	if skin_id == SKIN_MINE:
+		return cell_size * (_MINE_FRAME_T / _D_TILE)
+	if _is_sheet(skin_id):
 		return cell_size * (_D_MARGIN_Y / _D_TILE)
 	_ensure_loaded(skin_id)
 	var d = _skins[skin_id]
@@ -354,8 +378,8 @@ static func _vkey(is_light: bool, i: int) -> String:
 # (ver _build_layout). tint_light/tint_dark multiplicam a cor (branco = sem
 # alteração; usado pra rebater o tema difícil/chefe sem perder a textura).
 static func draw_tiles(canvas: CanvasItem, board_offset: Vector2, rows: int, cols: int, cell_size: float, tint_light: Color = Color.WHITE, tint_dark: Color = Color.WHITE, skin_id: String = SKIN_WOOD) -> void:
-	if skin_id == SKIN_DESERT:
-		_draw_desert_tiles(canvas, board_offset, rows, cols, cell_size, tint_light, tint_dark)
+	if _is_sheet(skin_id):
+		_draw_sheet_tiles(canvas, skin_id, board_offset, rows, cols, cell_size, tint_light, tint_dark)
 		return
 	_ensure_loaded(skin_id)
 	var d = _skins[skin_id]
@@ -377,8 +401,8 @@ static func draw_tiles(canvas: CanvasItem, board_offset: Vector2, rows: int, col
 # esticar, pra não deformar o entalhe), e as 4 bordas esticam só no eixo
 # que acompanha o tamanho do tabuleiro.
 static func draw_frame(canvas: CanvasItem, board_offset: Vector2, rows: int, cols: int, cell_size: float, tint: Color = Color.WHITE, skin_id: String = SKIN_WOOD) -> void:
-	if skin_id == SKIN_DESERT:
-		_draw_desert_frame(canvas, board_offset, rows, cols, cell_size, tint)
+	if _is_sheet(skin_id):
+		_draw_sheet_frame(canvas, skin_id, board_offset, rows, cols, cell_size, tint)
 		return
 	_ensure_loaded(skin_id)
 	var d = _skins[skin_id]
@@ -475,30 +499,39 @@ static func _desert_pick(r: int, c: int, _is_light: bool, count: int) -> int:
 		k += 1
 	return i
 
-static func _draw_desert_tiles(canvas: CanvasItem, board_offset: Vector2, rows: int, cols: int, cell_size: float, tint_light: Color, tint_dark: Color) -> void:
-	_ensure_desert()
-	if not _desert["ok"]:
+static func _draw_sheet_tiles(canvas: CanvasItem, skin_id: String, board_offset: Vector2, rows: int, cols: int, cell_size: float, tint_light: Color, tint_dark: Color) -> void:
+	_ensure_sheet(skin_id)
+	if not _sheets[skin_id]["ok"]:
 		return
 	for r in range(rows):
 		for c in range(cols):
 			var is_light: bool = (r + c) % 2 == 0
-			var pool: Array = _desert["light" if is_light else "dark"]
+			var pool: Array = _sheets[skin_id]["light" if is_light else "dark"]
 			var tex: Texture2D = pool[_desert_pick(r, c, is_light, pool.size())]
 			var rect := Rect2(board_offset.x + c * cell_size, board_offset.y + r * cell_size, cell_size, cell_size)
 			canvas.draw_texture_rect(tex, rect, false, tint_light if is_light else tint_dark)
 
 # Mesma montagem de ForestBackground._draw_frame_sheet: 8 px (lados) e 10 px
 # (topo/base) nativos ficam FORA do tabuleiro; o resto da peça entra sobre as casas.
-static func _draw_desert_frame(canvas: CanvasItem, board_offset: Vector2, rows: int, cols: int, cell_size: float, tint: Color) -> void:
-	_ensure_desert()
-	if not _desert["ok"]:
+static func _draw_sheet_frame(canvas: CanvasItem, skin_id: String, board_offset: Vector2, rows: int, cols: int, cell_size: float, tint: Color) -> void:
+	_ensure_sheet(skin_id)
+	if not _sheets[skin_id]["ok"]:
 		return
-	var tex: Texture2D = _desert["frame"]
+	if skin_id == SKIN_MINE:
+		_draw_mine_frame(canvas, board_offset, rows, cols, cell_size, tint)
+		return
+	var tex: Texture2D = _sheets[skin_id]["frame"]
 	var S: float = cell_size / _D_TILE
 	var W: float = tex.get_width()
 	var H: float = tex.get_height()
 	var board_size := Vector2(cols * cell_size, rows * cell_size)
-	var outer := Rect2(board_offset - Vector2(_D_MARGIN_X, _D_MARGIN_Y) * S, board_size + Vector2(_D_MARGIN_X, _D_MARGIN_Y) * S * 2.0)
+	# Mina: a moldura fica INTEIRA fora das casas (as peças das beiradas não pisam
+	# nela). Deserto: ela entra sobre a beirada das casas.
+	var outer: Rect2
+	if skin_id == SKIN_MINE:
+		outer = Rect2(board_offset - Vector2(_D_SIDE_W, _D_TOP_H) * S, board_size + Vector2(_D_SIDE_W * 2.0, _D_TOP_H + _D_BOT_H) * S)
+	else:
+		outer = Rect2(board_offset - Vector2(_D_MARGIN_X, _D_MARGIN_Y) * S, board_size + Vector2(_D_MARGIN_X, _D_MARGIN_Y) * S * 2.0)
 	for i in range(cols):
 		var sx: float = _D_MARGIN_X + _D_TILE * float(i % _D_COLS)
 		var dx: float = board_offset.x + float(i) * cell_size
@@ -515,3 +548,78 @@ static func _draw_desert_frame(canvas: CanvasItem, board_offset: Vector2, rows: 
 	canvas.draw_texture_rect_region(tex, Rect2(Vector2(outer.end.x - top_sz.x, outer.position.y), top_sz), Rect2(W - _D_SIDE_W, 0, _D_SIDE_W, _D_TOP_H), tint)
 	canvas.draw_texture_rect_region(tex, Rect2(Vector2(outer.position.x, outer.end.y - bot_sz.y), bot_sz), Rect2(0, H - _D_BOT_H, _D_SIDE_W, _D_BOT_H), tint)
 	canvas.draw_texture_rect_region(tex, Rect2(outer.end - bot_sz, bot_sz), Rect2(W - _D_SIDE_W, H - _D_BOT_H, _D_SIDE_W, _D_BOT_H), tint)
+
+
+# ---------------------------------------------------------------------
+# Moldura da Mina: monta a borda de pedra INTEIRA fora das casas (18 px nativos
+# de espessura). Pedra lisa repetida + 2 vigas de madeira por lado + cantoneiras.
+# Trechos (em px da folha 354x332) medidos na arte: sem rachadura nem viga.
+# ---------------------------------------------------------------------
+const _MINE_FRAME_T: float = 18.0
+const _MINE_TOP_PLAIN := Vector2(172.0, 50.0)     # x, largura
+const _MINE_BOT_PLAIN := Vector2(142.0, 63.0)
+const _MINE_LEFT_PLAIN := Vector2(135.0, 40.0)    # y, altura
+const _MINE_RIGHT_PLAIN := Vector2(143.0, 59.0)
+# vigas: [início, comprimento] ao longo do lado, na folha
+const _MINE_TOP_BEAM := Vector2(76.0, 55.0)
+const _MINE_BOT_BEAM := Vector2(86.0, 55.0)
+const _MINE_LEFT_BEAM := Vector2(86.0, 47.0)
+const _MINE_RIGHT_BEAM := Vector2(94.0, 48.0)
+
+# Preenche `dst` repetindo o trecho `src` ao longo do eixo (o último pedaço é cortado).
+static func _fill_strip(canvas: CanvasItem, tex: Texture2D, src: Rect2, dst: Rect2, horizontal: bool, S: float, tint: Color) -> void:
+	var unit: float = (src.size.x if horizontal else src.size.y) * S
+	var total: float = dst.size.x if horizontal else dst.size.y
+	var pos: float = 0.0
+	while pos < total - 0.01:
+		var len_px: float = minf(unit, total - pos)
+		var frac: float = len_px / unit
+		if horizontal:
+			canvas.draw_texture_rect_region(tex, Rect2(dst.position.x + pos, dst.position.y, len_px, dst.size.y), Rect2(src.position.x, src.position.y, src.size.x * frac, src.size.y), tint)
+		else:
+			canvas.draw_texture_rect_region(tex, Rect2(dst.position.x, dst.position.y + pos, dst.size.x, len_px), Rect2(src.position.x, src.position.y, src.size.x, src.size.y * frac), tint)
+		pos += len_px
+
+static func _draw_mine_frame(canvas: CanvasItem, board_offset: Vector2, rows: int, cols: int, cell_size: float, tint: Color, corner_native: float = 18.0) -> void:
+	var tex: Texture2D = _sheets[SKIN_MINE]["frame"]
+	var W: float = tex.get_width()
+	var H: float = tex.get_height()
+	var S: float = cell_size / _D_TILE
+	var T: float = _MINE_FRAME_T * S
+	var bw: float = cols * cell_size
+	var bh: float = rows * cell_size
+	var th := Vector2(T, T)
+	var outer_pos: Vector2 = board_offset - th
+	var outer_end: Vector2 = board_offset + Vector2(bw, bh) + th
+	var tt: float = _MINE_FRAME_T
+	# Pedra lisa dos 4 lados (entre as cantoneiras).
+	_fill_strip(canvas, tex, Rect2(_MINE_TOP_PLAIN.x, 0.0, _MINE_TOP_PLAIN.y, tt), Rect2(board_offset.x, outer_pos.y, bw, T), true, S, tint)
+	_fill_strip(canvas, tex, Rect2(_MINE_BOT_PLAIN.x, H - tt, _MINE_BOT_PLAIN.y, tt), Rect2(board_offset.x, outer_end.y - T, bw, T), true, S, tint)
+	_fill_strip(canvas, tex, Rect2(0.0, _MINE_LEFT_PLAIN.x, tt, _MINE_LEFT_PLAIN.y), Rect2(outer_pos.x, board_offset.y, T, bh), false, S, tint)
+	_fill_strip(canvas, tex, Rect2(W - tt, _MINE_RIGHT_PLAIN.x, tt, _MINE_RIGHT_PLAIN.y), Rect2(outer_end.x - T, board_offset.y, T, bh), false, S, tint)
+	# Vigas: 2 por lado quando o lado é longo, 1 no centro quando é curto.
+	var hf: Array = [0.25, 0.75] if bw / S >= 150.0 else [0.5]
+	for f in hf:
+		var bl: float = _MINE_TOP_BEAM.y * S
+		var cx: float = board_offset.x + bw * float(f) - bl * 0.5
+		canvas.draw_texture_rect_region(tex, Rect2(cx, outer_pos.y, bl, T), Rect2(_MINE_TOP_BEAM.x, 0.0, _MINE_TOP_BEAM.y, tt), tint)
+		bl = _MINE_BOT_BEAM.y * S
+		cx = board_offset.x + bw * float(f) - bl * 0.5
+		canvas.draw_texture_rect_region(tex, Rect2(cx, outer_end.y - T, bl, T), Rect2(_MINE_BOT_BEAM.x, H - tt, _MINE_BOT_BEAM.y, tt), tint)
+	var vf: Array = [0.25, 0.75] if bh / S >= 150.0 else [0.5]
+	for f in vf:
+		var bl2: float = _MINE_LEFT_BEAM.y * S
+		var cy: float = board_offset.y + bh * float(f) - bl2 * 0.5
+		canvas.draw_texture_rect_region(tex, Rect2(outer_pos.x, cy, T, bl2), Rect2(0.0, _MINE_LEFT_BEAM.x, tt, _MINE_LEFT_BEAM.y), tint)
+		bl2 = _MINE_RIGHT_BEAM.y * S
+		cy = board_offset.y + bh * float(f) - bl2 * 0.5
+		canvas.draw_texture_rect_region(tex, Rect2(outer_end.x - T, cy, T, bl2), Rect2(W - tt, _MINE_RIGHT_BEAM.x, tt, _MINE_RIGHT_BEAM.y), tint)
+	# Cantoneiras: 18 px = só o quadrado externo (duelo, sem invadir as casas);
+	# 30 px = a pedra inteira da arte, que avança 12 px sobre a casa do canto (mapa).
+	var cn: float = corner_native
+	var cd := Vector2(cn, cn) * S
+	var cs := Vector2(cn, cn)
+	canvas.draw_texture_rect_region(tex, Rect2(outer_pos, cd), Rect2(Vector2(0.0, 0.0), cs), tint)
+	canvas.draw_texture_rect_region(tex, Rect2(Vector2(outer_end.x - cd.x, outer_pos.y), cd), Rect2(Vector2(W - cn, 0.0), cs), tint)
+	canvas.draw_texture_rect_region(tex, Rect2(Vector2(outer_pos.x, outer_end.y - cd.y), cd), Rect2(Vector2(0.0, H - cn), cs), tint)
+	canvas.draw_texture_rect_region(tex, Rect2(outer_end - cd, cd), Rect2(Vector2(W - cn, H - cn), cs), tint)

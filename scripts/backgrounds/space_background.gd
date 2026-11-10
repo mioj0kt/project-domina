@@ -21,7 +21,6 @@ const LAYERS: Array[Dictionary] = [
 	{"count": 26, "size": 4.0, "speed": 14.0, "alpha": 1.0},
 ]
 
-static var _nebula_tex: ImageTexture = null
 static var _island_texs: Array[Texture2D] = []
 
 # Ilhas-tabuleiro flutuantes (sprites em assets/sprites/menu/ilhas); escala de pixel
@@ -48,6 +47,32 @@ var _canvas: Node2D
 var _t: float = 0.0
 # Transparência das ilhas/peças (menor = mais discretas; usado nos mapas, onde há texto por cima).
 var floater_alpha: float = 1.0
+# Bioma do mapa ("floresta", "deserto", "mina"; vazio = roxo padrão do menu/
+# tutorial). Troca o céu, as nebulosas e as estrelas. A mina não tem ilhas
+# voando (é uma caverna). Defina ANTES de add_child().
+var biome: String = ""
+# sky_top, sky_bottom, nebulosa A (3 níveis), nebulosa B (3 níveis), estrelas
+const BIOME_SKY: Dictionary = {
+	"floresta": {
+		"top": Color("#0f1a16"), "bottom": Color("#18281f"),
+		"a": [Color(0.28, 0.58, 0.36, 0.05), Color(0.30, 0.62, 0.38, 0.09), Color(0.40, 0.72, 0.46, 0.14)],
+		"b": [Color(0.60, 0.62, 0.25, 0.03), Color(0.65, 0.66, 0.28, 0.06), Color(0.72, 0.72, 0.34, 0.09)],
+		"stars": [Color("#efe6cf"), Color("#efe6cf"), Color("#cfe0b0"), Color("#d9a441"), Color("#7fa874"), Color("#a9c98f")],
+	},
+	"deserto": {
+		"top": Color("#1f1610"), "bottom": Color("#36261a"),
+		"a": [Color(0.80, 0.56, 0.26, 0.05), Color(0.82, 0.58, 0.27, 0.09), Color(0.90, 0.66, 0.32, 0.13)],
+		"b": [Color(0.72, 0.34, 0.24, 0.03), Color(0.75, 0.37, 0.25, 0.06), Color(0.82, 0.44, 0.30, 0.09)],
+		"stars": [Color("#f2e3b0"), Color("#f2e3b0"), Color("#e3c98a"), Color("#d98f4a"), Color("#efe6cf"), Color("#c9a45e")],
+	},
+	"mina": {
+		"top": Color("#0d1c22"), "bottom": Color("#12272b"),
+		"a": [Color(0.20, 0.55, 0.55, 0.05), Color(0.22, 0.60, 0.58, 0.09), Color(0.30, 0.70, 0.66, 0.13)],
+		"b": [Color(0.40, 0.65, 0.80, 0.03), Color(0.42, 0.70, 0.85, 0.06), Color(0.50, 0.78, 0.90, 0.09)],
+		"stars": [Color("#efe6cf"), Color("#a9dcef"), Color("#7fd1c0"), Color("#6fb6d8"), Color("#cfeee6")],
+	},
+}
+static var _nebula_cache: Dictionary = {}
 var _shoot_timer: float = 6.0
 var _shoot: Dictionary = {}          # {pos, dir, life}
 var _floaters: Array[Dictionary] = []   # ilhas e peças: {node, x, y, vx, vy, phase, bob, flip}
@@ -63,8 +88,8 @@ func _ready() -> void:
 	# 1. Céu em degradê (2 ColorRects não precisam de textura: usa shader-free
 	# gradiente por GradientTexture2D).
 	var grad = Gradient.new()
-	grad.set_color(0, SKY_TOP)
-	grad.set_color(1, SKY_BOTTOM)
+	grad.set_color(0, BIOME_SKY[biome]["top"] if BIOME_SKY.has(biome) else SKY_TOP)
+	grad.set_color(1, BIOME_SKY[biome]["bottom"] if BIOME_SKY.has(biome) else SKY_BOTTOM)
 	var gtex = GradientTexture2D.new()
 	gtex.gradient = grad
 	gtex.fill_from = Vector2(0, 0)
@@ -81,7 +106,7 @@ func _ready() -> void:
 
 	# 2. Nebulosas em blocos.
 	var neb = TextureRect.new()
-	neb.texture = _get_nebula()
+	neb.texture = _get_nebula(biome)
 	neb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	neb.stretch_mode = TextureRect.STRETCH_SCALE
 	neb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -90,13 +115,14 @@ func _ready() -> void:
 	add_child(neb)
 
 	# 3. Estrelas.
+	var star_cols: Array = BIOME_SKY[biome]["stars"] if BIOME_SKY.has(biome) else STAR_COLORS
 	for li in range(LAYERS.size()):
 		for i in range(int(LAYERS[li]["count"])):
 			_stars.append({
 				"layer": li,
 				"x": rng.randf(),
 				"y": rng.randf(),
-				"color": STAR_COLORS[rng.randi() % STAR_COLORS.size()],
+				"color": star_cols[rng.randi() % star_cols.size()],
 				"phase": rng.randf() * TAU,
 				"rate": rng.randf_range(0.6, 2.4),
 				"cross": li == 2 and rng.randf() < 0.45,
@@ -106,7 +132,8 @@ func _ready() -> void:
 	add_child(_canvas)
 
 	# 4. Ilhas-tabuleiro e peças voando (da mais longe para a mais perto).
-	_build_floaters(rng)
+	if biome != "mina":
+		_build_floaters(rng)
 
 func _process(delta: float) -> void:
 	_t += delta
@@ -168,9 +195,9 @@ func _draw_stars() -> void:
 
 # Textura de nebulosa: ruído fractal posterizado em 3 níveis, em 2 cores
 # (violeta e azul-petróleo), com transparência — gerada uma vez e reaproveitada.
-static func _get_nebula() -> ImageTexture:
-	if _nebula_tex != null:
-		return _nebula_tex
+static func _get_nebula(biome_id: String = "") -> ImageTexture:
+	if _nebula_cache.has(biome_id):
+		return _nebula_cache[biome_id]
 	var img = Image.create(NEBULA_SIZE.x, NEBULA_SIZE.y, false, Image.FORMAT_RGBA8)
 	var n1 = FastNoiseLite.new()
 	n1.seed = 7
@@ -184,6 +211,9 @@ static func _get_nebula() -> ImageTexture:
 	n2.fractal_octaves = 3
 	var violet = [Color(0.54, 0.36, 0.75, 0.05), Color(0.54, 0.36, 0.75, 0.09), Color(0.60, 0.44, 0.80, 0.14)]
 	var teal = [Color(0.25, 0.50, 0.60, 0.04), Color(0.25, 0.50, 0.60, 0.07), Color(0.30, 0.58, 0.68, 0.11)]
+	if BIOME_SKY.has(biome_id):
+		violet = BIOME_SKY[biome_id]["a"]
+		teal = BIOME_SKY[biome_id]["b"]
 	for y in range(NEBULA_SIZE.y):
 		for x in range(NEBULA_SIZE.x):
 			var v: float = n1.get_noise_2d(x, y) * 0.5 + 0.5
@@ -202,8 +232,9 @@ static func _get_nebula() -> ImageTexture:
 			elif w > 0.52 and col.a == 0.0:
 				col = teal[0]
 			img.set_pixel(x, y, col)
-	_nebula_tex = ImageTexture.create_from_image(img)
-	return _nebula_tex
+	var out := ImageTexture.create_from_image(img)
+	_nebula_cache[biome_id] = out
+	return out
 
 
 # ---------------------------------------------------------------------

@@ -160,6 +160,64 @@ const DESERT_SMALL: Array[String] = [
 	"poeira/areia_soprada_1", "poeira/areia_soprada_2", "poeira/areia_soprada_3",
 ]
 
+# --- Mina dos Cristais (res://assets/sprites/biomas/mina/) ---------------------
+# Calcário claro / rocha escura (o mesmo xadrez creme e ameixa dos outros
+# biomas), com cristais violeta e azul-gelo no lugar das árvores, colunas de
+# mina, carrinhos tombados e poeira de cristal. Moldura de pedra com vigas.
+const MINE_LIGHT_TILES: Array[String] = [
+	"casas/casa_clara_1", "casas/casa_clara_1", "casas/casa_clara_2", "casas/casa_clara_3",
+	"casas/casa_clara_4", "casas/casa_clara_5", "casas/casa_clara_6", "casas/casa_clara_7",
+	"casas/casa_clara_8",
+]
+const MINE_DARK_TILES: Array[String] = [
+	"casas/casa_escura_1", "casas/casa_escura_1", "casas/casa_escura_2", "casas/casa_escura_3",
+	"casas/casa_escura_4", "casas/casa_escura_5", "casas/casa_escura_6", "casas/casa_escura_7",
+	"casas/casa_escura_8",
+]
+const MINE_TREES_LIGHT: Array[String] = [
+	"cristais/cristal_1_violeta_alto_clara", "cristais/cristal_2_violeta_largo_clara",
+	"cristais/cristal_4_gelo_alto_clara", "cristais/cristal_6_misto_clara",
+	"cristais/cristal_1_violeta_alto_clara", "cristais/cristal_2_violeta_largo_clara",
+	"cristais/cristal_4_gelo_alto_clara", "cristais/cristal_6_misto_clara",
+	"cristais/cristal_5_esmeralda_clara",
+	"colunas/coluna_1_coluna_viga_clara", "colunas/coluna_2_coluna_quebrada_clara",
+	"colunas/coluna_3_portal_lanterna_clara", "colunas/coluna_4_coluna_cintada_clara",
+]
+const MINE_TREES_DARK: Array[String] = [
+	"cristais/cristal_1_violeta_alto_escura", "cristais/cristal_2_violeta_largo_escura",
+	"cristais/cristal_4_gelo_alto_escura", "cristais/cristal_6_misto_escura",
+	"cristais/cristal_1_violeta_alto_escura", "cristais/cristal_2_violeta_largo_escura",
+	"cristais/cristal_4_gelo_alto_escura", "cristais/cristal_6_misto_escura",
+	"cristais/cristal_5_esmeralda_escura",
+	"colunas/coluna_1_coluna_viga_escura", "colunas/coluna_2_coluna_quebrada_escura",
+	"colunas/coluna_3_portal_lanterna_escura", "colunas/coluna_4_coluna_cintada_escura",
+]
+const MINE_BUSHES_LIGHT: Array[String] = ["cristais/cristal_3_gelo_pequeno_clara", "cristais/cristal_5_esmeralda_clara"]
+const MINE_BUSHES_DARK: Array[String] = ["cristais/cristal_3_gelo_pequeno_escura", "cristais/cristal_5_esmeralda_escura"]
+const MINE_GRASS: Array[String] = [
+	"miudezas/18_cogumelo", "miudezas/19_cogumelos_duplos", "miudezas/20_liquen",
+	"miudezas/20_liquen", "miudezas/10_poeira_10x6", "miudezas/11_poeira_8x5",
+	"miudezas/12_poeira_6x4", "miudezas/12_poeira_6x4",
+]
+const MINE_BIG: Array[String] = [
+	"props/prop_1_pedra_veios", "props/prop_2_carrinho_tombado", "props/prop_3_pilha_pedras",
+	"props/prop_4_lasca_cristal", "props/prop_5_poste_torto", "props/prop_6_caixote_dinamite",
+	"props/prop_7_carrinho_minerio", "props/prop_8_barril", "props/prop_9_pedra_veios_gelo",
+	"props/prop_10_pedra_veios_esmeralda", "props/prop_11_pedra_pequena", "props/prop_12_lasca_gelo",
+	"props/prop_13_lasca_esmeralda", "props/prop_14_pilha_tabuas", "props/prop_15_placa_perigo",
+	"props/prop_16_balde_minerio", "props/prop_17_saco_minerio",
+	"props/prop_1_pedra_veios", "props/prop_3_pilha_pedras", "props/prop_9_pedra_veios_gelo",
+	"props/prop_10_pedra_veios_esmeralda", "props/prop_11_pedra_pequena",
+]
+const MINE_SMALL: Array[String] = [
+	"miudezas/01_caco_violeta_2x2", "miudezas/02_caco_gelo_2x2", "miudezas/03_caco_esmeralda_2x2",
+	"miudezas/04_caco_violeta_3x3", "miudezas/05_caco_gelo_3x3", "miudezas/06_caco_esmeralda_3x3",
+	"miudezas/07_caco_violeta_4x3", "miudezas/08_caco_gelo_4x3", "miudezas/09_caco_esmeralda_4x3",
+	"miudezas/13_picareta_quebrada", "miudezas/14_capacete_velho", "miudezas/15_trilho",
+	"miudezas/16_corda_velha", "miudezas/17_disco_rachado",
+	"miudezas/10_poeira_10x6", "miudezas/11_poeira_8x5", "miudezas/12_poeira_6x4",
+]
+
 # Tudo que muda de um bioma de mapa para outro. "floresta" usa as constantes de
 # cima; "deserto" as DESERT_*. `frame`: "moldura" = faixa 9x13 repetida (floresta);
 # "bordas" = moldura fina em folha (deserto), ver _draw_frame_sheet.
@@ -191,6 +249,19 @@ const THEMES: Dictionary = {
 		"clearing_node": "", "clearing_boss": "",
 		"swirls": "tabuleiro/poeira/redemoinho_pequeno",
 	},
+	"mina": {
+		"dir": "res://assets/sprites/biomas/mina/",
+		"trail_dir": "res://assets/sprites/biomas/mina/tabuleiro/trilhas_grade/",
+		"tiles_light": MINE_LIGHT_TILES, "tiles_dark": MINE_DARK_TILES,
+		"trees_light": MINE_TREES_LIGHT, "trees_dark": MINE_TREES_DARK,
+		"bushes_light": MINE_BUSHES_LIGHT, "bushes_dark": MINE_BUSHES_DARK,
+		"grass_light": MINE_GRASS, "grass_dark": MINE_GRASS,
+		"big_light": MINE_BIG, "big_dark": MINE_BIG,
+		"small_light": MINE_SMALL, "small_dark": MINE_SMALL,
+		"tree_ground_y": 0.86, "tree_density": 1.9, "grass_scale": 0.8,
+		"frame": "bordas", "frame_pad": Vector2(18, 18),   # moldura toda FORA das casas (ver BoardSkin._draw_mine_frame)
+		"clearing_node": "", "clearing_boss": "",
+	},
 }
 
 # Resultado público: retângulo (coords do mundo) ocupado pela moldura.
@@ -202,6 +273,7 @@ var _tiles: Array = []      # [Texture2D, Rect2, flip_h, flip_v]
 var _decor: Array = []      # [Texture2D, Vector2 centro, y_ordem]
 var _clearings: Array = []  # [Texture2D, Vector2 centro]
 var _board_rect: Rect2 = Rect2()
+var _walk_cells: Array[Vector2] = []   # centros das casas por onde a trilha passa e a peça salta
 var _frame_tex: Texture2D = null
 
 # Bioma do mapa ("floresta" | "deserto"); defina ANTES de build().
@@ -256,6 +328,24 @@ func build(layers: Array, tile_px: float, sprite_scale: int, min_col: int, max_c
 			for child in node.children:
 				segments.append([node.position, child.position])
 
+	# Casas por onde a PEÇA realmente anda: o desenho da trilha (retas + diagonais) e os
+	# saltos em diagonal do peão. Enfeites grandes nunca podem cobrir essas casas.
+	_walk_cells.clear()
+	for layer in layers:
+		for node in layer:
+			var gn := Vector2i((node.position / _tile).round())
+			_add_walk_cell(gn)
+			for child in node.children:
+				var gc := Vector2i((child.position / _tile).round())
+				var g_t := gn
+				_add_walk_cell(g_t)
+				for st in ForestTrail.build_steps(gn, gc):
+					g_t += st
+					_add_walk_cell(g_t)
+				if (absi(gc.x - gn.x) + absi(gc.y - gn.y)) % 2 == 0:   # paridade de damas: senão o salto nunca chega
+					for hop in MapPlayerPawn.calculate_diagonal_path(gn, gc):
+						_add_walk_cell(hop)
+
 	var half_cols = maxf(float(max_col), float(-min_col))
 	var tree_grounds: Array[Vector2] = []
 	for r in range(min_row, max_row + 1):
@@ -268,29 +358,31 @@ func build(layers: Array, tile_px: float, sprite_scale: int, min_col: int, max_c
 			if tex != null:
 				_tiles.append([tex, rect, rng.randf() < 0.5, rng.randf() < 0.5])
 
-			var d_path = _distance_to_paths(center, segments)
+			var d_path = _distance_to_walk(center)
 			var d_node = _distance_to_nodes(center, node_points)
 			var edge_w = clampf(absf(float(c)) / maxf(half_cols, 1.0), 0.0, 1.0)
 
 			# Árvore (mais comum quanto mais perto da borda lateral); se não
 			# vier árvore, às vezes um arbusto ou uma peça grande (toco, moita...).
-			var p_tree = (0.12 + 0.45 * edge_w * edge_w) * float(_th["tree_density"])
+			var p_tree = (0.2 + 0.4 * edge_w * edge_w) * float(_th["tree_density"])
 			var placed_tree = false
 			var tree_roll: float = rng.randf()
 			var trees: Array = _th["trees_light"] if is_light else _th["trees_dark"]
 			var t = _tex(BOARD_DIR + trees[rng.randi() % trees.size()], _dir)
 			var tree_ground: Vector2 = _snap(center + _jitter(rng, 0.12))
-			if tree_roll < p_tree and t != null and _tree_fits(t, tree_ground, segments, node_points, tree_grounds):
+			if tree_roll < p_tree and t != null and _tree_fits(t, tree_ground, node_points, tree_grounds) \
+					and not _covers_walk_cell(Rect2(_tree_center(t, tree_ground) - t.get_size() * float(_scale) / 2.0, t.get_size() * float(_scale))):
 				_decor.append([t, _tree_center(t, tree_ground), tree_ground.y])
 				tree_grounds.append(tree_ground)
 				placed_tree = true
-			elif d_path > 0.8 * _tile and d_node > 1.2 * _tile and rng.randf() < 0.20 + 0.15 * edge_w:
+			elif d_path > 0.8 * _tile and d_node > 1.2 * _tile and rng.randf() < 0.32 + 0.12 * edge_w:
 				var pool_big: Array[String] = []
 				pool_big.append_array(_th["bushes_light"] if is_light else _th["bushes_dark"])
 				pool_big.append_array(_th["big_light"] if is_light else _th["big_dark"])
 				var bt = _tex(BOARD_DIR + pool_big[rng.randi() % pool_big.size()], _dir)
-				if bt != null:
-					_decor.append([bt, _snap(center + _jitter(rng, 0.2)), center.y])
+				var bpos: Vector2 = _snap(center + _jitter(rng, 0.2))
+				if bt != null and not _covers_walk_cell(Rect2(bpos - bt.get_size() * float(_scale) / 2.0, bt.get_size() * float(_scale))):
+					_decor.append([bt, bpos, center.y])
 					placed_tree = true
 
 			# Detalhes pequenos (até 2 por casa), só fora da trilha/clareira.
@@ -379,12 +471,31 @@ func _clear_decor_from_frame_band() -> void:
 		kept.append(d)
 	_decor = kept
 
+func _distance_to_walk(p: Vector2) -> float:
+	var best := INF
+	for c in _walk_cells:
+		best = minf(best, p.distance_to(c))
+	return best
+
+func _add_walk_cell(g: Vector2i) -> void:
+	var c := Vector2(g.x * _tile, g.y * _tile)
+	if not _walk_cells.has(c):
+		_walk_cells.append(c)
+
+# O sprite (árvore, monólito, cristal grande...) cobriria alguma casa onde a peça anda?
+func _covers_walk_cell(rect: Rect2) -> bool:
+	var h := Vector2(_tile, _tile) * 0.36
+	for c in _walk_cells:
+		if Rect2(c - h, h * 2.0).intersects(rect):
+			return true
+	return false
+
 func _tree_center(tex: Texture2D, ground: Vector2) -> Vector2:
 	return _snap(ground + Vector2(0.0, (0.5 - float(_th["tree_ground_y"])) * tex.get_height() * float(_scale)))
 
 # A árvore cabe? Copa inteira dentro do tabuleiro, longe das trilhas e dos nós
 # e sem encostar demais em outra árvore.
-func _tree_fits(tex: Texture2D, ground: Vector2, segments: Array, node_points: Array, others: Array[Vector2]) -> bool:
+func _tree_fits(tex: Texture2D, ground: Vector2, node_points: Array, others: Array[Vector2]) -> bool:
 	var sz: Vector2 = tex.get_size() * float(_scale)
 	var ctr: Vector2 = _tree_center(tex, ground)
 	var rect := Rect2(ctr - sz / 2.0, sz)
@@ -401,10 +512,7 @@ func _tree_fits(tex: Texture2D, ground: Vector2, segments: Array, node_points: A
 		if o.distance_to(ground) < TREE_MIN_SPACING * _tile:
 			return false
 	# Pontos da copa e do tronco contra as trilhas.
-	var probes: Array[Vector2] = [ground, ctr, ctr + Vector2(sz.x * 0.35, 0.0), ctr - Vector2(sz.x * 0.35, 0.0)]
-	for pr in probes:
-		if _distance_to_paths(pr, segments) < TREE_PATH_CLEAR * _tile:
-			return false
+	# (a distância às trilhas é decidida por _covers_walk_cell, que olha as casas reais da trilha)
 	for np in node_points:
 		var q := Vector2(clampf(np[0].x, rect.position.x, rect.end.x), clampf(np[0].y, rect.position.y, rect.end.y))
 		if q.distance_to(np[0]) < TREE_NODE_CLEAR * _tile:
@@ -517,6 +625,14 @@ const FRAME_BAND_BOTTOM: float = 17.0
 const LARGE_DECOR_NATIVE: float = 11.0
 func _draw_frame_sheet() -> void:
 	if _frame_tex == null:
+		return
+	if biome == "mina":
+		# Mesma moldura do duelo: pedra lisa + vigas + cantoneiras de 18 px, sem
+		# blocos que avançam sobre as casas.
+		BoardSkin._ensure_sheet(BoardSkin.SKIN_MINE)
+		var mcols := int(round(_board_rect.size.x / _tile))
+		var mrows := int(round(_board_rect.size.y / _tile))
+		BoardSkin._draw_mine_frame(self, _board_rect.position, mrows, mcols, _tile, Color.WHITE, 30.0)
 		return
 	var S := float(_scale)
 	var tw := float(NATIVE_TILE)

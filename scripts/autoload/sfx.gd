@@ -30,6 +30,7 @@ const GROUPS := {
 	"vitoria": {"count": 1, "db": -5.0, "pitch": 0.0},
 	"derrota": {"count": 1, "db": -5.0, "pitch": 0.0},
 	"nascer": {"count": 3, "db": -8.0, "pitch": 0.05},          # peça gerada/renascida
+	"vento_nascer": {"count": 1, "db": -9.0, "pitch": 0.0},    # vento que sopra enquanto a peça se monta (2,4 s; clímax no impacto)
 	"brotar": {"count": 2, "db": -8.0, "pitch": 0.04},         # árvore/cacto/sarcófago surgindo
 	# Mapa / loja / eventos / transições
 	"salto": {"count": 3, "db": -8.0, "pitch": 0.04},          # peão pulando no mapa
@@ -55,11 +56,11 @@ const GROUPS := {
 	"coroa_final": {"count": 1, "db": -8.0, "pitch": 0.0},
 	"moeda_conta": {"count": 1, "db": -10.0, "pitch": 0.0},
 	# Máquina do Grimório
-	"maquina_carga": {"count": 1, "db": -7.0, "pitch": 0.0},
-	"maquina_revela": {"count": 4, "db": -8.0, "pitch": 0.0},   # "tun" do desbloqueio, um por raridade
-	"maquina_vortex": {"count": 1, "db": -6.0, "pitch": 0.0},
-	"maquina_crack": {"count": 1, "db": -7.0, "pitch": 0.02},
-	"maquina_boom": {"count": 4, "db": -4.0, "pitch": 0.0},    # uma variação por raridade
+	"maquina_carga": {"count": 1, "db": -10.0, "pitch": 0.0},
+	"maquina_revela": {"count": 4, "db": -11.0, "pitch": 0.0},   # "tun" do desbloqueio, um por raridade
+	"maquina_vortex": {"count": 1, "db": -9.0, "pitch": 0.0},
+	"maquina_crack": {"count": 1, "db": -10.0, "pitch": 0.02},
+	"maquina_boom": {"count": 4, "db": -7.0, "pitch": 0.0},    # uma variação por raridade
 	"contagem": {"count": 1, "db": -10.0, "pitch": 0.0},       # contagem de peças (Morte Súbita)
 	"contagem_dama": {"count": 1, "db": -7.0, "pitch": 0.0},
 	"placar": {"count": 1, "db": -8.0, "pitch": 0.0},          # fim da contagem

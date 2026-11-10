@@ -101,6 +101,7 @@ func _ready() -> void:
 	_refresh_button_states()
 
 	if TutorialManager.current_step == TutorialManager.Step.INTRO:
+		await RunIntro.new().run(self, camera, _node_position(entry_index), player_pawn.piece_px)
 		await guide_view.play_title_card("BEM-VINDO À", "DOMINA", "Tutorial · %d lições rápidas" % TutorialManager.LESSON_COUNT)
 		await guide_view.play_sequence(TutorialManager.get_intro_lines())
 		TutorialManager.advance_to(steps[1])
@@ -116,6 +117,7 @@ func _ready() -> void:
 			await guide_view.play_sequence(TutorialManager.get_flip_walk_lines(), false)
 			await _guide_walks_ahead()
 			await guide_view.play_sequence(TutorialManager.get_flip_lines(), false)
+			await _brother_captures_player()
 		TutorialManager.advance_to(TutorialManager.Step.FINISHED)
 		MetaProgress.mark_tutorial_done()
 		TutorialManager.end_tutorial()
@@ -262,7 +264,7 @@ func _setup_world(entry_index: int) -> void:
 		var base = MapNodeArt.make_rect(base_tex)
 		base.size = node_px
 		btn.add_child(base)
-		var ind = MapNodeArt.make_rect(MapNodeArt.sprite("ind_disponivel"))
+		var ind = MapNodeArt.make_rect(MapNodeArt.sprite("ind_selecionado"))
 		btn.add_child(ind)
 		node_art.append({"base": base, "ind": ind})
 
@@ -443,14 +445,14 @@ func _refresh_button_states() -> void:
 		if i == _pawn_index:
 			ind_name = "ind_atual"
 		elif i == current_index:
-			ind_name = "ind_selecionado" if i == _hovered else "ind_disponivel"
+			ind_name = "ind_selecionado" if i == _hovered else ""
 		elif i < _pawn_index or (i == 0 and _pawn_index > 0):
 			overlay_name = "ind_concluido"
 			base_mod = Color(0.7, 0.66, 0.62)
 			label_col = Color(0.75, 0.72, 0.7)
 		elif i < current_index:
 			# Visitado, mas o peão já saiu de lá (rever a lição).
-			ind_name = "ind_selecionado" if i == _hovered else "ind_disponivel"
+			ind_name = "ind_selecionado" if i == _hovered else ""
 		else:
 			base_mod = Color(0.62, 0.6, 0.62)
 			label_col = Color(0.6, 0.6, 0.65)
@@ -526,6 +528,75 @@ func _guide_walks_ahead() -> void:
 	_move_camera_to(_end_row_pos().y, 1.4)
 	await _guide_hops_to(_end_grid())
 	await get_tree().create_timer(0.3).timeout
+
+# Cutscene final: o Irmão desce até a peça do jogador e PULA POR CIMA dela, como
+# uma captura de damas. A peça se estilhaça (mesmo efeito da captura nos duelos).
+func _brother_captures_player() -> void:
+	if guide_map_piece == null or player_pawn == null:
+		return
+	guide_map_piece.set_who("evil")
+	overlay.visible = false   # some a seta "PRÓXIMA LIÇÃO"
+	guide_map_piece.pivot_offset = guide_map_piece.custom_minimum_size / 2.0
+	var g: Vector2i = _node_grid(_pawn_index)
+	var pawn_pos: Vector2 = _node_position(_pawn_index)
+	# a peça do jogador sai do soquete e fica à vista
+	_pawn_resting = false
+	_refresh_button_states()
+	player_pawn.set_initial_position(pawn_pos, TILE_SIZE)
+	player_pawn.position = pawn_pos
+	player_pawn.visible = true
+	_move_camera_to(pawn_pos.y, 1.0)
+	await get_tree().create_timer(1.1).timeout
+	# desce até a casa diagonal logo acima da peça
+	await _guide_hops_to(Vector2i(g.x + 1, g.y - 1))
+	# pausa ameaçadora: treme, o mundo prende a respiração
+	var tremor_t := 0.0
+	var base_pos: Vector2 = guide_map_piece.position
+	while tremor_t < 0.9:
+		await get_tree().process_frame
+		tremor_t += get_process_delta_time()
+		guide_map_piece.position = base_pos + Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * (1.0 + 4.0 * tremor_t)
+	guide_map_piece.position = base_pos
+	# o salto por cima: sobe alto, passa sobre a peça (captura) e pousa do outro lado
+	var land := Vector2i(g.x - 1, g.y + 1)
+	var from: Vector2 = guide_map_piece.position
+	var to: Vector2 = _guide_world_pos(land)
+	var shattered: Array = [false]
+	Sfx.play("salto")
+	var tw := create_tween()
+	tw.tween_method(func(t: float):
+		guide_map_piece.position = from.lerp(to, t) + Vector2(0.0, -sin(t * PI) * HOP_ARC * 4.0)
+		var sc: float = 1.0 + 0.55 * sin(t * PI)
+		guide_map_piece.scale = Vector2(sc, sc)
+		if t >= 0.5 and not shattered[0]:
+			shattered[0] = true
+			_shatter_player_piece(pawn_pos), 0.0, 1.0, 0.7).set_trans(Tween.TRANS_SINE)
+	await tw.finished
+	guide_map_piece.position = to
+	guide_map_piece.scale = Vector2.ONE
+	_guide_grid = land
+	Sfx.play("irmao_impacto")
+	_shake_camera(10.0, 0.4)
+	await get_tree().create_timer(1.8).timeout
+
+func _shatter_player_piece(world_pos: Vector2) -> void:
+	player_pawn.visible = false
+	var shatter := PieceShatterView.new()
+	add_child(shatter)
+	shatter.shatter_piece(world_pos, player_pawn.dummy_piece, player_pawn.piece_px / 0.85)
+	Sfx.play("captura")
+	_shake_camera(18.0, 0.55)
+
+func _shake_camera(amp: float, dur: float) -> void:
+	if camera == null:
+		return
+	var tw := create_tween()
+	tw.tween_method(func(k: float):
+		if is_instance_valid(camera):
+			camera.offset = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * amp * (1.0 - k), 0.0, 1.0, dur)
+	tw.tween_callback(func():
+		if is_instance_valid(camera):
+			camera.offset = Vector2.ZERO)
 
 func _move_pawn_to_current_step(animate: bool) -> void:
 	var current_index = steps.find(TutorialManager.current_step)

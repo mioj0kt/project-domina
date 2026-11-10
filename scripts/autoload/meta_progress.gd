@@ -207,6 +207,24 @@ func locked_of(is_rule: bool, rarity: int) -> Array:
 		return locked_rules_of_rarity(rarity)
 	return locked_cards(rarity)
 
+# Total de itens que dá para desbloquear (tudo menos os iniciais).
+func lockable_cards_total() -> int:
+	var n := 0
+	for c in LootTables.get_all_action_cards():
+		if not STARTER_CARDS.has(c.id):
+			n += 1
+	return n
+
+func lockable_rules_total() -> int:
+	var n := 0
+	for r in LootTables.get_all_rules():
+		if not STARTER_RULES.has(r.id):
+			n += 1
+	return n
+
+func lockable_total() -> int:
+	return lockable_cards_total() + lockable_rules_total()
+
 # Quantos itens (Cartas ou Leis) ainda faltam desbloquear.
 func remaining_of(is_rule: bool) -> int:
 	var n := 0

@@ -120,7 +120,7 @@ func _build() -> void:
 	_name_label = Label.new()
 	_name_label.text = BossDialogue.boss_name(biome)
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_label.add_theme_font_size_override("font_size", 20)
+	_name_label.add_theme_font_size_override("font_size", 26)
 	_name_label.add_theme_color_override("font_color", BossDialogue.boss_tint(biome).lightened(0.4))
 	_name_label.add_theme_color_override("font_outline_color", Color(0.04, 0.02, 0.06))
 	_name_label.add_theme_constant_override("outline_size", 8)
@@ -129,7 +129,12 @@ func _build() -> void:
 
 	_bubble = PanelContainer.new()
 	_bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_bubble.add_theme_stylebox_override("panel", PixelUI.make_dialogue_panel(BossDialogue.boss_tint(biome), 14, 4))
+	# Mesmo painel em pixel art do resto do jogo, tingido com a cor do chefe
+	# (verde de Musgo, dourado do Faraó).
+	var bst: StyleBox = PixelUI.make_pixel_panel(PixelUI.FUNDO_QUADRO, Color.WHITE, 10)
+	if bst is StyleBoxTexture:
+		(bst as StyleBoxTexture).modulate_color = Color.WHITE.lerp(BossDialogue.boss_tint(biome), 0.85)
+	_bubble.add_theme_stylebox_override("panel", bst)
 	_bubble.custom_minimum_size = Vector2(BUBBLE_W, 0)
 	_bubble.visible = false
 	_root.add_child(_bubble)

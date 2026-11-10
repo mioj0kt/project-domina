@@ -44,6 +44,7 @@ var _card_tip: ActionCardTooltip
 var _msg_label: Label
 
 func _ready() -> void:
+	Music.play("menu")
 	add_child(SpaceBackground.new())
 	var canvas := CanvasLayer.new()
 	_canvas = canvas
@@ -197,6 +198,7 @@ func _refresh() -> void:
 		Tab.MAQUINA: _build_machine()
 		Tab.LEIS: _build_rules()
 		Tab.CARTAS: _build_cards()
+	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if _tab == Tab.MAQUINA else ScrollContainer.SCROLL_MODE_AUTO
 	_side_panel.visible = _tab != Tab.MAQUINA   # a mochila só aparece em Leis/Cartas
 	# No Oráculo o quadro de fundo também some: só o painel da máquina.
 	_window_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new() if _tab == Tab.MAQUINA else _window_style)
@@ -322,6 +324,7 @@ func _build_machine() -> void:
 	var m := OrbitalMachine.new()
 	m.cards_left = cards_left
 	m.rules_left = rules_left
+	m.total_items = MetaProgress.lockable_total()
 	m.items = MetaProgress.machine_all_items()
 	m.enabled = remaining > 0 and MetaProgress.coroas >= price
 	if remaining <= 0:
@@ -340,7 +343,7 @@ func _build_machine() -> void:
 	h.add_child(m)
 
 	var info := VBoxContainer.new()
-	info.add_theme_constant_override("separation", 12)
+	info.add_theme_constant_override("separation", 8)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.custom_minimum_size = Vector2(0, 0)
 	info.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -390,12 +393,13 @@ func _build_machine() -> void:
 		l2.add_theme_font_size_override("font_size", 22)
 		l2.add_theme_color_override("font_color", C_CREAM if left > 0 else C_DIM)
 		cv.add_child(l2)
-	var cnt := Label.new()
-	cnt.text = ("Faltam %d Cartas e %d Leis" % [cards_left, rules_left]) if remaining > 0 else "TUDO DESBLOQUEADO!"
-	cnt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	cnt.add_theme_font_size_override("font_size", 18)
-	cnt.add_theme_color_override("font_color", C_DIM if remaining > 0 else C_GREEN)
-	info.add_child(cnt)
+	if remaining <= 0:
+		var cnt := Label.new()
+		cnt.text = "TUDO DESBLOQUEADO!"
+		cnt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cnt.add_theme_font_size_override("font_size", 18)
+		cnt.add_theme_color_override("font_color", C_GREEN)
+		info.add_child(cnt)
 	if remaining > 0:
 		# Preço (sem botão: o sorteio é segurando o clique no próprio Oráculo).
 		var prow := HBoxContainer.new()
@@ -422,11 +426,23 @@ func _build_machine() -> void:
 		pv.add_theme_color_override("font_color", C_GOLD if MetaProgress.coroas >= price else C_RED)
 		prow.add_child(pv)
 	_machine_ref = panel
+	_fit_machine.call_deferred(panel, m, info)
 	var cc := CenterContainer.new()
 	cc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	cc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cc.add_child(panel)
 	_grid_holder.add_child(cc)
+
+# O Oráculo nunca deve gerar barra de rolagem: depois do layout assentar, ajusta
+# a altura da máquina ao espaço que sobra (entre 480 e 560 px).
+func _fit_machine(panel: Control, m: OrbitalMachine, info: Control) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not is_instance_valid(panel) or not is_instance_valid(m) or _scroll == null or _tab != Tab.MAQUINA:
+		return
+	var avail: float = _scroll.size.y
+	var others: float = panel.get_combined_minimum_size().y - m.custom_minimum_size.y
+	m.custom_minimum_size.y = clampf(avail - others - 12.0, 480.0, 560.0)
 
 func _on_machine_charged() -> void:
 	_machine_busy = true
@@ -517,7 +533,13 @@ func _on_machine_burst() -> void:
 	_stage_flash.color = Color(fx.lerp(Color.WHITE, 0.7), 0.9)
 	create_tween().tween_property(_stage_flash, "color:a", 0.0, 0.7)
 	var spd: float = _machine.speed() if (_machine != null and is_instance_valid(_machine)) else 1.0
-	await get_tree().create_timer(1.1 / spd).timeout   # deixa a explosão aparecer antes do prêmio
+	# deixa a explosão aparecer antes do prêmio (clique/espaço pula a espera)
+	var wait_ms: int = 150 if (_machine != null and is_instance_valid(_machine) and _machine.is_skipping()) else int(1100.0 / spd)
+	var t0: int = Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < wait_ms:
+		if _machine == null or not is_instance_valid(_machine) or _machine.is_skipping():
+			break
+		await get_tree().process_frame
 	if _stage == null:
 		return
 	var layer := Control.new()
