@@ -6,7 +6,7 @@
 
 Roguelite de damas. Você atravessa um mapa de ilhas flutuantes, duela em tabuleiros que mudam de regra a cada partida e monta o seu jogo com **Leis** (que alteram as regras) e **Cartas de Ação** (que quebram as regras na hora certa).
 
-> **Status:** alpha `0.3.5`. Feito com Godot e GDScript, em desenvolvimento ativo. Muita coisa ainda vai mudar.
+> **Status:** alpha `0.4.6`. Feito com Godot e GDScript, em desenvolvimento ativo. Muita coisa ainda vai mudar.
 
 <p align="center">
   <img src="docs/domina_jogando.gif" alt="Duelo em tabuleiro 6x6 com as Leis Escudo e Movimento Reverso, sem cartas" width="640">
