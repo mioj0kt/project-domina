@@ -618,9 +618,12 @@ func _maybe_play_ai_card() -> void:
 	var host = _host
 	if ai_deck_mgr == null or ai_deck_mgr.hand.is_empty():
 		return
+	if host.board.silenced_turns.get(host.ai_team, 0) > 0:
+		return   # Silêncio do jogador: a IA não usa cartas neste turno
 
 	var board = host.board
-	var context = {"main": host, "deck_mgr": ai_deck_mgr}
+	var context = {"main": host, "deck_mgr": ai_deck_mgr, "opp_deck_mgr": host.action_cards.card_deck_mgr if host.action_cards != null else null,
+		"steal_filter": LootTables.AI_ELIGIBLE_CARD_IDS}
 
 	for i in range(ai_deck_mgr.hand.size()):
 		var card: ActionCard = ai_deck_mgr.hand[i]
@@ -630,6 +633,12 @@ func _maybe_play_ai_card() -> void:
 		var target = _find_ai_card_target(card, board, host)
 		if target == null:
 			continue
+		# Cartas de dois alvos: a IA escolhe o segundo com a regra de bolso da carta.
+		var second := Vector2i(-1, -1)
+		var opts: Array = card.get_second_targets(board, target, host.ai_team, context)
+		if not opts.is_empty():
+			second = _ai_pick_second(card, board, target, opts, host)
+		context["second"] = second
 
 		# Primeiro a carta aparece/é lançada, SÓ DEPOIS o efeito resolve (assim
 		# cara ou coroa, animações etc. acontecem depois de mostrar a carta).
@@ -681,6 +690,32 @@ func _find_ai_card_target(card: ActionCard, board: Board, host: Node2D) -> Varia
 			return _ai_find_enemy_king_target(card, board, host)
 		"heir":
 			return _ai_find_any_own_common_piece(board, host.ai_team)
+		"collapse":
+			return _ai_find_advanced_enemy(card, board, host)
+		"mirror_crystal", "swap", "push":
+			return _ai_find_by_simulation(card, board, host)
+		"forced_march":
+			return _ai_find_forced_march_target(card, board, host)
+		"counterstrike":
+			# Arma os espinhos quando o jogador já tem uma captura na mão.
+			for m in board.get_all_valid_moves(host.human_team):
+				if m.get("is_capture", false) and not m.get("optional", false):
+					return Vector2i.ZERO
+			return null
+		"all_or_nothing":
+			return _ai_find_all_or_nothing_target(board, host)
+		"steal":
+			# Só rouba se a mão do jogador tem uma carta que a IA sabe usar e sobra espaço.
+			if ai_deck_mgr.hand.size() >= CardDeckManager.MAX_HAND_SIZE or host.action_cards == null:
+				return null
+			for c in host.action_cards.card_deck_mgr.hand:
+				if LootTables.AI_ELIGIBLE_CARD_IDS.has(c.id):
+					return Vector2i.ZERO
+			return null
+		"silence":
+			var opp_hand: int = host.action_cards.card_deck_mgr.hand.size() if host.action_cards != null else 0
+			@warning_ignore("incompatible_ternary")
+			return Vector2i.ZERO if opp_hand >= 2 or (opp_hand >= 1 and _ai_material(board, host.ai_team) <= _ai_material(board, host.human_team)) else null
 		"ambush":
 			return _ai_find_ambush_target(card, board, host)
 		"coronation":
@@ -721,12 +756,18 @@ func _find_ai_card_target(card: ActionCard, board: Board, host: Node2D) -> Varia
 			@warning_ignore("incompatible_ternary")
 			return Vector2i.ZERO if _ai_material(board, host.ai_team) >= _ai_material(board, host.human_team) + 2 else null
 		"recycle":
-			# Só recicla uma carta de verdade (não outra Reciclar) e com espaço na mão.
-			if ai_deck_mgr == null or ai_deck_mgr.discard_pile.is_empty() or ai_deck_mgr.hand.size() > 4:
+			# Só recicla uma carta de verdade (não outra Reciclar), com espaço na mão,
+			# e só se a carta que voltaria tiver uso AGORA — senão ela volta, fica
+			# parada na mão e a Reciclar foi gasta à toa.
+			if ai_deck_mgr == null or ai_deck_mgr.hand.size() > 4:
 				return null
-			var last_card: ActionCard = ai_deck_mgr.discard_pile.back()
+			var back_card: ActionCard = CardRecycle.pick_target(ai_deck_mgr)
+			if back_card == null:
+				return null
+			if not back_card.can_play(board, host.ai_team, {"main": host, "deck_mgr": ai_deck_mgr}):
+				return null
 			@warning_ignore("incompatible_ternary")
-			return Vector2i.ZERO if last_card.id != "recycle" else null
+			return Vector2i.ZERO if _find_ai_card_target(back_card, board, host) != null else null
 	return null
 
 # Cinzas: casa em chamas colada (na diagonal) a uma peça da IA, que a impede de andar.
@@ -809,6 +850,132 @@ func _ai_material(board: Board, team: int) -> int:
 			if p != Board.EMPTY and p.owner_team == team and not p.is_tree:
 				total += 5 if p.is_king else 1
 	return total
+
+# Desmoronar: a peça comum do jogador mais avançada (a mais perto de virar Dama).
+func _ai_find_advanced_enemy(card: ActionCard, board: Board, host: Node2D) -> Variant:
+	var best = null
+	var best_row: int = 999
+	for r in range(board.rows):
+		for c in range(board.cols):
+			var pos := Vector2i(c, r)
+			if not card.is_valid_target(board, pos, host.ai_team, {}):
+				continue
+			# o jogador avança para a fileira 0 quando é o human_team_color
+			var dist: int = r if board.grid[r][c].owner_team == board.human_team_color else board.rows - 1 - r
+			if dist < best_row:
+				best_row = dist
+				best = pos
+	# só vale a carta quando a peça já passou da metade
+	if best != null and best_row <= board.rows / 2:
+		return best
+	return null
+
+# Marcha Forçada: puxa uma peça do jogador para uma casa onde a IA a captura.
+func _ai_find_forced_march_target(card: ActionCard, board: Board, host: Node2D) -> Variant:
+	for r in range(board.rows):
+		for c in range(board.cols):
+			var pos := Vector2i(c, r)
+			if not card.is_valid_target(board, pos, host.ai_team, {}):
+				continue
+			for to in CardForcedMarch.landings(board, pos):
+				if _ai_captures_at(board, pos, to, host.ai_team):
+					return pos
+	return null
+
+# Depois de mover a peça em `from` para `to` (sem regras), a IA consegue capturá-la?
+func _ai_captures_at(board: Board, from: Vector2i, to: Vector2i, ai_team: int) -> bool:
+	var sim: Board = board.clone()
+	sim.grid[to.y][to.x] = sim.grid[from.y][from.x]
+	sim.grid[from.y][from.x] = Board.EMPTY
+	for m in sim.get_all_valid_moves(ai_team):
+		if m.get("is_capture", false) and m["captured"] == to:
+			return true
+	return false
+
+# Tudo ou Nada: quando a IA está atrás (ou empatada), a peça dela com mais peças do
+# jogador coladas (pelo menos 2, ou 1 se for uma Dama do jogador).
+func _ai_find_all_or_nothing_target(board: Board, host: Node2D) -> Variant:
+	if _ai_material(board, host.ai_team) > _ai_material(board, host.human_team):
+		return null
+	var best = null
+	var best_score: int = 1
+	for r in range(board.rows):
+		for c in range(board.cols):
+			var p: BoardPiece = board.grid[r][c]
+			if p == Board.EMPTY or p.is_tree or p.owner_team != host.ai_team:
+				continue
+			var score: int = 0
+			for n in CardAllOrNothing.adjacent_enemies(board, Vector2i(c, r), host.ai_team):
+				score += 3 if board.grid[n.y][n.x].is_king else 1
+			if score > best_score:
+				best_score = score
+				best = Vector2i(c, r)
+	return best
+
+# Placar rápido de uma posição para a IA: capturas que ela tem agora menos as que
+# o jogador teria (peso maior para ameaças contra Damas).
+func _ai_tactical_score(b: Board, host: Node2D) -> int:
+	var score: int = 0
+	for m in b.get_all_valid_moves(host.ai_team):
+		if m.get("is_capture", false) and not m.get("optional", false):
+			var v: BoardPiece = b.grid[m["captured"].y][m["captured"].x]
+			score += 3 if (v != Board.EMPTY and v.is_king) else 2
+	for m in b.get_all_valid_moves(host.human_team):
+		if m.get("is_capture", false) and not m.get("optional", false):
+			var v2: BoardPiece = b.grid[m["captured"].y][m["captured"].x]
+			score -= 3 if (v2 != Board.EMPTY and v2.is_king) else 2
+	return score
+
+# Cristal Espelho / Troca de Lugar / Empurrão: testa cada jogada possível da carta
+# num tabuleiro de mentira e fica com a que mais melhora o placar tático (ganhar
+# uma captura, tirar uma peça da mira). Só joga se melhorar de verdade.
+var _ai_second_hint: Dictionary = {}
+
+func _ai_find_by_simulation(card: ActionCard, board: Board, host: Node2D) -> Variant:
+	var base: int = _ai_tactical_score(board, host)
+	var best = null
+	var best_second := Vector2i(-1, -1)
+	var best_gain: int = 0   # precisa ganhar pelo menos uma captura (ou tirar uma do jogador)
+	for r in range(board.rows):
+		for c in range(board.cols):
+			var pos := Vector2i(c, r)
+			if not card.is_valid_target(board, pos, host.ai_team, {}):
+				continue
+			var seconds: Array = card.get_second_targets(board, pos, host.ai_team, {})
+			if seconds.is_empty():
+				seconds = [Vector2i(-1, -1)]
+			for sec in seconds:
+				var sim: Board = board.clone()
+				match card.id:
+					"mirror_crystal":
+						sim.scorched_tiles[pos] = 6
+						sim.crystal_tiles[pos] = true
+					"swap":
+						var a: BoardPiece = sim.grid[pos.y][pos.x]
+						sim.grid[pos.y][pos.x] = sim.grid[sec.y][sec.x]
+						sim.grid[sec.y][sec.x] = a
+					"push":
+						sim.grid[sec.y][sec.x] = sim.grid[pos.y][pos.x]
+						sim.grid[pos.y][pos.x] = Board.EMPTY
+				var gain: int = _ai_tactical_score(sim, host) - base
+				if gain > best_gain or (gain == best_gain and best != null and randf() < 0.3):
+					best_gain = gain
+					best = pos
+					best_second = sec
+	if best != null:
+		_ai_second_hint[card.id] = best_second
+	return best
+
+# Segundo alvo das cartas de dois cliques, para a IA.
+func _ai_pick_second(card: ActionCard, board: Board, first: Vector2i, opts: Array, host: Node2D) -> Vector2i:
+	var hint: Vector2i = _ai_second_hint.get(card.id, Vector2i(-1, -1))
+	if opts.has(hint):
+		return hint
+	if card.id == "forced_march":
+		for to in opts:
+			if _ai_captures_at(board, first, to, host.ai_team):
+				return to
+	return opts[0]
 
 # Plantar Árvore: casa escura vazia onde o jogador iria andar (bloqueia avanço).
 func _ai_find_tree_target(card: ActionCard, board: Board, host: Node2D) -> Variant:
@@ -1054,11 +1221,19 @@ func _process_sandstorm_events(st: SandstormMod) -> void:
 		if moves.is_empty():
 			await get_tree().create_timer(0.5).timeout
 			continue
+		# As peças DESLIZAM da casa de origem até a de destino (o renderer desenha o
+		# deslize com rastro de areia); a peça "de verdade" no destino fica escondida.
+		for mv in moves:
+			host.piece_spawn_scales[mv[1]] = 0.0
+		host.gust_anim = {"moves": moves, "k": 0.0, "dir": int(ev.get("dir", st.dir)), "sand": true}
+		var slide = create_tween()
+		slide.tween_method(func(v): host.gust_anim["k"] = v, 0.0, 1.0, 0.6)
+		await slide.finished
+		host.gust_anim = {}
 		var tw = create_tween().set_parallel(true)
 		for mv in moves:
 			var to: Vector2i = mv[1]
-			host.piece_spawn_scales[to] = 0.0
-			tw.tween_method(func(v): host.piece_spawn_scales[to] = v, 0.0, 1.0, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tw.tween_method(func(v): host.piece_spawn_scales[to] = v, 1.18, 1.0, 0.18)
 		await tw.finished
 		for mv2 in moves:
 			host.piece_spawn_scales.erase(mv2[1])
@@ -1222,6 +1397,16 @@ func _conclude_turn(team_that_moved: int) -> void:
 	var host = _host
 	host.board.extra_move_piece = null
 	host.extra_skip_kind = ""
+
+	# Silêncio / Contragolpe (cartas com efeito por time).
+	for tev in host.board.tick_team_card_effects(team_that_moved):
+		if host.rule_banner_view == null:
+			continue
+		var mid: Vector2 = host.board_offset + Vector2(host.board.cols * host.cell_size / 2.0, host.board.rows * host.cell_size / 2.0)
+		if tev["type"] == "silence_end":
+			host.rule_banner_view.pop_rule_trigger(mid, "CARTAS LIBERADAS", Color(0.7, 0.8, 1.0))
+		elif tev["type"] == "counterstrike_end":
+			host.rule_banner_view.pop_rule_trigger(mid, "CONTRAGOLPE ACABOU", Color(0.8, 0.65, 0.9))
 
 	# Efeitos temporários das peças de quem acabou de jogar (Emboscada, Herdeiro).
 	for ev in host.board.tick_piece_effects(team_that_moved):

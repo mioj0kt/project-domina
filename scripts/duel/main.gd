@@ -79,7 +79,10 @@ var _debug_console: DebugRuleConsole
 
 # ---------- Views de animação ----------
 var turn_indicator_view: TurnIndicatorView  # peça que vai para o lado de quem joga
-var mine_overlay: MineBossOverlay = null     # chefe da Mina: pepitas, vagoneta, desabamento
+var mine_overlay: MineBossOverlay = null
+# Rajada de areia passando: {"moves": [[de, para]...], "k": 0..1}. O
+# BoardRenderer desliza as peças de "de" até "para" enquanto isso está preenchido.
+var gust_anim: Dictionary = {}     # chefe da Mina: pepitas, vagoneta, desabamento
 var coin_flip_view: CoinFlipView            # sorteio de início de partida
 var card_coin_flip_view: CoinFlipView       # efeitos de carta/lei (separada de propósito)
 var multi_coin_flip_view: MultiCoinFlipView # Empate Impossível (3 moedas)
@@ -235,6 +238,7 @@ func _setup_board(size: Vector2i, node_type: int) -> void:
 	board.set_theme_for_duel(node_type == MapNode.NodeType.DueloForte or node_type == MapNode.NodeType.Chefe)
 	board.piece_destroyed.connect(_on_board_piece_destroyed)
 	board.capture_prevented.connect(_on_board_capture_prevented)
+	board.counterstrike_hit.connect(_on_counterstrike_hit)
 	board.rule_fired.connect(_on_rule_fired)
 	board.trap_sprung.connect(_on_trap_sprung)
 
@@ -727,6 +731,15 @@ func _on_board_capture_prevented(grid_pos: Vector2i, _piece: BoardPiece) -> void
 	var tile_center = board_offset + Vector2(grid_pos.x * cell_size + cell_size / 2.0, grid_pos.y * cell_size + cell_size / 2.0)
 	var preventer_id: String = board.rule_pipeline.last_preventer_id if board.rule_pipeline != null else ""
 	rule_banner_view.pop_rule_trigger(tile_center, "CAPTURA BLOQUEADA!", Color(0.45, 0.75, 1.0), preventer_id)
+
+# Contragolpe: quem capturou uma peça protegida é destruído no pouso.
+func _on_counterstrike_hit(grid_pos: Vector2i, _attacker: BoardPiece) -> void:
+	Sfx.play("bloqueio")
+	var c = board_offset + Vector2(grid_pos.x * cell_size + cell_size / 2.0, grid_pos.y * cell_size + cell_size / 2.0)
+	Juice.ring(self, to_global(c), cell_size * 0.9, Color(1.0, 0.35, 0.4), 6.0, 0.35)
+	Juice.burst(self, to_global(c), Color(0.72, 0.55, 0.95), 16, 300.0, 0.5, 4.0, 300.0)
+	Juice.shake(self, 5.0, 0.2)
+	rule_banner_view.pop_rule_trigger(c, "CONTRAGOLPE!", Color(1.0, 0.45, 0.45))
 
 func _on_trap_sprung(grid_pos: Vector2i) -> void:
 	Sfx.play("bloqueio")

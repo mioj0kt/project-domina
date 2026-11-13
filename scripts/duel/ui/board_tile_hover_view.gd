@@ -52,7 +52,15 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 	var pos = Vector2i(col, row)
 	var effects: Array = []
 
-	if board.scorched_tiles.has(pos) and board.sand_tiles.has(pos):
+	if board.crystal_tiles.has(pos) and board.scorched_tiles.has(pos):
+		var cturns: int = board.scorched_tiles[pos]
+		effects.append({
+			"title": "CRISTAL ESPELHO",
+			"desc": "Ninguém para nesta casa%s. Uma captura que pousaria aqui ricocheteia para a diagonal espelhada." % ("" if cturns > 500 else " por %d turno(s)" % cturns),
+			"affects": "both",
+			"title_color": Color(0.75, 0.65, 1.0)
+		})
+	elif board.scorched_tiles.has(pos) and board.sand_tiles.has(pos):
 		var sturns: int = board.scorched_tiles[pos]
 		effects.append({
 			"title": "AREIA SOTERRADA",

@@ -70,6 +70,8 @@ static func try_save(host, pos: Vector2i, piece: BoardPiece, keep_king: bool = f
 	var end_row: int = 0 if piece.owner_team == board.human_team_color else board.rows - 1
 	if pos.y == end_row:
 		# Na fileira de coroação: coroada de novo, continua Dama.
+		if piece.temp_king_turns > 0:
+			piece.sd_exempt = false   # Herdeiro coroado de verdade passa a contar
 		piece.temp_king_turns = 0
 		host.animating_coronation_tile = pos
 		await host.king_animation_view.play_coronation(tile_center, host.cell_size, piece)
@@ -77,4 +79,5 @@ static func try_save(host, pos: Vector2i, piece: BoardPiece, keep_king: bool = f
 	else:
 		piece.is_king = false
 		piece.temp_king_turns = 0
+		piece.sd_exempt = false
 	return true

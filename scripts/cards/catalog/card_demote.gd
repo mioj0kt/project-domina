@@ -30,7 +30,8 @@ func execute(board: Board, target_pos: Vector2i, _human_team: int, context: Dict
 		return
 	await CardFx.demote(context.get("main"), target_pos, func():
 		piece.is_king = false
-		piece.temp_king_turns = 0)
+		piece.temp_king_turns = 0
+		piece.sd_exempt = false)
 	_pop_banner(context, "REBAIXADA!", Color(0.9, 0.45, 0.4), target_pos)
 
 func _is_enemy_king(board: Board, pos: Vector2i, team: int) -> bool:

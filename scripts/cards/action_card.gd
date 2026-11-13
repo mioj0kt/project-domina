@@ -68,6 +68,21 @@ func is_valid_target(board: Board, target_pos: Vector2i, human_team: int, _conte
 func execute(_board: Board, _target_pos: Vector2i, _human_team: int, _context: Dictionary = {}) -> void:
 	pass
 
+# Segundo alvo (opcional). Cartas que precisam de duas escolhas (Troca de Lugar:
+# qual peça inimiga; Empurrão/Marcha Forçada: para qual casa) devolvem aqui as
+# opções depois do primeiro clique. Com 2+ opções o jogador escolhe uma; com 1 ela
+# vai direto. A escolhida chega em execute() como context["second"].
+func get_second_targets(_board: Board, _first: Vector2i, _team: int, _context: Dictionary = {}) -> Array:
+	return []
+
+# Ajuda para cartas com alvo: existe pelo menos uma casa válida no tabuleiro?
+func has_any_target(board: Board, team: int, context: Dictionary = {}) -> bool:
+	for r in range(board.rows):
+		for c in range(board.cols):
+			if is_valid_target(board, Vector2i(c, r), team, context):
+				return true
+	return false
+
 # Aviso flutuante sobre o tabuleiro (reusa o RuleBannerView do host). Sem host
 # (testes/simulação) simplesmente não faz nada.
 func _pop_banner(context: Dictionary, text: String, color: Color, cell: Vector2i = Vector2i(-1, -1)) -> void:

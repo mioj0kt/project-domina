@@ -100,7 +100,16 @@ static func get_all_action_cards() -> Array[ActionCard]:
 		CardFuse.new(),
 		CardAshes.new(),
 		CardShadowHand.new(),
-		CardSquire.new()
+		CardSquire.new(),
+		CardCollapse.new(),
+		CardMirrorCrystal.new(),
+		CardSwap.new(),
+		CardPush.new(),
+		CardForcedMarch.new(),
+		CardCounterstrike.new(),
+		CardAllOrNothing.new(),
+		CardSteal.new(),
+		CardSilence.new()
 	]
 	return cards
 
@@ -172,7 +181,10 @@ const AI_ELIGIBLE_CARD_IDS: Array[String] = [
 	"coronation", "plant_tree", "restock", "triple_toss",
 	"plant_cactus", "light_up", "ember", "scorched_earth", "shadow_hand", "squire", "fuse",
 	# Liberadas depois: cada uma tem alvo/condição própria na IA (duel_turn_controller).
-	"ashes", "flame_wall", "clock_cut", "extension", "pause", "sudden_start", "recycle", "place_sarcophagus"
+	"ashes", "flame_wall", "clock_cut", "extension", "pause", "sudden_start", "recycle", "place_sarcophagus",
+	# Cartas novas que a IA sabe usar (Roubo só quando sua mão tem carta que ela conhece).
+	"collapse", "forced_march", "counterstrike", "all_or_nothing", "steal", "silence",
+	"mirror_crystal", "swap", "push"
 ]
 
 # Pesos de raridade [comum, rara, épica, lendária] das cartas do inimigo por

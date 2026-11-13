@@ -9,7 +9,7 @@ func _init() -> void:
 	id = "heir"
 	icon_path = "res://assets/sprites/cards/icons/heir.png"
 	name = "Herdeiro"
-	description = "Uma peça comum sua vira Dama por 3 turnos e depois volta ao normal."
+	description = "Uma peça comum sua vira Dama por 3 turnos e depois volta ao normal. Essa Dama emprestada não ativa a Morte Súbita."
 	rarity = Rarity.EPIC
 	target_type = TargetType.ALLY_PIECE
 
@@ -31,5 +31,7 @@ func execute(board: Board, target_pos: Vector2i, _human_team: int, context: Dict
 		return
 	piece.is_king = true
 	piece.temp_king_turns = DURATION_TURNS
+	# Dama emprestada: não conta como "Dama nova" para ativar a Morte Súbita.
+	piece.sd_exempt = true
 	await CardFx.crown(context.get("main"), target_pos, piece)
 	_pop_banner(context, "HERDEIRO!", Color(0.85, 0.65, 1.0), target_pos)

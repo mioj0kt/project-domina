@@ -167,6 +167,12 @@ func _draw() -> void:
 		draw_line(line_from, line_to, prophecy_color, 3.0)
 
 	if host.action_cards != null and host.action_cards.has_selected_card():
+		# carta de dois alvos: o primeiro já escolhido fica marcado em dourado
+		var pf: Vector2i = host.action_cards.pending_first
+		if pf.x >= 0:
+			var pf_rect = Rect2(board_offset.x + pf.x * cell_size, board_offset.y + pf.y * cell_size, cell_size, cell_size)
+			draw_rect(pf_rect, Color(1.0, 0.8, 0.3, 0.22))
+			PixelRenderer.draw_pixel_corners(self, pf_rect, Color(1.0, 0.85, 0.35), 10.0, 3.0)
 		for r in range(board.rows):
 			for c in range(board.cols):
 				var pos = Vector2i(c, r)
@@ -195,6 +201,9 @@ func _draw() -> void:
 				PixelRenderer.draw_piece(self, piece_obj, center, cell_size, scale_factor)
 				_draw_piece_status(piece_obj, center, cell_size * scale_factor)
 
+	_draw_gust_preview(board_offset, cell_size)
+	_draw_gust_slide(board, board_offset, cell_size)
+	_draw_silence_badges(board, board_offset, cell_size)
 	_draw_night_and_status(board, board_offset, cell_size)
 
 # Terra Queimada: chamas animadas (spritesheet 8 frames de 64x64, loop a 8 fps)
@@ -282,7 +291,7 @@ func _draw_quicksand_tiles(board: Board, board_offset: Vector2, cell_size: float
 # Tempestade de areia: a fileira por onde a próxima rajada vai passar, com setas de
 # pixel correndo no sentido do vento. Fica mais forte quando falta 1 rodada.
 func _draw_sandstorm_telegraph(board_offset: Vector2, cell_size: float) -> void:
-	if host == null or host.current_duel == null or host.current_duel.sandstorm == null:
+	if host == null or host.current_duel == null or host.current_duel.sandstorm == null or not host.gust_anim.is_empty():
 		return
 	var st: SandstormMod = host.current_duel.sandstorm
 	if st.gust_row < 0:
@@ -306,9 +315,103 @@ func _draw_sandstorm_telegraph(board_offset: Vector2, cell_size: float) -> void:
 		var cx: float = rect.position.x + fx
 		var cy: float = rect.position.y + cell_size * 0.5
 		for j in range(4):
-			var ox: float = float(j) * u * float(st.dir)
-			draw_rect(Rect2(Vector2(cx + ox - u * 4.0 * float(st.dir), cy - u * float(j) - u * 0.5), Vector2(u, u)), col)
-			draw_rect(Rect2(Vector2(cx + ox - u * 4.0 * float(st.dir), cy + u * float(j) - u * 0.5), Vector2(u, u)), col)
+			# ponta na frente (no sentido do vento), asas para trás
+			var ox: float = -float(j) * u * float(st.dir)
+			draw_rect(Rect2(Vector2(cx + ox - u * 0.5, cy - u * float(j) - u * 0.5), Vector2(u, u)), col)
+			draw_rect(Rect2(Vector2(cx + ox - u * 0.5, cy + u * float(j) - u * 0.5), Vector2(u, u)), col)
+
+# Rajada anunciada: cada peça que vai ser empurrada ganha uma SETA grossa (com
+# contorno escuro, legível em casa clara e escura) até a casa onde vai parar, e lá
+# aparece um "fantasma" da peça piscando. Peça que não tem para onde ir não ganha
+# seta (fica parada). Some enquanto a rajada está passando.
+func _draw_gust_preview(board_offset: Vector2, cell_size: float) -> void:
+	if host == null or host.current_duel == null or host.current_duel.sandstorm == null or not host.gust_anim.is_empty():
+		return
+	var st: SandstormMod = host.current_duel.sandstorm
+	if st.gust_row < 0:
+		return
+	var t: float = Time.get_ticks_msec() / 1000.0
+	var soon: bool = st.plies_to_gust() <= 2
+	var pulse: float = 0.5 + 0.5 * sin(t * (7.0 if soon else 3.5))
+	var u: float = maxf(2.0, round(cell_size / 22.0))
+	var col := Color(1.0, 0.88, 0.5)
+	var dark := Color(0.16, 0.10, 0.06, 0.9)
+	for mv in st.preview():
+		var from: Vector2i = mv[0]
+		var to: Vector2i = mv[1]
+		var p: BoardPiece = host.board.grid[from.y][from.x]
+		if p == Board.EMPTY:
+			continue
+		if p.owner_team == host.ai_team and host.current_duel.is_fogged(from):
+			continue
+		var a: Vector2 = board_offset + (Vector2(from) + Vector2(0.5, 0.5)) * cell_size
+		var b: Vector2 = board_offset + (Vector2(to) + Vector2(0.5, 0.5)) * cell_size
+		var d: Vector2 = (b - a).normalized()
+		var side := Vector2(-d.y, d.x)
+		# casa de destino: fundo quente + cantos + fantasma da peça
+		var rect := Rect2(board_offset + Vector2(to) * cell_size, Vector2(cell_size, cell_size))
+		draw_rect(rect, Color(0.95, 0.72, 0.35, 0.10 + 0.08 * pulse))
+		PixelRenderer.draw_pixel_corners(self, rect.grow(-u), Color(col, 0.45 + 0.25 * pulse), cell_size * 0.16, maxf(2.0, u * 0.5))
+		var gtex: Texture2D = PixelRenderer.get_piece_texture(p)
+		if gtex != null:
+			var gs := Vector2(cell_size, cell_size) * 0.74
+			draw_texture_rect(gtex, Rect2((b - gs / 2.0).round(), gs), false, Color(1, 1, 1, 0.28 + 0.27 * pulse))
+		# seta: do pé da peça até a borda do fantasma, avançando um pouco no ritmo
+		var bob: float = (pulse if soon else pulse * 0.5) * u
+		var start: Vector2 = a + d * (cell_size * 0.30 + bob)
+		var tip: Vector2 = b - d * (cell_size * 0.22 - bob)
+		var head_len: float = cell_size * 0.11
+		var neck: Vector2 = tip - d * head_len
+		var w: float = 2.0
+		var acol := Color(col, 0.45 + 0.25 * pulse)
+		var shade := Color(dark, 0.25)
+		draw_line(start + Vector2(0, 1), neck + Vector2(0, 1), shade, w)
+		draw_line(start, neck + d * u * 0.5, acol, w)
+		draw_colored_polygon(PackedVector2Array([tip, neck + side * head_len * 0.6, neck - side * head_len * 0.6]), acol)
+
+# Rajada passando: as peças deslizam da origem ao destino com um rastro de areia.
+func _draw_gust_slide(board: Board, board_offset: Vector2, cell_size: float) -> void:
+	if host == null or host.gust_anim.is_empty():
+		return
+	var k: float = clampf(float(host.gust_anim.get("k", 0.0)), 0.0, 1.0)
+	var e: float = 1.0 - pow(1.0 - k, 3.0)
+	var u: float = maxf(2.0, round(cell_size / 22.0))
+	# a rajada varrendo a fileira: faixas de areia correndo no sentido do vento
+	var sandy: bool = bool(host.gust_anim.get("sand", true))
+	if sandy and not host.gust_anim["moves"].is_empty():
+		var dir: int = int(host.gust_anim.get("dir", 1))
+		var row: int = host.gust_anim["moves"][0][0].y
+		var w: float = float(board.cols) * cell_size
+		var y0: float = board_offset.y + float(row) * cell_size
+		var fade: float = sin(k * PI)
+		draw_rect(Rect2(board_offset.x, y0, w, cell_size), Color(0.95, 0.78, 0.45, 0.22 * fade))
+		for i in range(14):
+			var ly: float = y0 + cell_size * (0.1 + 0.8 * fposmod(float(i) * 0.37, 1.0))
+			var ln: float = cell_size * (0.5 + 0.4 * fposmod(float(i) * 0.61, 1.0))
+			var x: float = fposmod(float(i) * 97.0 + k * w * 1.6, w + ln) - ln
+			if dir < 0:
+				x = w - x - ln
+			var x1: float = clampf(x, 0.0, w)
+			var x2: float = clampf(x + ln, 0.0, w)
+			if x2 > x1:
+				draw_rect(Rect2(Vector2(board_offset.x + x1, ly).round(), Vector2(x2 - x1, u)), Color(1.0, 0.9, 0.65, 0.75 * fade))
+	for mv in host.gust_anim["moves"]:
+		var from: Vector2i = mv[0]
+		var to: Vector2i = mv[1]
+		var p: BoardPiece = board.grid[to.y][to.x]
+		if p == Board.EMPTY:
+			continue
+		var a: Vector2 = board_offset + (Vector2(from) + Vector2(0.5, 0.5)) * cell_size
+		var b: Vector2 = board_offset + (Vector2(to) + Vector2(0.5, 0.5)) * cell_size
+		var pos: Vector2 = a.lerp(b, e)
+		# rastro: grãos de areia ficando para trás (só na rajada)
+		for i in range(10 if sandy else 0):
+			var f: float = float(i) / 10.0
+			var q: Vector2 = a.lerp(pos, f) + Vector2(sin(float(i) * 2.3 + k * 9.0), cos(float(i) * 1.7)) * cell_size * 0.12
+			draw_rect(Rect2(q.round(), Vector2(u, u)), Color(0.95, 0.82, 0.55, 0.25 + 0.55 * f * (1.0 - k * 0.6)))
+		if p.owner_team == host.ai_team and host.current_duel != null and host.current_duel.is_fogged(to) and host.current_duel.is_fogged(from):
+			continue
+		PixelRenderer.draw_piece(self, p, pos, cell_size, 1.0)
 
 # Casas que a lei do chefe do deserto vai afetar no próximo ciclo.
 func _draw_desert_boss_telegraph(board_offset: Vector2, cell_size: float) -> void:
@@ -386,6 +489,8 @@ func _draw_fire_tiles(board: Board, board_offset: Vector2, cell_size: float) -> 
 # Marcas de status na peça: bolha azul = escudo (Lei do Luto); grade violeta = imobilizada (Emboscada);
 # selo dourado com número = Dama temporária (Herdeiro, turnos restantes).
 func _draw_piece_status(piece: BoardPiece, center: Vector2, size: float) -> void:
+	if host.board != null and not piece.is_tree and host.board.counterstrike_turns.get(piece.owner_team, 0) > 0:
+		_draw_counterstrike_spikes(center, size)
 	if piece.rooted_turns > 0 and piece.dazzled:
 		MineBossFx.draw_dazzle(self, center, size)
 	elif piece.rooted_turns > 0 and host.board != null and host.board.hungry_roots_team != 0:
@@ -428,6 +533,46 @@ func _draw_piece_status(piece: BoardPiece, center: Vector2, size: float) -> void
 		var r = size * 0.15
 		var base_y = badge.y + (font.get_ascent(fs) - font.get_descent(fs)) / 2.0
 		draw_string(font, Vector2(badge.x - r, base_y), txt, HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, fs, Color(1.0, 0.9, 0.5))
+
+# Contragolpe: coroa de espinhos roxos (pontas vermelhas) em volta da peça, pulsando.
+func _draw_counterstrike_spikes(center: Vector2, size: float) -> void:
+	var t: float = Time.get_ticks_msec() / 1000.0
+	var pulse: float = 0.5 + 0.5 * sin(t * 5.0)
+	var r0: float = size * 0.36
+	var r1: float = size * (0.50 + 0.03 * pulse)
+	for i in range(8):
+		var a: float = TAU * float(i) / 8.0 + PI / 8.0
+		var dir := Vector2(cos(a), sin(a))
+		var side := Vector2(-dir.y, dir.x) * size * 0.06
+		var base: Vector2 = center + dir * r0
+		var tip: Vector2 = center + dir * r1
+		draw_colored_polygon(PackedVector2Array([base + side, tip, base - side]), Color(0.42, 0.3, 0.58, 0.95))
+		draw_colored_polygon(PackedVector2Array([base.lerp(tip, 0.55) + side * 0.45, tip, base.lerp(tip, 0.55) - side * 0.45]), Color(1.0, 0.38, 0.42, 0.7 + 0.3 * pulse))
+
+const _BADGE_FONT := preload("res://assets/fonts/m5x7.ttf")
+
+# Silêncio: plaquinha "CARTAS SILENCIADAS (n)" na borda do tabuleiro do lado do
+# time silenciado (embaixo = jogador, em cima = inimigo).
+func _draw_silence_badges(board: Board, board_offset: Vector2, cell_size: float) -> void:
+	if board == null or board.silenced_turns.is_empty():
+		return
+	for team in board.silenced_turns.keys():
+		var n: int = int(board.silenced_turns[team])
+		if n <= 0:
+			continue
+		var mine: bool = team == host.human_team
+		var txt: String = ("SUAS CARTAS SILENCIADAS (%d)" if mine else "CARTAS DO INIMIGO SILENCIADAS (%d)") % n
+		var fs: int = 32
+		var w: float = _BADGE_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 28.0
+		var h: float = 30.0
+		# no quarto direito da borda, para não cobrir a carta da mão no meio
+		var cx: float = board_offset.x + board.cols * cell_size * 0.72
+		var y: float = (board_offset.y + board.rows * cell_size + 14.0) if mine else (board_offset.y - 14.0 - h)
+		var rect := Rect2(Vector2(cx - w / 2.0, y).round(), Vector2(w, h))
+		draw_rect(rect.grow(3), Color(0.12, 0.09, 0.15, 0.95))
+		draw_rect(rect, Color(0.22, 0.24, 0.36, 0.95))
+		PixelRenderer.draw_pixel_corners(self, rect.grow(3), Color(0.7, 0.8, 1.0), 8.0, 3.0)
+		draw_string(_BADGE_FONT, Vector2(rect.position.x, rect.position.y + h * 0.5 + 9.0), txt, HORIZONTAL_ALIGNMENT_CENTER, w, fs, Color(0.82, 0.88, 1.0))
 
 # Idade (s) das raízes desta peça: começa a contar na 1ª vez que ela é vista
 # enraizada; some do registro quando a peça é liberada.

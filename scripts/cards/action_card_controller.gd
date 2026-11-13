@@ -21,6 +21,9 @@ var card_hand_ui: CardHandUI
 
 var selected_action_card: ActionCard = null
 var selected_action_card_idx: int = -1
+# Carta de dois alvos: primeiro alvo já escolhido e as opções do segundo.
+var pending_first: Vector2i = Vector2i(-1, -1)
+var second_options: Array = []
 
 var _host: Node2D
 var _hud_bar: HUDBar
@@ -60,7 +63,10 @@ func setup(host: Node2D, hud_bar: HUDBar) -> void:
 	card_hand_ui.card_selection_cancelled.connect(cancel_selection)
 
 func _build_context() -> Dictionary:
-	return {"main": _host, "deck_mgr": card_deck_mgr}
+	var opp = null
+	if _host.turn_controller != null:
+		opp = _host.turn_controller.ai_deck_mgr
+	return {"main": _host, "deck_mgr": card_deck_mgr, "opp_deck_mgr": opp}
 
 # Lei do Eco: a primeira carta de cada duelo (qualquer raridade) volta pra mão.
 func _maybe_apply_echo(card: ActionCard) -> void:
@@ -80,12 +86,26 @@ func _maybe_apply_echo(card: ActionCard) -> void:
 			_host.board_offset + Vector2(board.cols * _host.cell_size / 2.0, board.rows * _host.cell_size / 2.0),
 			"ECO!", Color(0.6, 0.8, 1.0), "echo")
 
+# Silêncio (carta do inimigo): suas cartas ficam travadas por alguns turnos.
+func _blocked_by_silence() -> bool:
+	var board: Board = _host.board
+	if board == null or board.silenced_turns.get(_host.human_team, 0) <= 0:
+		return false
+	Sfx.play("negado")
+	if _host.rule_banner_view != null:
+		_host.rule_banner_view.pop_rule_trigger(
+			_host.board_offset + Vector2(board.cols * _host.cell_size / 2.0, board.rows * _host.cell_size - _host.cell_size * 0.5),
+			"CARTAS SILENCIADAS!", Color(0.65, 0.75, 0.95))
+	return true
+
 func has_selected_card() -> bool:
 	return selected_action_card != null
 
 func is_target_valid(pos: Vector2i) -> bool:
 	if selected_action_card == null:
 		return false
+	if pending_first.x >= 0:
+		return second_options.has(pos)
 	return selected_action_card.is_valid_target(_host.board, pos, _host.human_team, _build_context())
 
 # Chamado pelo handle_cell_click do host. Retorna true se havia uma carta
@@ -94,13 +114,37 @@ func is_target_valid(pos: Vector2i) -> bool:
 func try_play_at_target(pos: Vector2i) -> bool:
 	if selected_action_card == null:
 		return false
+	if pending_first.x >= 0:
+		if second_options.has(pos):
+			_execute_selected_card(pending_first, pos)
+		elif pos == pending_first:
+			# clicar de novo no primeiro alvo desfaz só a 1ª escolha
+			pending_first = Vector2i(-1, -1)
+			second_options = []
+		return true
 	if selected_action_card.is_valid_target(_host.board, pos, _host.human_team, _build_context()):
-		_execute_selected_card(pos)
+		_choose_first_target(pos)
 	return true
+
+# Primeiro alvo escolhido: se a carta pede um segundo e há mais de uma opção, espera
+# o próximo clique; senão executa já.
+func _choose_first_target(pos: Vector2i) -> void:
+	var opts: Array = selected_action_card.get_second_targets(_host.board, pos, _host.human_team, _build_context())
+	if opts.size() > 1:
+		pending_first = pos
+		second_options = opts
+		Sfx.play("carta_pegar")
+		_host.queue_redraw()
+	elif opts.size() == 1:
+		_execute_selected_card(pos, opts[0])
+	else:
+		_execute_selected_card(pos)
 
 func cancel_selection() -> void:
 	selected_action_card = null
 	selected_action_card_idx = -1
+	pending_first = Vector2i(-1, -1)
+	second_options = []
 	if card_hand_ui and card_hand_ui.selected_card_idx != -1:
 		card_hand_ui.cancel_selection(false)
 	_host.queue_redraw()
@@ -111,6 +155,10 @@ func on_turn_started() -> void:
 
 func _on_card_drag_started(card: ActionCard, idx: int) -> void:
 	if _host.current_turn != _host.human_team or _host.is_ai_thinking or _host.is_resolving_card_effect or _host.is_tutorial_intro_playing or (_host.tutorial_guide_view and _host.tutorial_guide_view.is_showing_sequence):
+		card_hand_ui.cancel_selection(false)
+		return
+
+	if _blocked_by_silence():
 		card_hand_ui.cancel_selection(false)
 		return
 
@@ -132,12 +180,16 @@ func _on_card_drag_released(card: ActionCard, _idx: int, screen_pos: Vector2) ->
 	var grid_pos = Vector2i((screen_pos - _host.board_offset) / _host.cell_size)
 
 	if _host.board.is_valid_pos(grid_pos.y, grid_pos.x) and card.is_valid_target(_host.board, grid_pos, _host.human_team, _build_context()):
-		_execute_selected_card(grid_pos)
+		_choose_first_target(grid_pos)
 	else:
 		cancel_selection()
 
 func _on_card_selected_from_hand(card: ActionCard, idx: int) -> void:
 	if _host.current_turn != _host.human_team or _host.is_ai_thinking or _host.is_resolving_card_effect or _host.is_tutorial_intro_playing or (_host.tutorial_guide_view and _host.tutorial_guide_view.is_showing_sequence):
+		card_hand_ui.cancel_selection(false)
+		return
+
+	if _blocked_by_silence():
 		card_hand_ui.cancel_selection(false)
 		return
 
@@ -158,9 +210,13 @@ func _on_card_selected_from_hand(card: ActionCard, idx: int) -> void:
 	if card.target_type == ActionCard.TargetType.NONE:
 		_execute_selected_card(Vector2i.ZERO)
 
-func _execute_selected_card(pos: Vector2i) -> void:
+func _execute_selected_card(pos: Vector2i, second: Vector2i = Vector2i(-1, -1)) -> void:
 	if selected_action_card == null:
 		return
+	pending_first = Vector2i(-1, -1)
+	second_options = []
+	var ctx: Dictionary = _build_context()
+	ctx["second"] = second
 
 	# Precisa ser aguardado: cartas com efeito de moeda (moeda branca x preta)
 	# só aplicam a consequência no tabuleiro DEPOIS da moeda visualmente
@@ -169,7 +225,7 @@ func _execute_selected_card(pos: Vector2i) -> void:
 	var played_card: ActionCard = selected_action_card
 	Juice.sparkle(_host, _host.get_global_mouse_position(), 18)   # juice: fagulhas ao jogar
 	@warning_ignore("redundant_await")
-	await selected_action_card.execute(_host.board, pos, _host.human_team, _build_context())
+	await selected_action_card.execute(_host.board, pos, _host.human_team, ctx)
 	_host.boss_say("card_player")
 	TutorialManager.report_event("card_used")
 

@@ -123,6 +123,13 @@ var bait_flies: Array = []
 # Ricochete: casas de cristal (também ficam em scorched_tiles, que é o bloqueio).
 # Uma captura que pousaria num cristal ricocheteia para a diagonal espelhada.
 var crystal_tiles: Dictionary = {}
+# --- Cartas com efeito por time ---
+# Silêncio: time -> turnos dele em que não pode usar cartas.
+var silenced_turns: Dictionary = {}
+# Contragolpe: time protegido -> turnos do ADVERSÁRIO que ainda faltam. Quem
+# capturar uma peça desse time é destruído no pouso.
+var counterstrike_turns: Dictionary = {}
+signal counterstrike_hit(pos: Vector2i, attacker: BoardPiece)
 # Trilhos: [{"a": Vector2i, "b": Vector2i, "cells": [Vector2i...]}]. Quem PARA numa
 # ponta (movimento simples) é levado pela vagoneta até a outra, se estiver livre.
 var rail_lines: Array = []
@@ -216,6 +223,8 @@ func clear_board() -> void:
 	bait_flies.clear()
 	_capturers.clear()
 	crystal_tiles.clear()
+	silenced_turns.clear()
+	counterstrike_turns.clear()
 	rail_lines.clear()
 	nugget_tiles.clear()
 	nugget_counts.clear()
@@ -259,6 +268,29 @@ func tick_scorched_tiles() -> void:
 func build_bridge(pos: Vector2i, team: int, vertical: bool, turns: int) -> void:
 	bridge_tiles[pos] = {"team": team, "vertical": vertical, "turns": turns}
 
+# Chamado ao fim do turno de `team`: desconta Silêncio (de quem jogou) e
+# Contragolpe (de quem estava protegido contra quem jogou). Devolve eventos
+# [{"type": "silence_end"|"counterstrike_end", "team"}].
+func tick_team_card_effects(team: int) -> Array:
+	var events: Array = []
+	if silenced_turns.get(team, 0) > 0:
+		silenced_turns[team] -= 1
+		if silenced_turns[team] <= 0:
+			silenced_turns.erase(team)
+			events.append({"type": "silence_end", "team": team})
+	for prot in counterstrike_turns.keys():
+		if prot == team:
+			continue
+		counterstrike_turns[prot] -= 1
+		if counterstrike_turns[prot] <= 0:
+			counterstrike_turns.erase(prot)
+			events.append({"type": "counterstrike_end", "team": prot})
+	# Cristais de carta (Cristal Espelho) somem junto com o bloqueio da casa.
+	for cpos in crystal_tiles.keys():
+		if not scorched_tiles.has(cpos):
+			crystal_tiles.erase(cpos)
+	return events
+
 # Chamado ao fim do turno de `team`: desconta os efeitos temporários DAS PEÇAS
 # DELE (Emboscada, Herdeiro). Devolve eventos [{"type", "pos"}] pra a UI avisar.
 func tick_piece_effects(team: int) -> Array:
@@ -276,6 +308,7 @@ func tick_piece_effects(team: int) -> Array:
 				p.temp_king_turns -= 1
 				if p.temp_king_turns == 0:
 					p.is_king = false
+					p.sd_exempt = false
 					events.append({"type": "heir_expired", "pos": Vector2i(c, r)})
 	return events
 
@@ -939,6 +972,16 @@ func make_move(move_dict: Dictionary) -> bool:
 					"piece": cap_piece,
 					"pos": cap_pos
 				}, self)
+			# Contragolpe: a vítima estava protegida -> quem capturou morre no pouso
+			# (vale também em simulação, para a IA evitar a armadilha).
+			if counterstrike_turns.get(cap_piece.owner_team, 0) > 0 and piece.owner_team != cap_piece.owner_team:
+				grid[to_pos.y][to_pos.x] = EMPTY
+				piece_destroyed.emit(to_pos, piece)
+				if not is_simulation:
+					counterstrike_hit.emit(to_pos, piece)
+				if pipeline != null:
+					pipeline.emit_event(&"piece_lost", {"piece": piece, "pos": to_pos}, self)
+				return false
 	else:
 		if pipeline != null:
 			pipeline.emit_event(&"step_moved", {
@@ -1004,6 +1047,7 @@ func make_move(move_dict: Dictionary) -> bool:
 		var end_row = 0 if piece.owner_team == human_team_color else rows - 1
 		if to_pos.y == end_row:
 			piece.temp_king_turns = 0
+			piece.sd_exempt = false   # agora é Dama de verdade: passa a contar
 
 	var promoted = false
 	if not piece.is_king:
@@ -1108,6 +1152,8 @@ func clone() -> Board:
 	new_b.quicksand_tiles = quicksand_tiles.duplicate()
 	new_b.lit_tiles = lit_tiles.duplicate(true)
 	new_b.crystal_tiles = crystal_tiles.duplicate()
+	new_b.counterstrike_turns = counterstrike_turns.duplicate()
+	new_b.silenced_turns = silenced_turns.duplicate()
 	new_b.rail_lines = rail_lines
 	new_b.nugget_tiles = nugget_tiles.duplicate()
 	new_b.nugget_counts = nugget_counts.duplicate()

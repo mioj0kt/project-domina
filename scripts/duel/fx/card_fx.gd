@@ -117,3 +117,21 @@ static func demote(main, pos: Vector2i, apply: Callable) -> void:
 	await _scale_tween(main, pos, 1.25, 0.8, 0.12, Tween.TRANS_QUAD, Tween.EASE_IN)
 	await _scale_tween(main, pos, 0.8, 1.0, 0.18, Tween.TRANS_BACK, Tween.EASE_OUT)
 	_release_scale(main, pos)
+
+# Peças que DESLIZAM de uma casa para outra (Troca de Lugar, Empurrão, Marcha
+# Forçada). O tabuleiro (board.grid) já deve estar com as peças nos destinos;
+# aqui só se anima: moves = [[de, para], ...]. Reusa o deslize da tempestade de
+# areia do BoardRenderer (main.gust_anim), sem as faixas de areia.
+static func slide(main, moves: Array, dur: float = 0.32) -> void:
+	if not _ok(main) or not ("gust_anim" in main) or moves.is_empty():
+		return
+	for mv in moves:
+		main.piece_spawn_scales[mv[1]] = 0.0
+	main.gust_anim = {"moves": moves, "k": 0.0, "sand": false}
+	var tw = main.create_tween()
+	tw.tween_method(func(v): main.gust_anim["k"] = v, 0.0, 1.0, dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	await tw.finished
+	main.gust_anim = {}
+	for mv in moves:
+		main.piece_spawn_scales.erase(mv[1])
+		Juice.dust(main, center_of(main, mv[1]), main.cell_size)
