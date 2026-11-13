@@ -28,5 +28,7 @@ func on_game_event(event_name: StringName, context: Dictionary, board: RefCounte
 			if p != null and p.owner_team == board.human_team_color and pos.x >= 0 and board.is_center_tile(pos.y, pos.x):
 				uses += 1
 
-func get_promotion_trigger_banner(_to_pos: Vector2i) -> Dictionary:
+func get_promotion_trigger_banner(to_pos: Vector2i, _piece: BoardPiece = null, board: RefCounted = null) -> Dictionary:
+	if board != null and not board.is_center_tile(to_pos.y, to_pos.x):
+		return {}
 	return {"text": "ZONA SAGRADA!", "color": Color(1.0, 0.9, 0.3)}

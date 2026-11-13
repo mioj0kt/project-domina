@@ -24,8 +24,9 @@ func set_side_textures(new_white_path: String, new_black_path: String) -> void:
 	_reload_textures()
 
 func _reload_textures() -> void:
-	white_texture = load(white_sprite_path) if ResourceLoader.exists(white_sprite_path) else null
-	black_texture = load(black_sprite_path) if ResourceLoader.exists(black_sprite_path) else null
+	# PieceSkin: os sprites padrão viram a cor do jogador / do adversário.
+	white_texture = PieceSkin.resolve(white_sprite_path)
+	black_texture = PieceSkin.resolve(black_sprite_path)
 
 var is_animating: bool = false
 var is_finished: bool = false
@@ -84,8 +85,8 @@ var auto_hide_coin_after_result: bool = true
 # Textos customizáveis — outros usos (como uma aposta) podem trocar por
 # mensagens próprias antes de chamar play_toss(). Os valores padrão mantêm
 # o comportamento original (sorteio de brancas/pretas no início do duelo).
-var win_text: String = "VOCE JOGA COM AS BRANCAS!"
-var lose_text: String = "VOCE JOGA COM AS PRETAS!"
+var win_text: String = "VOCÊ COMEÇA!"
+var lose_text: String = "O ADVERSÁRIO COMEÇA!"
 
 var white_sprite_path: String = "res://assets/sprites/pieces/white.png"
 var black_sprite_path: String = "res://assets/sprites/pieces/black.png"
@@ -117,10 +118,11 @@ func play_toss_for_team(p_center: Vector2, p_cell_size: float, team: int, win_ms
 	play_toss(p_center, p_cell_size)
 
 static func color_word(is_white: bool) -> String:
-	return "BRANCA" if is_white else "PRETA"
+	return PieceSkin.word(is_white)
 
 func play_toss(p_center: Vector2, p_cell_size: float) -> void:
 	_kill_tweens()
+	_reload_textures()   # as cores podem ter mudado nas Configurações
 	Sfx.play(sfx_spin)
 	Music.muffle(true)   # a trilha abafa enquanto a moeda gira
 

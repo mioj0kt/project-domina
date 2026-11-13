@@ -22,8 +22,6 @@ var clickable: bool = false:
 var _hover: int = -1   # 0 = branca, 1 = preta
 var pulse_pieces: bool = false
 var _t: float = 0.0
-var _white: Texture2D = load("res://assets/sprites/pieces/white.png")
-var _black: Texture2D = load("res://assets/sprites/pieces/black.png")
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -163,8 +161,8 @@ func _draw() -> void:
 		if clickable:
 			scl += (0.08 if pulse > 0.5 else 0.0) + (0.14 if _hover == i else 0.0)
 		var pos: Vector2 = _piece_pos(w) + Vector2(0, bob if w else -bob)
-		_piece(_white if w else _black, pos, PIECE_D * scl, "BRANCA" if w else "PRETA",
-			CREAM if w else PLUM_L.lightened(0.3), clickable and _hover == i)
+		_piece(PieceSkin.team_texture(Board.WHITE if w else Board.BLACK, false), pos, PIECE_D * scl, PieceSkin.word(w),
+			PieceSkin.team_color(Board.WHITE if w else Board.BLACK).lerp(CREAM, 0.35), clickable and _hover == i)
 
 func _piece(tex: Texture2D, p: Vector2, d: float, label: String, col: Color, hot: bool = false) -> void:
 	p = Vector2(_snap(p.x), _snap(p.y))

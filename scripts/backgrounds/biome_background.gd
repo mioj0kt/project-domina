@@ -45,7 +45,7 @@ const BIOMES: Dictionary = {
 		"spores": Color("7fcfc0"), "n_spores": 52,
 		# Estalactites (teto) e estalagmites (chão) no fundo: [rocha, rocha clara, ponta de cristal].
 		"cave": [Color("07131a"), Color("1a3a42"), Color("7fd1c0")],
-		"trans_a": Color("0d1c22"), "trans_b": Color("1d3a40"), "trans_boss": Color("2a1428"), "trans_edge": Color("4fb3a0"),
+		"trans_a": Color("0d1c22"), "trans_b": Color("1d3a40"), "trans_boss": Color("2a1418"), "trans_edge": Color("4fb3a0"),
 	},
 	"tutorial": {
 		"top": Color("231a2a"), "bottom": Color("1a1420"),

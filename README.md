@@ -6,7 +6,7 @@
 
 Roguelite de damas. Você atravessa um mapa de ilhas flutuantes, duela em tabuleiros que mudam de regra a cada partida e monta o seu jogo com **Leis** (que alteram as regras) e **Cartas de Ação** (que quebram as regras na hora certa).
 
-> **Status:** alpha `0.4.6`. Feito com Godot e GDScript, em desenvolvimento ativo. Muita coisa ainda vai mudar.
+> **Status:** alpha `0.7.4`. Feito com Godot e GDScript, em desenvolvimento ativo. Muita coisa ainda vai mudar.
 
 <p align="center">
   <img src="docs/domina_jogando.gif" alt="Duelo em tabuleiro 6x6 com as Leis Escudo e Movimento Reverso, sem cartas" width="640">
@@ -39,12 +39,6 @@ Uma partida de damas comum termina quando um lado fica sem peças. Em DOMINA, o 
 
 Existe um tutorial que o jogador pode acessar dentro do jogo (botão **Tutorial** no menu) que te guia pelos pontos básicos.
 
-## Capturas de tela
-
-| | |
-| --- | --- |
-| ![Duelo com as Leis Escudo e Movimento Reverso](docs/duelo.png) | ![Mapa da Floresta](docs/mapa_floresta.png)<br>Mapa gerado proceduralmente, onde o jogador navega entre os pontos de interesse até chegar na batalha contra o chefe |
-
 ## Como jogar
 
 | Ação | Controle |
@@ -59,7 +53,7 @@ O jogo roda em 1920×1080 e escala para outras resoluções no menu de configura
 
 ## Rodando o projeto
 
-Você precisa do [Godot 4.7](https://godotengine.org/download) (o projeto foi salvo nessa versão).
+Você precisa do [Godot 7.5](https://godotengine.org/download) (o projeto foi salvo nessa versão).
 
 1. Clone o repositório:
    ```bash
@@ -73,23 +67,51 @@ Para gerar um executável, use **Projeto → Exportar**. O repositório já tem 
 
 ## Estrutura do repositório
 
+## Estrutura do repositório
+
 ```
 assets/
+  audio/
+    musica/         mapa (menu e um tema por bioma) e duelo (por bioma e por chefe, em seções)
+    sfx/            efeitos por tipo: duelo, cartas, moedas, chefes, vozes, cassino, grimório, interface
   fonts/            fonte pixel (m5x7)
   theme/            tema da interface
-  sprites/          peças, cartas, leis, biomas, mapa, menu, efeitos
+  video/            vídeo de abertura
+  sprites/
+    biomas/         arte de cada bioma: floresta, deserto e mina (tabuleiro, trilhas do mapa, chefe, gruta)
+    cards/          Cartas de Ação: faces, ícones e versos
+    events/         cenas dos eventos e cenário da biblioteca
+    fx/             efeitos animados (raízes, cipós, vaga-lumes etc.)
+    hud/            painéis, botões e ícones da interface
+    mapa/           nodos, anéis e a base de pedra das ilhas (uma por bioma)
+    menu/           menu e ilhas flutuantes do fundo
+    pieces/         peças e Damas
+    retratos/       rostos falantes do Guia, do Irmão e dos chefes
+    rules/          Leis: artes e versos
+    tabuleiro/      peças do tabuleiro padrão
+    tutorial/       arte própria do tutorial
+    ui/             elementos de interface avulsos
 scenes/             todas as cenas (.tscn)
 scripts/
-  autoload/         progresso, run atual, configurações, transição de cena
-  duel/             tabuleiro, regras de movimento, IA, HUD e efeitos do duelo
-    modes/          duelo padrão, forte e de chefe (floresta e deserto)
-    boss/           falas e animações dos chefes
-  cards/            Cartas de Ação: catálogo, visuais, baralho e recompensas
-  rules/            Leis: catálogo, pipeline de eventos e leis de chefe
-  map/              geração e tela do mapa; map/nodes tem loja, evento, aposta e altar
-  backgrounds/      fundos animados (floresta, espaço, losangos)
+  autoload/         progresso, run atual, configurações, transição de cena, música e efeitos sonoros
+  duel/             tabuleiro, regras de movimento, IA, turnos e Morte Súbita
+    modes/          duelo padrão, forte e de chefe (floresta, deserto e mina)
+    boss/           falas, entradas e efeitos das leis dos chefes
+    fx/             efeitos visuais do duelo
+    ui/             HUD, indicador de vez e revelação da carta do inimigo
+  cards/            Cartas de Ação: baralho e recompensas
+    catalog/        uma carta por arquivo
+    visuals/        desenho das cartas
+    modals/         janelas de recompensa e de espiar cartas
+  rules/            Leis: pipeline de eventos
+    catalog/        uma Lei por arquivo (boss/ tem as leis de chefe)
+    modals/         janelas de recompensa e de descarte de Lei
+  map/              geração e tela do mapa, trilhas, grutas da mina, tempestade e base das ilhas
+    nodes/          loja, evento (com a cena encenada), aposta, roleta, altar e Arcano
+  backgrounds/      fundos animados (biomas, espaço, tempestade de areia)
+  ui/               desenho em pixel, cores das peças, transições e efeitos compartilhados
   data/             tabelas de sorteio (loot_tables.gd)
-  menu/             menu, Grimório, fim de run
+  menu/             menu, Grimório e Oráculo, personalização da peça, fim de run
   tutorial/         tutorial guiado
   debug/            atalhos e console de depuração
 ```

@@ -84,6 +84,13 @@ func apply_board_modifiers() -> void:
 
 # O chefe não herda a Coroa de Ferro do Duelo Forte: o slot inimigo mostra
 # o Sapo Devorador (Lei só descritiva — a mecânica vive aqui e na view do sapo).
+# Chefe: Leis aleatórias e baralho crescem a cada bioma (EnemyScaling).
+func get_enemy_random_rule_count() -> int:
+	return EnemyScaling.boss_rules()
+
+func get_enemy_card_count() -> int:
+	return EnemyScaling.boss_cards()
+
 func get_enemy_fixed_rules() -> Array[RuleCard]:
 	var rules: Array[RuleCard] = []
 	match law_id:

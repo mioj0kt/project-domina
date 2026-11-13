@@ -64,20 +64,65 @@ static func make_rect(tex: Texture2D) -> TextureRect:
 # Soquete + peão do jogador compostos NA RESOLUÇÃO NATIVA (peça de 32 px
 # centralizada no sprite do nó) e só depois ampliados por inteiro, então os dois
 # nunca se desalinham — é uma imagem só.
+# A cor da peça mudou nas Configurações: refaz as imagens compostas.
+static var _skin_version: int = -1
+static func _check_skin() -> void:
+	if _skin_version != PieceSkin.version:
+		_skin_version = PieceSkin.version
+		_pawn_socket_cache.clear()
+		_ring_socket_cache.clear()
+
+# Cola o peão no meio do soquete. O anel do soquete tem relevo: em cima/à
+# esquerda a borda de dentro é escura (sombra do buraco) e, com a peça
+# encaixada, essa faixa escura de 1 px parecia um vão entre a peça e o nodo,
+# como se a peça estivesse fora do centro. Aqui essa faixa (só onde ela é mais
+# escura que o anel logo atrás) recebe a cor clara do anel, e a peça fica
+# rente ao anel dos dois lados.
+static func _blend_pawn(img: Image, pimg: Image) -> void:
+	@warning_ignore("integer_division")
+	var off := Vector2i((img.get_width() - pimg.get_width()) / 2, (img.get_height() - pimg.get_height()) / 2)
+	img.blend_rect(pimg, Rect2i(Vector2i.ZERO, pimg.get_size()), off)
+	var pw: int = pimg.get_width()
+	var ph: int = pimg.get_height()
+	var center := Vector2(off) + Vector2(pw, ph) / 2.0
+	var in_pawn := func(x: int, y: int) -> bool:
+		var px: int = x - off.x
+		var py: int = y - off.y
+		return px >= 0 and py >= 0 and px < pw and py < ph and pimg.get_pixel(px, py).a > 0.5
+	var fixes: Array = []
+	for y in range(img.get_height()):
+		for x in range(img.get_width()):
+			if in_pawn.call(x, y) or img.get_pixel(x, y).a < 0.5:
+				continue
+			if not (in_pawn.call(x + 1, y) or in_pawn.call(x - 1, y) or in_pawn.call(x, y + 1) or in_pawn.call(x, y - 1)):
+				continue
+			# um passo para fora (afastando do centro da peça)
+			var d := Vector2(x + 0.5, y + 0.5) - center
+			var step := Vector2i(signi(roundi(d.x / maxf(absf(d.x), absf(d.y)))), signi(roundi(d.y / maxf(absf(d.x), absf(d.y)))))
+			var ox: int = x + step.x
+			var oy: int = y + step.y
+			if ox < 0 or oy < 0 or ox >= img.get_width() or oy >= img.get_height():
+				continue
+			var here: Color = img.get_pixel(x, y)
+			var out: Color = img.get_pixel(ox, oy)
+			if out.a > 0.5 and out.get_luminance() > here.get_luminance() + 0.08:
+				fixes.append([x, y, out])
+	for f in fixes:
+		img.set_pixel(f[0], f[1], f[2])
+
 static func socket_with_pawn(sprite_name: String) -> Texture2D:
+	_check_skin()
 	if _pawn_socket_cache.has(sprite_name):
 		return _pawn_socket_cache[sprite_name]
 	var base_tex: Texture2D = load(MAP_SPRITE_DIR + sprite_name + ".png")
-	var pawn_tex: Texture2D = load(BoardPiece.TEXTURE_WHITE_KING_PATH)
+	var pawn_tex: Texture2D = PieceSkin.player_texture(false)
 	if base_tex == null or pawn_tex == null:
 		return sprite(sprite_name)
 	var img: Image = base_tex.get_image()
 	img.convert(Image.FORMAT_RGBA8)
 	var pimg: Image = pawn_tex.get_image()
 	pimg.convert(Image.FORMAT_RGBA8)
-	@warning_ignore("integer_division")
-	var off = Vector2i((img.get_width() - pimg.get_width()) / 2, (img.get_height() - pimg.get_height()) / 2)
-	img.blend_rect(pimg, Rect2i(Vector2i.ZERO, pimg.get_size()), off)
+	_blend_pawn(img, pimg)
 	img.resize(img.get_width() * NODE_SPRITE_SCALE, img.get_height() * NODE_SPRITE_SCALE, Image.INTERPOLATE_NEAREST)
 	var tex = ImageTexture.create_from_image(img)
 	_pawn_socket_cache[sprite_name] = tex
@@ -103,6 +148,7 @@ static func ring_nudge(ind_file: String) -> Vector2:
 # porque o círculo dele não fica no meio do PNG.
 static func socket_with_ring(sprite_name: String, ring_name: String, with_pawn: bool) -> Texture2D:
 	var key = "%s|%s|%s" % [sprite_name, ring_name, with_pawn]
+	_check_skin()
 	if _ring_socket_cache.has(key):
 		return _ring_socket_cache[key]
 	var base_tex: Texture2D = load(MAP_SPRITE_DIR + sprite_name + ".png")
@@ -114,12 +160,11 @@ static func socket_with_ring(sprite_name: String, ring_name: String, with_pawn: 
 	var rimg: Image = ring_tex.get_image()
 	rimg.convert(Image.FORMAT_RGBA8)
 	if with_pawn:
-		var pawn_tex: Texture2D = load(BoardPiece.TEXTURE_WHITE_KING_PATH)
+		var pawn_tex: Texture2D = PieceSkin.player_texture(false)
 		if pawn_tex:
 			var pimg: Image = pawn_tex.get_image()
 			pimg.convert(Image.FORMAT_RGBA8)
-			@warning_ignore("integer_division")
-			bimg.blend_rect(pimg, Rect2i(Vector2i.ZERO, pimg.get_size()), Vector2i((bimg.get_width() - pimg.get_width()) / 2, (bimg.get_height() - pimg.get_height()) / 2))
+			_blend_pawn(bimg, pimg)
 	var canvas := Image.create(rimg.get_width(), rimg.get_height(), false, Image.FORMAT_RGBA8)
 	@warning_ignore("integer_division")
 	canvas.blend_rect(bimg, Rect2i(Vector2i.ZERO, bimg.get_size()), Vector2i((canvas.get_width() - bimg.get_width()) / 2, (canvas.get_height() - bimg.get_height()) / 2))

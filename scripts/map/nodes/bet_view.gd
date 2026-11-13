@@ -333,11 +333,11 @@ func _setup_ui() -> void:
 	canvas.add_child(casino_fx)
 
 	coin_flip_view = CoinFlipView.new()
-	coin_flip_view.win_text = "BRANCA!"
+	coin_flip_view.win_text = "%s!" % PieceSkin.word(true)
 	coin_flip_view.sfx_spin = "cassino_girar"
 	coin_flip_view.sfx_land = "cassino_pousa"
 	coin_flip_view.play_result_sound = false   # o som de acerto/erro depende da APOSTA, não da cor
-	coin_flip_view.lose_text = "PRETA!"
+	coin_flip_view.lose_text = "%s!" % PieceSkin.word(false)
 	# Um lado é a peça comum branca, o outro a peça comum preta (padrão da moeda).
 	coin_flip_view.flip_completed.connect(_on_flip_completed)
 	# Precisa estar no MESMO CanvasLayer do resto da UI — senão o fundo
@@ -580,7 +580,7 @@ func _on_call_selected(called_white: bool) -> void:
 	player_called_white = called_white
 	TutorialManager.report_event("bet_call")
 	coin_hint.clickable = false
-	call_label.text = "Voce chamou %s..." % ("BRANCA" if called_white else "PRETA")
+	call_label.text = "Voce chamou %s..." % PieceSkin.word(called_white)
 	leave_btn.disabled = true
 
 	# Posição real do centro do espaço reservado, calculada agora (depois

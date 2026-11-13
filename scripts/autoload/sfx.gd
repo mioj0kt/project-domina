@@ -7,6 +7,21 @@ extends Node
 
 const BUS := "SFX"
 const DIR := "res://assets/audio/sfx/"
+# Ganho geral somado a todos os grupos (o volume relativo entre eles continua o
+# mesmo). Antes os sons ficavam baixos mesmo no 100%; o limitador no Master
+# (ensure_buses) segura os picos quando vários tocam juntos.
+const GAIN_DB := 8.0
+# Subpasta de cada grupo dentro de DIR.
+const FOLDERS := {
+	"duelo": ["mover", "captura", "coroar", "bloqueio", "lei", "morte_subita", "vitoria", "derrota", "nascer", "vento_nascer", "brotar", "contagem", "contagem_dama", "placar"],
+	"cartas": ["carta", "carta_pegar", "carta_jogar", "carta_virar", "item"],
+	"moedas": ["moeda_girar", "moeda_girar_longa", "moeda_pousa", "acerto", "erro", "moeda", "moeda_conta", "compra"],
+	"chefes": ["boss_encolhe", "boss_intro_deserto", "boss_intro_floresta", "irmao_impacto", "irmao_pressentimento"],
+	"vozes": ["voz_guia", "voz_irmao", "voz_musgo", "voz_farao"],
+	"cassino": ["cassino_girar", "cassino_pousa", "cassino_acerto", "cassino_erro", "roleta_giro", "roleta_tick", "roleta_fim"],
+	"grimorio": ["maquina_carga", "maquina_revela", "maquina_vortex", "maquina_crack", "maquina_boom", "coroa_conta", "coroa_final"],
+	"interface": ["clique", "hover", "negado", "transicao_in", "transicao_out", "salto"],
+}
 const GROUPS := {
 	# Duelo
 	"mover": {"count": 6, "db": -17.0, "pitch": 0.06},
@@ -92,7 +107,7 @@ func _ready() -> void:
 	for g in GROUPS:
 		var list: Array[AudioStream] = []
 		for i in range(int(GROUPS[g]["count"])):
-			var path := "%s%s_%d.wav" % [DIR, g, i + 1]
+			var path := "%s%s/%s_%d.wav" % [DIR, folder_of(g), g, i + 1]
 			if ResourceLoader.exists(path):
 				list.append(load(path))
 			else:
@@ -100,6 +115,12 @@ func _ready() -> void:
 		_streams[g] = list
 
 static var _inst: Sfx = null
+
+static func folder_of(group: String) -> String:
+	for f in FOLDERS:
+		if group in FOLDERS[f]:
+			return f
+	return "outros"
 
 # Cria os canais "SFX" e "Music" (saem no Master) se ainda não existirem.
 static func ensure_buses() -> void:
@@ -109,6 +130,17 @@ static func ensure_buses() -> void:
 			var idx := AudioServer.bus_count - 1
 			AudioServer.set_bus_name(idx, bus_name)
 			AudioServer.set_bus_send(idx, "Master")
+	# Limitador no fim de tudo: com o volume mais alto, vários sons juntos não estouram.
+	var master := AudioServer.get_bus_index("Master")
+	var has_lim := false
+	for e in range(AudioServer.get_bus_effect_count(master)):
+		if AudioServer.get_bus_effect(master, e) is AudioEffectHardLimiter:
+			has_lim = true
+	if not has_lim:
+		var lim := AudioEffectHardLimiter.new()
+		lim.ceiling_db = -0.5
+		lim.release = 0.12
+		AudioServer.add_bus_effect(master, lim)
 
 # Volume linear (0..1) -> dB; 0 silencia o canal.
 static func set_bus_volume(bus_name: String, linear: float) -> void:
@@ -185,6 +217,6 @@ func _play(group: String, extra_db: float, pitch_mul: float = 1.0, forced_idx: i
 		player = _players[0]
 	player.stream = list[i]
 	_player_group[player] = group
-	player.volume_db = float(cfg["db"]) + extra_db
+	player.volume_db = float(cfg["db"]) + extra_db + GAIN_DB
 	player.pitch_scale = pitch_mul * (1.0 + randf_range(-float(cfg["pitch"]), float(cfg["pitch"])))
 	player.play()

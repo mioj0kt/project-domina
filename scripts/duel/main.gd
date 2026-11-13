@@ -78,6 +78,8 @@ var board_renderer: BoardRenderer
 var _debug_console: DebugRuleConsole
 
 # ---------- Views de animação ----------
+var turn_indicator_view: TurnIndicatorView  # peça que vai para o lado de quem joga
+var mine_overlay: MineBossOverlay = null     # chefe da Mina: pepitas, vagoneta, desabamento
 var coin_flip_view: CoinFlipView            # sorteio de início de partida
 var card_coin_flip_view: CoinFlipView       # efeitos de carta/lei (separada de propósito)
 var multi_coin_flip_view: MultiCoinFlipView # Empate Impossível (3 moedas)
@@ -111,12 +113,28 @@ var _click_busy: bool = false
 # MONTAGEM
 # ==========================================
 
+# Duelo dentro de uma tempestade de areia (nodo coberto no mapa do Deserto).
+# O EFEITO AINDA NÃO FOI DEFINIDO: é aqui que ele entra (regra, visual, o que for).
+func _apply_sandstorm() -> void:
+	# Visual: rajadas de areia no fundo do duelo. (O efeito de REGRA ainda entra aqui.)
+	add_child(DuelSandstorm.new())
+
 func _ready() -> void:
+	PieceSkin.human_team = Board.WHITE
+	# Visual do adversário deste duelo: clássico na maioria, temático do bioma às vezes.
+	if TutorialManager.is_active:
+		PieceSkin.reset_enemy()
+	else:
+		PieceSkin.roll_enemy(RunManager.map_biome)
 	var node_type: int = RunManager.current_node_type
 	# Trilha do duelo: só a floresta tem por enquanto (a do mapa some em fade nos outros).
-	if not TutorialManager.is_active and Music.DUEL_SECTIONS.has(RunManager.map_biome):
+	if not TutorialManager.is_active and node_type == MapNode.NodeType.Chefe:
+		# cada chefe tem as suas seções de jazz (6 + tensão + 2 de morte súbita), encadeadas ao acaso
+		var boss_key := "boss_" + RunManager.map_biome
+		Music.play_duel(boss_key if Music.DUEL_SECTIONS.has(boss_key) else "boss_floresta")
+		Music.set_tension(0.45)
+	elif not TutorialManager.is_active and Music.DUEL_SECTIONS.has(RunManager.map_biome):
 		Music.play_duel(RunManager.map_biome)
-		Music.set_tension(0.6 if node_type == MapNode.NodeType.Chefe else 0.0)
 	else:
 		Music.play("")
 	var active_size: Vector2i = RunManager.current_board_size
@@ -127,6 +145,8 @@ func _ready() -> void:
 		active_size = TutorialManager.get_duel_board_size(TutorialManager.current_step)
 
 	add_child(BiomeBackground.new())
+	if RunManager.current_node_storm and not TutorialManager.is_active:
+		_apply_sandstorm()
 	current_duel = _create_duel(node_type)
 	_setup_board(active_size, node_type)
 	_setup_enemy_side()
@@ -143,6 +163,8 @@ func _ready() -> void:
 	turn_controller.start_match_flow()
 
 func _exit_tree() -> void:
+	PieceSkin.human_team = Board.WHITE   # fora do duelo, a peça do jogador é a "branca" da lógica
+	PieceSkin.reset_enemy()
 	if RunManager.rules_updated.is_connected(_on_run_rules_updated):
 		RunManager.rules_updated.disconnect(_on_run_rules_updated)
 
@@ -152,6 +174,8 @@ func _create_duel(node_type: int) -> DuelBase:
 			# Cada bioma tem o seu chefe (e o seu conjunto de leis).
 			if RunManager.map_biome == "deserto":
 				return DuelBossDesert.new()
+			if RunManager.map_biome == "mina":
+				return DuelBossMine.new()
 			return DuelBoss.new()
 		MapNode.NodeType.DueloForte:
 			return DuelHard.new()
@@ -251,16 +275,16 @@ func _setup_enemy_side() -> void:
 		card_count = maxi(1, card_count - 1)
 	_ai_starting_cards = LootTables.get_ai_starting_deck(card_count, _enemy_card_depth())
 
-# Profundidade do duelo na run (camada do nó; +1 em Duelo Forte; chefe = 7).
+# Profundidade do duelo na run, para a raridade das cartas da IA (EnemyScaling).
+# (Antes lia id.y, que é a posição do nó DENTRO da camada, não a camada.)
 func _enemy_card_depth() -> int:
 	if TutorialManager.is_active or RunManager.current_node == null:
 		return 0
-	var depth: int = RunManager.current_node.id.y
 	if current_duel is DuelBoss:
-		return 7
+		return EnemyScaling.card_depth("boss")
 	if current_duel is DuelHard:
-		depth += 1
-	return clampi(depth, 1, 7)
+		return EnemyScaling.card_depth("hard")
+	return EnemyScaling.card_depth("standard")
 
 # Monta o RulePipeline "ao vivo" do duelo. A fonte da verdade das Leis do
 # jogador é o RunManager (ver comentário lá): este método é chamado de novo
@@ -298,6 +322,15 @@ func _setup_modules(max_dim: int) -> void:
 	board_renderer = BoardRenderer.new()
 	add_child(board_renderer)
 	board_renderer.setup(self)
+
+	turn_indicator_view = TurnIndicatorView.new()
+	add_child(turn_indicator_view)
+	turn_indicator_view.setup(self)
+
+	if current_duel is DuelBossMine:
+		mine_overlay = MineBossOverlay.new()
+		add_child(mine_overlay)
+		mine_overlay.setup(self)
 
 	coin_flip_view = CoinFlipView.new()
 	add_child(coin_flip_view)
@@ -383,7 +416,7 @@ func _setup_ui() -> void:
 	ui_layer.add_child(game_over_modal)
 
 	rule_reward_modal = RuleRewardModal.new()
-	rule_reward_modal.reward_completed.connect(_leave_duel)
+	rule_reward_modal.reward_completed.connect(_on_rule_reward_done)
 	ui_layer.add_child(rule_reward_modal)
 
 	action_card_reward_modal = ActionCardRewardModal.new()
@@ -751,10 +784,25 @@ func _on_game_over_action(won: bool) -> void:
 		_go_run_over()
 		return
 
+	# Tempestade de areia: duelo comum dá a escolha de LEI (como um duelo forte);
+	# duelo forte dá a Lei E depois a Carta.
+	var storm: bool = current_duel != null and current_duel.sandstorm != null
 	if RunManager.current_node_type == MapNode.NodeType.DueloForte:
+		_storm_card_after_law = storm
+		rule_reward_modal.open_reward_draft()
+	elif storm:
 		rule_reward_modal.open_reward_draft()
 	else:
 		action_card_reward_modal.prompt_reward()
+
+var _storm_card_after_law: bool = false
+
+func _on_rule_reward_done() -> void:
+	if _storm_card_after_law:
+		_storm_card_after_law = false
+		action_card_reward_modal.prompt_reward()
+		return
+	_leave_duel()
 
 func _go_run_over() -> void:
 	SceneTransition.go(RUN_OVER_SCENE_PATH)

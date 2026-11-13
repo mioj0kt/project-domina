@@ -130,6 +130,13 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 			"affects": "both",
 			"title_color": Color(0.95, 1.0, 0.5)
 		})
+	if board.hungry_roots_team == 0 and board.grid[row][col] != Board.EMPTY and board.grid[row][col].rooted_turns > 0 and not board.grid[row][col].is_tree:
+		effects.append({
+			"title": "PRESA",
+			"desc": "Não pode se mover nem capturar por mais %d turno(s) do dono." % board.grid[row][col].rooted_turns,
+			"affects": "both",
+			"title_color": Color(0.7, 0.5, 0.9)
+		})
 	if board.hungry_roots_team != 0 and board.grid[row][col] != Board.EMPTY and board.grid[row][col].rooted_turns > 0:
 		effects.append({
 			"title": "ENRAIZADA",

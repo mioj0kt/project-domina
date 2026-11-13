@@ -100,6 +100,46 @@ const DATA := {
 			"law_mummy": ["Levanta, primo! Tem gente nova aqui!", "A família cresceu. E bate."],
 		},
 	},
+	"mina": {
+		"name": "O GARIMPEIRO CEGO",
+		"tint": Color(0.68, 0.58, 1.0),
+		"events": {
+			"start": [
+				"Eu ouvi você chegando... ouvi duas vezes.",
+				"Não precisa acenar. Eu não vejo. Mas escuto tudo.",
+				"Quebrou? Quem disse que quebrou? Só passou a ter duas faces.",
+				"Pisa mais leve. A mina conta tudo pra mim.",
+			],
+			"start_lantern": ["Meu lampião não serve pra mim. Serve pra você.", "Olha pra luz. Vai, olha."],
+			"start_ricochet": ["Os cristais devolvem tudo. Até você.", "Aqui embaixo nada vai reto. Tudo volta."],
+			"start_cave_in": ["Escuta o teto. Ele tá cansado.", "Cuidado onde para. A pedra cai onde quer."],
+			"start_rails": ["Os trilhos ainda funcionam. Eu acho.", "Quem embarca na vagoneta não escolhe onde desce."],
+			"start_nuggets": ["Ouro no chão! Eu sinto o brilho daqui.", "Três pepitas valem uma coroa. Regra da casa."],
+			"win": [
+				"Hm. O eco ficou mais baixo. Passa, passa.",
+				"Ouvi você ganhar. Duas vezes. Doeu as duas.",
+				"A mina é sua por hoje. Só por hoje.",
+			],
+			"lose": [
+				"Silêncio. Era o que faltava.",
+				"Mais um pedaço pra parede da mina.",
+				"Eu nem precisei ver pra saber.",
+			],
+			"capture_boss": ["Escutei o estalo. Era seu.", "Tum! Ouviu? Nem eu.", "Essa ecoou bonito."],
+			"piece_lost": [
+				"Ei! Essa era das boas!",
+				"Ouvi rachar... foi minha?",
+				"Hmpf. Sorte de principiante, sorte de principiante.",
+			],
+			"promote_player": ["Coroa? Tô ouvindo ela tilintar.", "Coroou. O eco ficou mais pesado."],
+			"promote_boss": ["Coroa de cristal. Brilha até no escuro.", "Mais uma pra minha coleção."],
+			"card_player": ["Papel? Na mina? Vai molhar.", "Escutei a carta. Que barulhinho chato.", "Truque de gente que enxerga."],
+			"law_lantern": ["Olha a luz! Olha a luz!", "Clarão! Eu nem pisquei."],
+			"law_crystal": ["Mais um espelho pra você se perder.", "Brotou mais um. Ouvi o tilintar."],
+			"law_cave_warn": ["Escuta... o teto tá falando.", "Crec. Crec. Ouviu?"],
+			"law_cave_in": ["Desceu! Eu avisei, avisei.", "A mina tem fome de vez em quando."],
+		},
+	},
 }
 
 static func boss_name(biome: String) -> String:

@@ -15,6 +15,13 @@ const BOB_PERIOD: float = 11.0      # segundos por ciclo (lento)
 const CAP_PATH := "res://assets/sprites/mapa/ilha/base_ponta.png"
 const STRIP_PATH := "res://assets/sprites/mapa/ilha/base_faixa.png"
 const ART_HEIGHT: int = 96
+# Arte por bioma (assets/sprites/mapa/ilha/<bioma>/): pontas esquerda e direita,
+# 4 faixas que encaixam entre si em qualquer ordem e 6 pendentes soltos.
+const BIOME_DIR := "res://assets/sprites/mapa/ilha/%s/"
+const PEND_MARGIN: int = 34          # espaço abaixo da arte para os pendentes
+# deserto: areia escorrendo da rocha, feita grão a grão por código
+const SAND_GRAVITY: float = 70.0     # px de arte / s²
+const SAND_COLORS: Array[Color] = [Color("efdcaa"), Color("dcc08a"), Color("c49f66"), Color("a98250")]
 const OVERLAP_UNITS: int = 0        # quanto a base sobe por baixo da moldura
 
 const C_OUTLINE := Color("1a1220")
@@ -29,7 +36,11 @@ const C_CRYSTAL_TIP := Color("b58be0")
 
 static var _cache: Dictionary = {}
 
+## Bioma do mapa ("tutorial", "floresta", "deserto", "mina"). Defina antes de build().
+var biome: String = ""
 var _unit: int = 3
+var _sand: bool = false              # deserto: desenha a areia caindo
+var _sand_spots: Array = []          # [x, y, semente, comprimento, ritmo, intermitente]
 var _tex: ImageTexture = null
 var _camera: Camera2D = null
 var _t: float = 0.0
@@ -49,8 +60,13 @@ func build(board_rect: Rect2, unit: int, camera: Camera2D) -> void:
 	_camera = camera
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	var w: int = int(ceil(board_rect.size.x / float(unit)))
-	_tex = _make_art_texture(w) if _has_art() else _make_texture(w, _height_units(w))
-	_height_px = float(_tex.get_height() * unit)
+	if biome != "" and ResourceLoader.exists((BIOME_DIR % biome) + "base_faixa_1.png"):
+		_tex = _make_biome_texture(biome, w, _sand_spots)
+		_height_px = float(ART_HEIGHT * unit)
+		_sand = biome == "deserto" and not _sand_spots.is_empty()
+	else:
+		_tex = _make_art_texture(w) if _has_art() else _make_texture(w, _height_units(w))
+		_height_px = float(_tex.get_height() * unit)
 	position = Vector2(board_rect.position.x, board_rect.end.y - float(unit) * float(OVERLAP_UNITS))
 	queue_redraw()
 
@@ -63,11 +79,64 @@ func extra_height() -> float:
 func _draw() -> void:
 	if _tex != null:
 		draw_texture_rect(_tex, Rect2(Vector2.ZERO, _tex.get_size() * float(_unit)), false)
+	# deserto: fios de areia caindo da rocha, em loop
+	if _sand:
+		for sp in _sand_spots:
+			_draw_sand_stream(sp)
+
+# Cada fio solta grãos num ritmo fixo; o grão j nasceu em j/ritmo e cai com
+# gravidade, abrindo um pouco para os lados e sumindo no fim do percurso.
+# Tudo derivado do tempo, então não guarda estado nenhum.
+func _draw_sand_stream(sp: Array) -> void:
+	var u: float = float(_unit)
+	var x0: float = float(sp[0])
+	var y0: float = float(sp[1])
+	var sd: int = int(sp[2])
+	var length: float = float(sp[3])
+	var rate: float = float(sp[4])
+	var gaps: bool = bool(sp[5])
+	var t: float = _t + float(sd % 997) * 0.37
+	var max_age: float = sqrt(2.0 * length / SAND_GRAVITY)
+	var newest: int = int(floor(t * rate))
+	var oldest: int = int(floor((t - max_age) * rate))
+	# fio contínuo grudado na rocha (some quando o fio pausa)
+	if not gaps or _sand_on(newest, sd):
+		draw_rect(Rect2(Vector2(x0, y0) * u, Vector2(1.0, 2.0) * u), SAND_COLORS[1])
+	for j in range(oldest, newest + 1):
+		if gaps and not _sand_on(j, sd):
+			continue
+		var age: float = t - float(j) / rate
+		if age < 0.0:
+			continue
+		var h: int = absi(hash(Vector2i(j, sd)))
+		var fall: float = 0.5 * SAND_GRAVITY * age * age + 6.0 * age
+		if fall > length:
+			continue
+		var k: float = fall / length
+		# começa num fio e abre num leque estreito
+		var drift: float = (float(h % 7) - 3.0) / 3.0 * (0.4 + k * 2.2)
+		var gx: float = round(x0 + drift)
+		var gy: float = round(y0 + 1.0 + fall)
+		var c: Color = SAND_COLORS[(h >> 3) % SAND_COLORS.size()]
+		c.a = 1.0 - k * k
+		draw_rect(Rect2(Vector2(gx, gy) * u, Vector2(u, u)), c)
+		# grãos rápidos deixam um rastro de 1 px logo acima
+		if k > 0.25 and (h >> 6) % 3 == 0:
+			c.a *= 0.45
+			draw_rect(Rect2(Vector2(gx, gy - 1.0) * u, Vector2(u, u)), c)
+
+static func _sand_on(j: int, sd: int) -> bool:
+	# rajadas: blocos de 8 grãos, ~60% ligados, variando por fio
+	@warning_ignore("integer_division")
+	var block: int = (j + sd) / 8
+	return absi(hash(Vector2i(block, sd * 31))) % 5 < 3
 
 func _process(delta: float) -> void:
 	if _camera == null or not is_instance_valid(_camera):
 		return
 	_t += delta
+	if _sand:
+		queue_redraw()
 	var steps: float = round(sin(_t * TAU / BOB_PERIOD) * float(BOB_STEPS))
 	_camera.offset = Vector2(0.0, steps * float(_unit))
 
@@ -97,6 +166,122 @@ static func _make_art_texture(w: int) -> ImageTexture:
 	var tex := ImageTexture.create_from_image(img)
 	_cache[key] = tex
 	return tex
+
+static func _img(path: String) -> Image:
+	var im: Image = (load(path) as Texture2D).get_image()
+	if im.is_compressed():
+		im.decompress()
+	im.convert(Image.FORMAT_RGBA8)
+	return im
+
+# Base do bioma: ponta esquerda + faixas sorteadas (nunca a mesma duas vezes
+# seguidas) + ponta direita, e pendentes grudados no contorno de baixo. O
+# sorteio é fixo para o bioma e a largura, então a ilha não muda entre visitas.
+static func _make_biome_texture(b: String, w: int, sand_out: Array) -> ImageTexture:
+	var key := "%s_%d" % [b, w]
+	var dir: String = BIOME_DIR % b
+	var left: Image = _img(dir + "base_ponta_esq.png")
+	var right: Image = _img(dir + "base_ponta_dir.png")
+	var strips: Array = []
+	for i in range(1, 5):
+		if ResourceLoader.exists(dir + "base_faixa_%d.png" % i):
+			strips.append(_img(dir + "base_faixa_%d.png" % i))
+	var pends: Array = []
+	for i in range(1, 7):
+		if b == "deserto" and i == 1:
+			continue  # fio de areia parado: no deserto a areia cai por código
+		if ResourceLoader.exists(dir + "pendente_%d.png" % i):
+			pends.append(_img(dir + "pendente_%d.png" % i))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(key)
+	var lw: int = left.get_width()
+	var rw: int = right.get_width()
+	var total: int = maxi(w, lw + rw)
+	var h: int = ART_HEIGHT + PEND_MARGIN
+	var img := Image.create(total, h, false, Image.FORMAT_RGBA8)
+	img.blit_rect(left, Rect2i(0, 0, lw, mini(left.get_height(), ART_HEIGHT)), Vector2i(0, 0))
+	var x: int = lw
+	var last: int = -1
+	while x < total - rw and not strips.is_empty():
+		var k: int = rng.randi() % strips.size()
+		if strips.size() > 1 and k == last:
+			k = (k + 1 + rng.randi() % (strips.size() - 1)) % strips.size()
+		last = k
+		var st: Image = strips[k]
+		var take: int = mini(st.get_width(), total - rw - x)
+		img.blend_rect(st, Rect2i(0, 0, take, mini(st.get_height(), ART_HEIGHT)), Vector2i(x, 0))
+		x += take
+	img.blend_rect(right, Rect2i(0, 0, rw, mini(right.get_height(), ART_HEIGHT)), Vector2i(total - rw, 0))
+	# contorno de baixo de cada coluna (último pixel opaco)
+	var bottom: Array[int] = []
+	for cx in range(total):
+		var yb: int = -1
+		for yy in range(ART_HEIGHT - 1, -1, -1):
+			if img.get_pixel(cx, yy).a > 0.5:
+				yb = yy
+				break
+		bottom.append(yb)
+	# pendentes: espalhados, longe das pontas e uns dos outros
+	var used: Array[int] = []
+	if not pends.is_empty():
+		@warning_ignore("integer_division")
+		var n: int = clampi(total / 70, 4, 9)
+		var tries: int = 0
+		while used.size() < n and tries < 200:
+			tries += 1
+			@warning_ignore("integer_division")
+			var px: int = rng.randi_range(lw / 2, total - rw / 2)
+			var ok := true
+			for u in used:
+				if absi(u - px) < 18:
+					ok = false
+			if not ok or bottom[px] < 8:
+				continue
+			var pe: Image = pends[rng.randi() % pends.size()]
+			var pw: int = pe.get_width()
+			@warning_ignore("integer_division")
+			var x0: int = clampi(px - pw / 2, 0, total - pw)
+			# gruda pelo ponto mais alto do contorno embaixo da peça (2 px de encaixe)
+			var top: int = ART_HEIGHT
+			for cx2 in range(x0, x0 + pw):
+				if bottom[cx2] >= 0:
+					top = mini(top, bottom[cx2])
+			if top >= ART_HEIGHT:
+				continue
+			img.blend_rect(pe, Rect2i(0, 0, pw, pe.get_height()), Vector2i(x0, maxi(0, top - 2)))
+			used.append(px)
+	# deserto: onde a areia escorre (fora dos pendentes)
+	sand_out.clear()
+	if b == "deserto":
+		var tries2: int = 0
+		@warning_ignore("integer_division")
+		var want: int = clampi(total / 55, 4, 10)
+		while sand_out.size() < want and tries2 < 400:
+			tries2 += 1
+			@warning_ignore("integer_division")
+			var sx: int = rng.randi_range(lw / 2, total - rw / 2)
+			if bottom[sx] < 20:
+				continue
+			# desce até a ponta mais baixa por perto: a areia escorre das pontas
+			for _i in range(6):
+				var best: int = sx
+				for dx in [-2, -1, 1, 2]:
+					var nx: int = clampi(sx + dx, 0, total - 1)
+					if bottom[nx] > bottom[best]:
+						best = nx
+				sx = best
+			var near := false
+			for u in used:
+				if absi(u - sx) < 10:
+					near = true
+			for sp in sand_out:
+				if absi(int(sp[0]) - sx) < 16:
+					near = true
+			if not near:
+				var gaps: bool = rng.randf() < 0.55
+				sand_out.append([sx, bottom[sx], rng.randi() % 100000, rng.randf_range(26.0, 54.0),
+					rng.randf_range(12.0, 18.0) if gaps else rng.randf_range(9.0, 15.0), gaps])
+	return ImageTexture.create_from_image(img)
 
 static func _make_texture(w: int, h: int) -> ImageTexture:
 	var key := Vector2i(w, h)

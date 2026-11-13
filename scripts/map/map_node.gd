@@ -22,6 +22,17 @@ var children: Array[MapNode] = []
 # Armazena Vector2i(linhas, colunas)
 var board_size: Vector2i = Vector2i(8, 8)
 
+# Mina dos Cristais: nodo escondido por uma área coberta até a peça entrar.
+var covered: bool = false
+var revealed: bool = false
+var cave_id: int = -1          # gruta a que o nodo pertence (vários nodos podem dividir uma)
+var cave_order: int = 0        # 0 e 1 = nodos ligados pelo túnel; 2 = nodo "de carona"
+var cave_edge: bool = false    # a gruta tem túnel entre os dois primeiros
+
+# Deserto das Torres: duelo coberto por uma tempestade de areia (o duelo ganha um efeito).
+var storm: bool = false
+var storm_id: int = -1
+
 # Disposição inicial das peças (ver Board.layout_cells); só duelos comuns/fortes sorteiam.
 var board_layout: String = Board.LAYOUT_CLASSIC
 

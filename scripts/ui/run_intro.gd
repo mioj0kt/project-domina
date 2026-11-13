@@ -45,7 +45,7 @@ func run(host: Node, camera: Camera2D, world_pos: Vector2, piece_px: float) -> v
 	add_child(fxl)
 	var fx := PieceAssembleFx.new()
 	fxl.add_child(fx)
-	fx.setup(PixelRenderer.get_piece_texture(BoardPiece.new(Board.WHITE, true)), piece_px)
+	fx.setup(PixelRenderer.get_piece_texture(BoardPiece.new(Board.WHITE, false)), piece_px)
 
 	var follow := func() -> void:
 		var ct: Transform2D = host.get_viewport().get_canvas_transform()

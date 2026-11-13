@@ -77,6 +77,10 @@ func _setup_ui() -> void:
 		tw.tween_property(meta_btn, "modulate", Color(1.5, 1.3, 0.9), 0.5)
 		tw.tween_property(meta_btn, "modulate", Color.WHITE, 0.5)
 
+	var piece_btn = _make_menu_button("MINHA PEÇA", Color(0.16, 0.12, 0.2), Color(0.75, 0.55, 0.95))
+	piece_btn.pressed.connect(_on_piece_pressed)
+	center_box.add_child(piece_btn)
+
 	var tutorial_btn = _make_menu_button("TUTORIAL", Color(0.12, 0.16, 0.24), Color(0.35, 0.7, 1.0))
 	tutorial_btn.pressed.connect(_on_tutorial_pressed)
 	center_box.add_child(tutorial_btn)
@@ -224,6 +228,14 @@ func _on_meta_pressed() -> void:
 	if not MetaProgress.grimorio_unlocked:
 		return
 	SceneTransition.go(META_SCENE_PATH)
+
+# Personalização: cor das peças do jogador e da estrela da Dama.
+func _on_piece_pressed() -> void:
+	if get_node_or_null("PieceCustomize") != null:
+		return
+	var view := PieceCustomizeView.new()
+	view.name = "PieceCustomize"
+	add_child(view)
 
 func _on_tutorial_pressed() -> void:
 	if TutorialManager != null:

@@ -192,7 +192,12 @@ func _refresh() -> void:
 		return   # não reconstrói a tela no meio da animação da máquina
 	for i in range(_tab_btns.size()):
 		PixelUI.skin_button(_tab_btns[i], C_GREEN if i == _tab else Color.WHITE)
+	# Tira o conteúdo antigo da árvore NA HORA (só queue_free deixava o velho e o
+	# novo juntos por um quadro: no Oráculo, com a rolagem desligada, a altura
+	# somada esticava a tela inteira, que não encolhia mais, e o Oráculo ia parar
+	# lá embaixo — acontecia quando o guia trocava de aba na 1ª visita).
 	for c in _grid_holder.get_children():
+		_grid_holder.remove_child(c)
 		c.queue_free()
 	match _tab:
 		Tab.MAQUINA: _build_machine()

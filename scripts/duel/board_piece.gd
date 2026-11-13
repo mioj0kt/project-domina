@@ -22,6 +22,12 @@ var is_sarcophagus: bool = false
 # Cacto do Deserto (chefe): também é uma "árvore" neutra; quem o derruba pulando
 # por cima se espeta e perde a próxima jogada.
 var is_cactus: bool = false
+# Rocha do Desabamento (chefe da Mina): também é uma "árvore" neutra (bloqueia,
+# qualquer lado derruba pulando por cima, opcional); só muda o desenho.
+var is_rock: bool = false
+# Lampião (chefe da Mina): a peça presa (rooted_turns) está ofuscada pela luz,
+# não enraizada — só muda o desenho do status.
+var dazzled: bool = false
 # Múmia (Sarcófagos): peça comum do chefe com sprite próprio.
 var is_mummy: bool = false
 # Sarcófago criado por CARTA: time de quem jogou a carta — a múmia nasce para ele
@@ -49,6 +55,12 @@ static func make_sarcophagus() -> BoardPiece:
 	var t = BoardPiece.new(Board.NEUTRAL, false)
 	t.is_tree = true
 	t.is_sarcophagus = true
+	return t
+
+static func make_rock() -> BoardPiece:
+	var t = BoardPiece.new(Board.NEUTRAL, false)
+	t.is_tree = true
+	t.is_rock = true
 	return t
 
 static func make_cactus() -> BoardPiece:
@@ -79,6 +91,8 @@ func clone() -> BoardPiece:
 	copy.is_tree = is_tree
 	copy.is_sarcophagus = is_sarcophagus
 	copy.is_cactus = is_cactus
+	copy.is_rock = is_rock
+	copy.dazzled = dazzled
 	copy.is_mummy = is_mummy
 	copy.mummy_owner = mummy_owner
 	copy.rooted_turns = rooted_turns

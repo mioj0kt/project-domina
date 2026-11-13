@@ -48,7 +48,7 @@ func _defeat_intro() -> void:
 	var canvas: CanvasLayer = _fx.get_parent() as CanvasLayer
 	var vp := get_viewport_rect().size
 	_center_box.modulate.a = 0.0
-	var piece := BoardPiece.new(Board.WHITE, true)
+	var piece := BoardPiece.new(Board.WHITE, false)
 	var tex: Texture2D = PixelRenderer.get_piece_texture(piece)
 	var centre := Vector2(vp.x * 0.5, vp.y * 0.5)
 	var side := 224.0

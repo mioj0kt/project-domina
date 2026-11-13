@@ -10,18 +10,22 @@ extends Node
 # As faixas são geradas por tools/music_gen.py e tools/music_duel.py.
 
 const TRACKS := {
-	"menu": "res://assets/audio/musica/menu.ogg",
-	"floresta": "res://assets/audio/musica/floresta.ogg",
-	"deserto": "res://assets/audio/musica/deserto.ogg",
-	"mina": "res://assets/audio/musica/mina.ogg",
+	"menu": "res://assets/audio/musica/mapa/menu.ogg",
+	"floresta": "res://assets/audio/musica/mapa/floresta.ogg",
+	"deserto": "res://assets/audio/musica/mapa/deserto.ogg",
+	"mina": "res://assets/audio/musica/mapa/mina.ogg",
 }
-const TRACK_DB := {"menu": -7.0, "floresta": -8.0, "deserto": -8.0, "mina": -8.0}
+# (+6 dB em relação à versão antiga: a trilha estava baixa mesmo no 100%)
+const TRACK_DB := {"menu": -1.0, "floresta": -2.0, "deserto": -2.0, "mina": -2.0}
 const SILENT_DB := -60.0
+# Seções de duelo: musica/duelo/<bioma>/ e musica/duelo/chefe_<bioma>/ (os nomes dos
+# arquivos continuam os que tools/music_*.py geram).
+const DUEL_DIR := "res://assets/audio/musica/duelo/"
 
-const DUEL_SECTIONS := {"floresta": 6, "deserto": 6, "mina": 6}
-const DUEL_SD_SECTIONS := {"floresta": 2, "deserto": 2, "mina": 2}   # Morte Súbita: andamento maior, mais seco e urgente
-const DUEL_BASE_DB := -9.0
-const DUEL_TENSION_DB := -8.0
+const DUEL_SECTIONS := {"floresta": 6, "deserto": 6, "mina": 6, "boss_floresta": 6, "boss_deserto": 6, "boss_mina": 6}
+const DUEL_SD_SECTIONS := {"floresta": 2, "deserto": 2, "mina": 2, "boss_floresta": 2, "boss_deserto": 2, "boss_mina": 2}   # Morte Súbita: andamento maior, mais seco e urgente
+const DUEL_BASE_DB := -3.0
+const DUEL_TENSION_DB := -2.0
 const MUFFLE_HZ := 900.0
 const OPEN_HZ := 20500.0
 
@@ -44,6 +48,9 @@ var _b: AudioStreamPlayer
 var _active: AudioStreamPlayer = null
 var _current: String = ""
 var _tween: Tween = null
+
+func _duel_folder() -> String:
+	return _duel_biome.replace("boss_", "chefe_")
 
 static func play(track: String, fade: float = 1.6) -> void:
 	if _inst == null or not is_instance_valid(_inst):
@@ -195,12 +202,12 @@ func _start_section(slot_i: int, fade_in: bool) -> void:
 		if n > 1 and k == _last_sd:
 			k = k % n + 1
 		_last_sd = k
-		base_path = "res://assets/audio/musica/duel_%s_sd%d.ogg" % [_duel_biome, k]
+		base_path = DUEL_DIR + "%s/duel_%s_sd%d.ogg" % [_duel_folder(), _duel_biome, k]
 		tens_path = ""
 	else:
 		var sec := _pick_section()
-		base_path = "res://assets/audio/musica/duel_%s_s%d_base.ogg" % [_duel_biome, sec]
-		tens_path = "res://assets/audio/musica/duel_%s_s%d_tensao.ogg" % [_duel_biome, sec]
+		base_path = DUEL_DIR + "%s/duel_%s_s%d_base.ogg" % [_duel_folder(), _duel_biome, sec]
+		tens_path = DUEL_DIR + "%s/duel_%s_s%d_tensao.ogg" % [_duel_folder(), _duel_biome, sec]
 	if not ResourceLoader.exists(base_path):
 		return
 	var bs: AudioStream = load(base_path)

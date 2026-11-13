@@ -195,6 +195,7 @@ func _setup_world(entry_index: int) -> void:
 	# Base rochosa (o mapa é uma ilha no espaço); a câmera é ligada depois.
 	island_base = IslandBase.new()
 	island_base.name = "IslandBase"
+	island_base.biome = "tutorial"
 	add_child(island_base)
 	island_base.build(world_rect, MapView.MAP_SPRITE_SCALE, null)
 
@@ -287,7 +288,8 @@ func _setup_world(entry_index: int) -> void:
 	add_child(guide_map_piece)
 
 	camera = Camera2D.new()
-	camera.position = Vector2(0.0, _camera_target_y(_node_position(entry_index).y))
+	camera.position = Vector2(0.0, roundf(_camera_target_y(_node_position(entry_index).y)))
+	_cam_y = camera.position.y
 	add_child(camera)
 	camera.make_current()
 	island_base.set_camera(camera)
@@ -487,11 +489,18 @@ func _camera_target_y(target_y: float) -> float:
 		return r.get_center().y
 	return clampf(target_y, r.position.y + half_h, r.end.y - half_h)
 
+# Câmera sempre em pixel inteiro (ver MapView._set_cam_y).
+var _cam_y: float = 0.0
+func _set_cam_y(v: float) -> void:
+	_cam_y = v
+	if camera != null:
+		camera.position.y = roundf(v)
+
 func _move_camera_to(world_y: float, duration: float = 0.85) -> void:
 	if camera == null:
 		return
 	var tween = create_tween()
-	tween.tween_property(camera, "position:y", _camera_target_y(world_y), duration)\
+	tween.tween_method(_set_cam_y, _cam_y, _camera_target_y(world_y), duration)\
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 # ---------------------------------------------------------------------------
@@ -619,6 +628,12 @@ func _move_pawn_to_current_step(animate: bool) -> void:
 	_refresh_button_states()
 	_move_camera_to(target.y)
 	_guide_hops_to(_guide_grid_for(current_index))
+	# Ao tocar o nodo, já mostra a peça encaixada no soquete (sem quadro avulso).
+	player_pawn.landed.connect(func():
+		player_pawn.visible = false
+		_pawn_index = current_index
+		_pawn_resting = true
+		_refresh_button_states(), CONNECT_ONE_SHOT)
 	await player_pawn.jump_to_node(target, TILE_SIZE)
 	player_pawn.visible = false
 	_pawn_index = current_index

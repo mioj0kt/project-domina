@@ -45,6 +45,11 @@ var _cost_override: int = -1
 # na carta e destaque no tooltip.
 var boss_law: bool = false
 
+# "Para trás" no tabuleiro: o jogador avança para cima (y diminui), então o
+# recuo dele é +y; para a IA é o contrário. Lei dada à IA (AI_ONLY) inverte.
+func back_dy() -> int:
+	return -1 if scope == Scope.AI_ONLY else 1
+
 func applies_to_team(piece_team: int, human_team: int) -> bool:
 	match scope:
 		Scope.PLAYER_ONLY:
@@ -100,7 +105,7 @@ func try_consume_extra_step() -> bool:
 func get_move_trigger_banner(_piece: BoardPiece, _from_pos: Vector2i, _to_pos: Vector2i, _was_capture: bool) -> Dictionary:
 	return {}
 
-func get_promotion_trigger_banner(_to_pos: Vector2i) -> Dictionary:
+func get_promotion_trigger_banner(_to_pos: Vector2i, _piece: BoardPiece = null, _board: RefCounted = null) -> Dictionary:
 	return {}
 
 static func get_category_color(cat: int) -> Color:

@@ -2,6 +2,10 @@ class_name MapPlayerPawn
 extends Node2D
 
 signal jump_finished()
+# A peça tocou o chão no ÚLTIMO pulo (antes da pausinha de amortecimento). Quem
+# usa troca na hora para o sprite do soquete com a peça encaixada, assim não
+# sobra nenhum quadro com a peça avulsa por cima do símbolo do nodo.
+signal landed()
 
 var current_grid_pos: Vector2i = Vector2i.ZERO
 var current_world_pos: Vector2 = Vector2.ZERO
@@ -14,8 +18,8 @@ var tile_size: float = 64.0
 var piece_px: float = 64.0
 
 func _ready() -> void:
-	z_index = 30
-	dummy_piece = BoardPiece.new(Board.WHITE, true)
+	z_index = 10   # abaixo do teto da gruta (z 20): a peça entra POR BAIXO da rocha
+	dummy_piece = BoardPiece.new(Board.WHITE, false)
 
 func set_initial_position(pos: Vector2, p_tile_size: float = 64.0) -> void:
 	tile_size = p_tile_size
@@ -31,10 +35,13 @@ func jump_to_node(target_pos: Vector2, p_tile_size: float = 64.0) -> void:
 	
 	var path: Array[Vector2i] = calculate_diagonal_path(current_grid_pos, target_grid)
 
-	for next_tile in path:
+	for i in range(path.size()):
+		var next_tile: Vector2i = path[i]
 		var target_world = Vector2(next_tile.x * tile_size, next_tile.y * tile_size)
-		await _do_single_diagonal_hop(target_world)
+		await _do_single_diagonal_hop(target_world, i == path.size() - 1)
 		current_grid_pos = next_tile
+	if path.is_empty():
+		landed.emit()
 
 	current_world_pos = target_pos
 	position = target_pos
@@ -66,7 +73,7 @@ static func calculate_diagonal_path(start: Vector2i, target: Vector2i) -> Array[
 
 	return result
 
-func _do_single_diagonal_hop(to_world_pos: Vector2) -> void:
+func _do_single_diagonal_hop(to_world_pos: Vector2, last: bool = false) -> void:
 	var from_p = current_world_pos
 	var tween = create_tween().set_parallel(true)
 
@@ -94,6 +101,8 @@ func _do_single_diagonal_hop(to_world_pos: Vector2) -> void:
 	jump_offset_y = 0.0
 	jump_scale = 1.0
 	queue_redraw()
+	if last:
+		landed.emit()
 	
 	# Pausa/amortecimento ao tocar o chão antes do próximo salto
 	await get_tree().create_timer(0.08).timeout

@@ -170,7 +170,9 @@ const AI_ELIGIBLE_CARD_IDS: Array[String] = [
 	"coin_of_destiny", "lucky_duel", "second_chance",
 	"rebellion", "demote", "heir", "guillotine", "ambush",
 	"coronation", "plant_tree", "restock", "triple_toss",
-	"plant_cactus", "light_up", "ember", "scorched_earth", "shadow_hand", "squire", "fuse"
+	"plant_cactus", "light_up", "ember", "scorched_earth", "shadow_hand", "squire", "fuse",
+	# Liberadas depois: cada uma tem alvo/condição própria na IA (duel_turn_controller).
+	"ashes", "flame_wall", "clock_cut", "extension", "pause", "sudden_start", "recycle", "place_sarcophagus"
 ]
 
 # Pesos de raridade [comum, rara, épica, lendária] das cartas do inimigo por

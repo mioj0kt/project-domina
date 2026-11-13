@@ -18,6 +18,7 @@ const TEXTURES := {
 	# usa o rosto do Irmão com a cor do bioma (tint) como provisório.
 	"boss_floresta": "res://assets/sprites/retratos/boss_floresta_talk.png",
 	"boss_deserto": "res://assets/sprites/retratos/boss_deserto_talk.png",
+	"boss_mina": "res://assets/sprites/retratos/boss_mina_talk.png",
 }
 var fallback_tint: Color = Color.WHITE
 const FALLBACK_PATH := "res://assets/sprites/retratos/evil_talk.png"

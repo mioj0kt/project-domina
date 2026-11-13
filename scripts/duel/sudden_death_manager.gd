@@ -115,7 +115,7 @@ func check_conditions(board: Board, human_team: int, ai_team: int) -> void:
 		_refresh_view()
 
 # Peças "congeladas": homens (não Damas) parados na última fileira sem nenhum
-# movimento ou captura — acontece quando a Lei da Ascensão barra a promoção.
+# movimento ou captura (ex.: encurraladas na borda por peças ou casas bloqueadas).
 # Ficam na borda, ninguém consegue capturá-las e elas não jogam mais, então não
 # podem contar como "peças em jogo" no anti-impasse (senão o duelo nunca fecha).
 func _count_inert_men(board: Board) -> int:

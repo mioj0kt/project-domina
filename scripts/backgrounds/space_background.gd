@@ -21,17 +21,15 @@ const LAYERS: Array[Dictionary] = [
 	{"count": 26, "size": 4.0, "speed": 14.0, "alpha": 1.0},
 ]
 
-static var _island_texs: Array[Texture2D] = []
+static var _island_cache: Dictionary = {}   # caminho -> Texture2D
 
 # Ilhas-tabuleiro flutuantes (sprites em assets/sprites/menu/ilhas); escala de pixel
 # e brilho por profundidade (longe = menor, mais escuro e mais lento).
-const ISLAND_PATHS: Array[String] = [
-	"res://assets/sprites/menu/ilhas/ilha_1.png", "res://assets/sprites/menu/ilhas/ilha_2.png",
-	"res://assets/sprites/menu/ilhas/ilha_3.png", "res://assets/sprites/menu/ilhas/ilha_4.png",
-	"res://assets/sprites/menu/ilhas/ilha_5.png", "res://assets/sprites/menu/ilhas/ilha_6.png",
-	"res://assets/sprites/menu/ilhas/ilha_7.png", "res://assets/sprites/menu/ilhas/ilha_8.png",
-	"res://assets/sprites/menu/ilhas/ilha_9.png",
-]
+# ilha_<grupo>_1..5.png. "menu" (as do tutorial) aparecem sempre; as de cada
+# bioma só depois que o jogador visitou aquele bioma pelo menos uma vez.
+const ISLAND_PATTERN := "res://assets/sprites/menu/ilhas/ilha_%s_%d.png"
+const ISLAND_GROUPS: Array[String] = ["menu", "floresta", "deserto", "mina"]
+const ISLAND_VARIANTS: int = 5
 const ISLAND_DEPTHS: Array[Dictionary] = [
 	{"scale": 0.5, "tint": 0.55, "speed": 4.0, "bob": 4.0},
 	{"scale": 0.7, "tint": 0.75, "speed": 8.0, "bob": 6.0},
@@ -73,6 +71,17 @@ const BIOME_SKY: Dictionary = {
 	},
 }
 static var _nebula_cache: Dictionary = {}
+# Mapa da Mina: dentro de uma gruta o céu vira um brilho de cristais (0..1, suavizado).
+var cave_glow: float = 0.0
+var _cave_t: float = 0.0
+var _cave_fx: Node2D
+var _cave_sparks: Array[Dictionary] = []   # {x, y, speed, size, color, phase, rate}
+var _cave_blobs: Array[Dictionary] = []    # {x, y, r, color, phase, ax, ay}
+var _cave_shards: Array[Dictionary] = []   # {x, y, size, color, phase, spin}
+static var _blob_tex: ImageTexture = null
+const CAVE_COLORS: Array[Color] = [
+	Color(0.62, 0.45, 0.95), Color(0.66, 0.88, 1.0), Color(0.35, 0.85, 0.65), Color(0.85, 0.6, 1.0),
+]
 var _shoot_timer: float = 6.0
 var _shoot: Dictionary = {}          # {pos, dir, life}
 var _floaters: Array[Dictionary] = []   # ilhas e peças: {node, x, y, vx, vy, phase, bob, flip}
@@ -131,6 +140,10 @@ func _ready() -> void:
 	_canvas.draw.connect(_draw_stars)
 	add_child(_canvas)
 
+	# 3b. Brilho de cristais (só aparece quando cave_glow > 0, na Mina).
+	if biome == "mina":
+		_build_cave_fx(rng)
+
 	# 4. Ilhas-tabuleiro e peças voando (da mais longe para a mais perto).
 	if biome != "mina":
 		_build_floaters(rng)
@@ -152,7 +165,112 @@ func _process(delta: float) -> void:
 		if _shoot["life"] > 0.7:
 			_shoot = {}
 	_canvas.queue_redraw()
+	if _cave_fx != null:
+		_cave_t = lerpf(_cave_t, cave_glow, minf(1.0, delta * 3.0))
+		_cave_fx.visible = _cave_t > 0.01
+		# dentro da gruta o próprio céu é tingido pela cor da vez (roxo -> azul -> verde)
+		var tint: Color = Color.WHITE.lerp(_cave_cycle(0.0).lightened(0.25), 0.85 * _cave_t)
+		_canvas.modulate = Color(tint.r, tint.g, tint.b, 1.0 - 0.2 * _cave_t)
+		if _cave_fx.visible:
+			_cave_fx.queue_redraw()
 	_update_floaters(delta)
+
+func _build_cave_fx(rng: RandomNumberGenerator) -> void:
+	if _blob_tex == null:
+		var n: int = 64
+		var bi := Image.create(n, n, false, Image.FORMAT_RGBA8)
+		for y in range(n):
+			for x in range(n):
+				var d: float = Vector2(x + 0.5 - n / 2.0, y + 0.5 - n / 2.0).length() / (n / 2.0)
+				var a: float = clampf(1.0 - d, 0.0, 1.0)
+				bi.set_pixel(x, y, Color(1, 1, 1, a * a * (3.0 - 2.0 * a)))
+		_blob_tex = ImageTexture.create_from_image(bi)
+	_cave_fx = Node2D.new()
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_cave_fx.material = mat
+	_cave_fx.visible = false
+	_cave_fx.draw.connect(_draw_cave)
+	add_child(_cave_fx)
+	for i in range(8):
+		_cave_blobs.append({
+			"x": rng.randf(), "y": rng.randf(), "r": rng.randf_range(0.22, 0.45),
+			"color": CAVE_COLORS[i % CAVE_COLORS.size()], "phase": rng.randf() * TAU,
+			"ax": rng.randf_range(0.03, 0.09), "ay": rng.randf_range(0.03, 0.09),
+		})
+	for i in range(90):
+		_cave_sparks.append({
+			"x": rng.randf(), "y": rng.randf(), "speed": rng.randf_range(0.01, 0.045),
+			"size": float(rng.randi_range(1, 3)), "color": CAVE_COLORS[rng.randi() % CAVE_COLORS.size()].lerp(Color.WHITE, rng.randf_range(0.0, 0.5)),
+			"phase": rng.randf() * TAU, "rate": rng.randf_range(1.2, 3.6),
+		})
+	for i in range(14):
+		_cave_shards.append({
+			"x": rng.randf(), "y": rng.randf(), "size": rng.randf_range(0.015, 0.05),
+			"color": CAVE_COLORS[rng.randi() % CAVE_COLORS.size()], "phase": rng.randf() * TAU,
+			"spin": rng.randf_range(-0.25, 0.25),
+		})
+
+# Cores dos cristais (violeta, gelo, esmeralda) alternando devagar; `offset` (0..1) defasa o ciclo.
+const CAVE_CYCLE: Array = [Color(0.55, 0.22, 0.95), Color(0.16, 0.42, 1.0), Color(0.12, 0.80, 0.36)]   # roxo, azul, verde
+const CAVE_CYCLE_SECS: float = 6.0   # tempo em cada cor
+
+func _cave_cycle(ofs: float) -> Color:
+	var n: int = CAVE_CYCLE.size()
+	var f: float = fposmod(_t / CAVE_CYCLE_SECS + ofs * float(n), float(n))
+	var i: int = int(f)
+	var k: float = f - float(i)
+	k = k * k * (3.0 - 2.0 * k)
+	var a: Color = CAVE_CYCLE[i]
+	var b: Color = CAVE_CYCLE[(i + 1) % n]
+	return a.lerp(b, k)
+
+func _draw_cave() -> void:
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	var u: float = _unit(vp)
+	var g: float = _cave_t
+	# Banho de cor dos cristais.
+	var wash: Color = _cave_cycle(0.0)
+	wash.a = 0.5 * g
+	_cave_fx.draw_rect(Rect2(Vector2.ZERO, vp), wash)
+	# Manchas de luz macias que derivam devagar.
+	for b in _cave_blobs:
+		var bx: float = (float(b["x"]) + float(b["ax"]) * sin(_t * 0.15 + float(b["phase"]))) * vp.x
+		var by: float = (float(b["y"]) + float(b["ay"]) * cos(_t * 0.12 + float(b["phase"]))) * vp.y
+		var rr: float = float(b["r"]) * vp.x
+		var col: Color = _cave_cycle(float(b["phase"]) / TAU * 0.5).lightened(0.15)
+		col.a = (0.26 + 0.08 * sin(_t * 0.7 + float(b["phase"]))) * g
+		_cave_fx.draw_texture_rect(_blob_tex, Rect2(Vector2(bx - rr, by - rr), Vector2(rr * 2.0, rr * 2.0)), false, col)
+	# Cacos de cristal (losangos) girando devagar.
+	for sh in _cave_shards:
+		var cx: float = float(sh["x"]) * vp.x
+		var cy: float = float(sh["y"]) * vp.y + 14.0 * sin(_t * 0.5 + float(sh["phase"]))
+		var sz: float = float(sh["size"]) * vp.y
+		var wv: float = absf(cos(_t * float(sh["spin"]) + float(sh["phase"])))
+		var col2: Color = sh["color"]
+		col2.a = (0.16 + 0.12 * sin(_t * 1.3 + float(sh["phase"]))) * g
+		var pts := PackedVector2Array([
+			Vector2(cx, cy - sz), Vector2(cx + sz * 0.55 * wv, cy), Vector2(cx, cy + sz), Vector2(cx - sz * 0.55 * wv, cy),
+		])
+		_cave_fx.draw_colored_polygon(pts, col2)
+	# Faíscas em cruz que sobem e piscam.
+	for sp in _cave_sparks:
+		var sx: float = float(sp["x"]) * vp.x
+		var sy: float = fposmod(float(sp["y"]) - _t * float(sp["speed"]), 1.0) * vp.y
+		var tw: float = 0.5 + 0.5 * sin(_t * float(sp["rate"]) + float(sp["phase"]))
+		tw = floor(tw * 3.0) / 3.0
+		var col3: Color = sp["color"]
+		col3.a = (0.25 + 0.75 * tw) * g
+		var sz2: float = float(sp["size"]) * u * 0.5
+		var p := Vector2(floor(sx), floor(sy))
+		_cave_fx.draw_rect(Rect2(p, Vector2(sz2, sz2)), col3)
+		if tw > 0.6:
+			var arm: float = sz2 * 2.0
+			col3.a *= 0.6
+			_cave_fx.draw_rect(Rect2(p + Vector2(-arm, 0), Vector2(arm, sz2)), col3)
+			_cave_fx.draw_rect(Rect2(p + Vector2(sz2, 0), Vector2(arm, sz2)), col3)
+			_cave_fx.draw_rect(Rect2(p + Vector2(0, -arm), Vector2(sz2, arm)), col3)
+			_cave_fx.draw_rect(Rect2(p + Vector2(0, sz2), Vector2(sz2, arm)), col3)
 
 func _unit(vp: Vector2) -> float:
 	# Tamanho de "pixel" das estrelas: inteiro, cresce com a resolução.
@@ -245,10 +363,7 @@ func _build_floaters(_fixed_rng: RandomNumberGenerator) -> void:
 	# Ilhas e peças usam semente aleatória a cada abertura (estrelas seguem fixas).
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	if _island_texs.is_empty():
-		for path in ISLAND_PATHS:
-			if ResourceLoader.exists(path):
-				_island_texs.append(load(path))
+	var groups: Array = _available_islands()
 	var vp = get_viewport().get_visible_rect().size
 	# Ilhas: 3 longe, 3 médias, 2 perto — posições espalhadas, sem sorteio puro
 	# para não amontoar.
@@ -257,16 +372,29 @@ func _build_floaters(_fixed_rng: RandomNumberGenerator) -> void:
 		Vector3(0.22, 0.72, 1), Vector3(0.70, 0.78, 1), Vector3(0.93, 0.08, 1),
 		Vector3(0.04, 0.48, 2), Vector3(0.80, 0.55, 2),
 	]
-	var island_bag: Array = []   # sorteio sem repetir até esgotar as 6 ilhas
-	for item in plan:
-		if _island_texs.is_empty():
-			break
-		if island_bag.is_empty():
-			island_bag = range(_island_texs.size())
-			island_bag.shuffle()
+	# Garante uma ilha de cada grupo liberado; o resto sai sorteado sem repetir.
+	var picks: Array = []
+	var rest: Array = []
+	for g in groups:
+		var gl: Array = (g as Array).duplicate()
+		gl.shuffle()
+		if not gl.is_empty():
+			picks.append(gl.pop_back())
+		rest.append_array(gl)
+	rest.shuffle()
+	while picks.size() < plan.size() and not rest.is_empty():
+		picks.append(rest.pop_back())
+	if picks.is_empty():
+		plan.clear()   # sem arte de ilha: só as peças
+	while picks.size() < plan.size():   # poucas ilhas: repete
+		picks.append(picks[rng.randi() % picks.size()])
+	picks.resize(plan.size())
+	picks.shuffle()
+	for pi in range(plan.size()):
+		var item: Vector3 = plan[pi]
 		var d: Dictionary = ISLAND_DEPTHS[int(item.z)]
 		var spr = Sprite2D.new()
-		spr.texture = _island_texs[int(island_bag.pop_back())]
+		spr.texture = picks[pi]
 		# Ilhas novas são arte grande: reduzidas por profundidade, com filtro suave.
 		spr.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		spr.scale = Vector2(d["scale"], d["scale"])
@@ -284,7 +412,7 @@ func _build_floaters(_fixed_rng: RandomNumberGenerator) -> void:
 		if not ResourceLoader.exists(path):
 			continue
 		var spr = Sprite2D.new()
-		spr.texture = load(path)
+		spr.texture = load(path)   # peças do fundo: sempre as padrão (não a cor do jogador)
 		spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		var sc: int = 1 + (i % 2)   # 1x a 2x
 		spr.scale = Vector2(sc, sc)
@@ -297,6 +425,22 @@ func _build_floaters(_fixed_rng: RandomNumberGenerator) -> void:
 			"phase": rng.randf() * TAU, "bob": rng.randf_range(5.0, 12.0),
 			"flip": rng.randf() < 0.4, "island": false, "base_scale": sc,
 		})
+
+# Texturas liberadas, separadas por grupo: [[menu...], [floresta...], ...]
+func _available_islands() -> Array:
+	var out: Array = []
+	for g in ISLAND_GROUPS:
+		if g != "menu" and not MetaProgress.visited_biomes.has(g):
+			continue
+		var gl: Array = []
+		out.append(gl)
+		for i in range(1, ISLAND_VARIANTS + 1):
+			var path: String = ISLAND_PATTERN % [g, i]
+			if not _island_cache.has(path) and ResourceLoader.exists(path):
+				_island_cache[path] = load(path)
+			if _island_cache.has(path):
+				gl.append(_island_cache[path])
+	return out
 
 func _update_floaters(delta: float) -> void:
 	var vp = get_viewport().get_visible_rect().size

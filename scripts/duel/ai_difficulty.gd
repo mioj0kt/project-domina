@@ -17,10 +17,15 @@ static func for_duel(node_type: int, biome: String, layer: int, tutorial: bool) 
 		MapNode.NodeType.DueloForte:
 			if biome == "floresta":
 				return {"depth": 3, "tolerance": 1.5, "blunder": 0.0, "cards": true}
+			if biome == "mina":
+				return {"depth": 4, "tolerance": 0.25, "blunder": 0.0, "cards": true}
 			return {"depth": 4, "tolerance": 0.5, "blunder": 0.0, "cards": true}
 	# Duelo comum
 	if biome == "floresta":
 		if layer <= 2:
 			return {"depth": 2, "tolerance": 8.0, "blunder": 0.25, "cards": true}
 		return {"depth": 3, "tolerance": 3.0, "blunder": 0.1, "cards": true}
+	# Mina (3º bioma): joga mais perto da melhor jogada que no deserto.
+	if biome == "mina":
+		return {"depth": 4, "tolerance": 0.5, "blunder": 0.0, "cards": true}
 	return {"depth": 4, "tolerance": 1.0, "blunder": 0.0, "cards": true}

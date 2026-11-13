@@ -27,7 +27,9 @@ var is_showing: bool = false
 signal sequence_finished
 
 func _init() -> void:
-	layer = 200
+	# Abaixo do menu de pausa/configurações (180): com o jogo pausado a animação
+	# congela, e a carta não pode ficar por cima do menu bloqueando os cliques.
+	layer = 170
 	root_ctrl = Control.new()
 	root_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -93,6 +95,15 @@ func show_card(card: ActionCard, from_pos: Vector2, to_pos: Vector2) -> void:
 	active_tween.tween_property(visual, "modulate:a", 0.0, 0.15)
 
 	active_tween.tween_callback(_finish_sequence)
+
+# Pausou (ESC no meio da animação): esconde a carta e solta o mouse até despausar.
+func _notification(what: int) -> void:
+	if root_ctrl == null:
+		return
+	if what == NOTIFICATION_PAUSED:
+		root_ctrl.visible = false
+	elif what == NOTIFICATION_UNPAUSED:
+		root_ctrl.visible = true
 
 func _on_gui_input(event: InputEvent) -> void:
 	if not is_showing:

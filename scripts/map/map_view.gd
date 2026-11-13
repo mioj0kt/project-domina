@@ -32,11 +32,21 @@ var lines_dictionary: Dictionary = {}
 var forest: ForestBackground
 var island_base: IslandBase
 var player_pawn: MapPlayerPawn
+# Altura "real" da câmera (fracionária, para o arrasto/rolagem suaves); a câmera
+# em si fica sempre num pixel inteiro. Com a câmera entre dois pixels, a arte
+# ampliada sai com pixels de largura desigual (um lado do soquete parecia ter um
+# vão escuro e o peão parecia fora do centro).
+var _cam_y: float = 0.0
 # Nó onde o peão está parado. Parado, o peão NÃO é desenhado à parte: ele já
 # vem "assado" no próprio sprite do soquete (ver _socket_with_pawn), então
 # o encaixe é exato em qualquer resolução/escala de janela. Só durante o
 # salto o peão avulso aparece.
 var pawn_rest_node: MapNode = null
+var covers: Dictionary = {}          # MapNode -> MapCover (Mina: nodos escondidos)
+var caves: Array = []                # MapCover (grutas, sem repetição)
+var sky_bg: SpaceBackground = null
+var _travel_target: MapNode = null
+var _travel_from: MapNode = null
 var is_traveling: bool = false
 
 # Rolagem manual do mapa (roda do mouse, setas/W/S, arrastar, touchpad).
@@ -57,10 +67,12 @@ func _ready() -> void:
 	randomize()
 	z_index = 0
 	Music.play(_current_biome() if Music.TRACKS.has(_current_biome()) else "")
+	MetaProgress.mark_biome_visited(_current_biome())   # antes do céu: as ilhas dele já aparecem
 	var sky := SpaceBackground.new()   # céu estrelado atrás do mapa
 	sky.floater_alpha = 0.55           # ilhas/peças discretas (há texto por cima)
 	sky.biome = _current_biome()
 	add_child(sky)
+	sky_bg = sky
 	_setup_map_ui()
 	_setup_player_pawn()
 
@@ -71,12 +83,18 @@ func _ready() -> void:
 		generator.biome = _current_biome()
 		RunManager.map_data = generator.generate_map()
 		_position_nodes(RunManager.map_data)
+		if _current_biome() == "mina":
+			_assign_covers(RunManager.map_data)
+		if _current_biome() == "deserto":
+			_assign_storms(RunManager.map_data)
 		if not RunManager.map_data.is_empty() and not RunManager.map_data[0].is_empty():
 			RunManager.current_node = RunManager.map_data[0][0]
 
 	_build_forest(RunManager.map_data)
 	_draw_lines(RunManager.map_data)
 	_instantiate_node_ui(RunManager.map_data)
+	_build_covers(RunManager.map_data)
+	_build_storms(RunManager.map_data)
 	_restore_visited_connections()
 
 	if RunManager.current_node != null:
@@ -101,7 +119,7 @@ func _play_run_intro() -> void:
 		return
 	if _cam_tween != null and _cam_tween.is_valid():
 		_cam_tween.kill()
-	camera.position.y = _camera_target_y(RunManager.current_node.position.y)
+	_set_cam_y(_camera_target_y(RunManager.current_node.position.y))
 	await RunIntro.new().run(self, camera, RunManager.current_node.position, player_pawn.piece_px)
 	if RunManager.biome_intro_pending:
 		RunManager.biome_intro_pending = false
@@ -166,12 +184,17 @@ func _input(event: InputEvent) -> void:
 			# (1 Sapo, 2 Coruja, 3 Floresta, 4 Cipós, 5 Vaga-lumes, 6 Raízes).
 			var law_idx: int = event.keycode - KEY_1
 			var desert: bool = _current_biome() == "deserto"
-			var law_count: int = DuelBossDesert.DESERT_LAWS.size() if desert else DuelBoss.LAWS.size()
+			var mine: bool = _current_biome() == "mina"
+			var law_count: int = DuelBossDesert.DESERT_LAWS.size() if desert else (DuelBossMine.MINE_LAWS.size() if mine else DuelBoss.LAWS.size())
 			if law_idx < law_count:
 				# No deserto: 1 Sol, 2 Tempestade, 3 Areia Movediça, 4 Ampulheta, 5 Sarcófagos, 6 Cactos.
+				# Na mina: 1 Lampião, 2 Ricochete, 3 Desabamento, 4 Trilhos, 5 Garimpo.
 				if desert:
 					RunManager.map_biome = "deserto"
 					RunManager.desert_boss_law_id = DuelBossDesert.DESERT_LAWS[law_idx]
+				elif mine:
+					RunManager.map_biome = "mina"
+					RunManager.mine_boss_law_id = DuelBossMine.MINE_LAWS[law_idx]
 				else:
 					RunManager.forest_boss_law_id = DuelBoss.LAWS[law_idx]
 				RunManager.current_node_type = MapNode.NodeType.Chefe
@@ -187,7 +210,14 @@ func _build_debug_hint() -> void:
 	layer.layer = 90
 	add_child(layer)
 	var lbl := Label.new()
-	var laws: String = "1 Sol  2 Tempestade  3 Areia Movediça  4 Ampulheta  5 Sarcófagos  6 Cactos" if _current_biome() == "deserto" else "1 Sapo  2 Coruja  3 Floresta  4 Cipós  5 Vaga-lumes  6 Raízes"
+	var laws: String
+	match _current_biome():
+		"deserto":
+			laws = "1 Sol  2 Tempestade  3 Areia Movediça  4 Ampulheta  5 Sarcófagos  6 Cactos"
+		"mina":
+			laws = "1 Lampião  2 Ricochete  3 Desabamento  4 Trilhos  5 Garimpo"
+		_:
+			laws = "1 Sapo  2 Coruja  3 Floresta  4 Cipós  5 Vaga-lumes  6 Raízes"
 	lbl.text = "DEBUG  CHEFE: " + laws + "   |   B Apostas   E Evento"
 	lbl.add_theme_font_size_override("font_size", 16)
 	lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
@@ -262,10 +292,11 @@ func _build_forest(layers: Array[Array]) -> void:
 	# fica simétrica em torno do centro; a câmera acompanha o centro do tabuleiro.
 	forest.build(layers, TILE_SIZE, MAP_SPRITE_SCALE, -half + 1, half - 1, min_r - 2, max_r + 2)
 	if camera != null:
-		camera.position.x = forest.world_rect.get_center().x
+		camera.position.x = roundf(forest.world_rect.get_center().x)
 	# Base rochosa: o mapa é uma ilha flutuando no espaço (atrás do tabuleiro).
 	island_base = IslandBase.new()
 	island_base.name = "IslandBase"
+	island_base.biome = _current_biome()
 	add_child(island_base)
 	move_child(island_base, 0)
 	island_base.build(forest.world_rect, MAP_SPRITE_SCALE, camera)
@@ -458,7 +489,227 @@ func _instantiate_node_ui(layers: Array[Array]) -> void:
 					size_label.add_child(layout_label)
 					node_layout_labels[node] = layout_label
 
+# Mina dos Cristais: sorteia grutas (no máximo 3 por mapa). Cada gruta cobre um
+# nodo e, às vezes, também um filho dele (ligados por um túnel); nodos que ficam
+# debaixo do teto entram na gruta também ("de carona"). Nunca o começo nem o chefe.
+const COVER_CHANCE: float = 0.5
+const COVER_MAX: int = 3
+const COVER_TWO_CHANCE: float = 0.5
+func _assign_covers(layers: Array[Array]) -> void:
+	var caves_made: int = 0
+	var next_id: int = 0
+	var used_pts: Array = []          # centros das grutas já feitas (para não encostarem)
+	for li in range(1, layers.size() - 1):
+		if caves_made >= COVER_MAX:
+			return
+		var layer: Array = layers[li]
+		if layer.size() < 2 or randf() > COVER_CHANCE:
+			continue
+		var a: MapNode = layer.pick_random()
+		if a.cave_id >= 0:
+			continue
+		var group: Array[MapNode] = [a]
+		var edge: bool = false
+		if li + 1 <= layers.size() - 2 and randf() < COVER_TWO_CHANCE:
+			var kids: Array = a.children.filter(func(k: MapNode): return k.cave_id < 0)
+			if not kids.is_empty():
+				group.append(kids.pick_random())
+				edge = true
+		# Nodos debaixo do teto entram de carona; o começo/chefe ou excesso cancelam.
+		var pts: Array = []
+		for g in group:
+			pts.append(g.position)
+		var ok: bool = true
+		for lj in range(layers.size()):
+			for other in layers[lj]:
+				if other in group:
+					continue
+				if MapCover.mask_value(other.position, pts, edge) <= 1.05:
+					if lj == 0 or lj == layers.size() - 1 or other.cave_id >= 0:
+						ok = false
+					else:
+						group.append(other)
+		for up in used_pts:
+			for q in pts:
+				if MapCover.mask_value(q, [up], false) <= 2.6:
+					ok = false
+		if not ok or group.size() > MapCover.MAX_MEMBERS:
+			continue
+		for i in range(group.size()):
+			group[i].covered = true
+			group[i].cave_id = next_id
+			group[i].cave_order = i
+			group[i].cave_edge = edge
+		used_pts.append(group[0].position)
+		next_id += 1
+		caves_made += 1
+
+# ---------------------------------------------------- tempestades de areia (Deserto) ----
+const STORM_CHANCE: float = 0.55      # chance por fileira de nascer uma tempestade
+const STORM_MAX: int = 2
+var storms: Array = []
+
+func _is_duel(n: MapNode) -> bool:
+	return n.type == MapNode.NodeType.Duelo or n.type == MapNode.NodeType.DueloForte
+
+# Sorteia as tempestades: cada uma é uma RAJADA que atravessa uma fileira inteira do mapa.
+# Todos os duelos da fileira ficam dentro dela; os outros nodos da fileira ficam de fora
+# (a areia se abre em volta deles). Fileiras vizinhas nunca têm rajada as duas.
+func _assign_storms(layers: Array[Array]) -> void:
+	var made: int = 0
+	var last_li: int = -9
+	for li in range(1, layers.size() - 1):
+		if made >= STORM_MAX:
+			return
+		if li - last_li < 2 or randf() > STORM_CHANCE:
+			continue
+		var duels: Array = layers[li].filter(func(n: MapNode): return _is_duel(n))
+		if duels.is_empty():
+			continue
+		for g in duels:
+			g.storm = true
+			g.storm_id = made
+		last_li = li
+		made += 1
+
+func _build_storms(layers: Array[Array]) -> void:
+	var cx: float = forest._board_rect.get_center().x if forest != null else 0.0
+	for layer in layers:
+		var duels: Array = layer.filter(func(n: MapNode): return n.storm and n.storm_id >= 0)
+		if duels.is_empty():
+			continue
+		var others: Array = layer.filter(func(n: MapNode): return not n.storm)
+		var gid: int = duels[0].storm_id
+		var st := MapStorm.new()
+		add_child(st)
+		st.setup(duels.map(func(n: MapNode): return n.position), others.map(func(n: MapNode): return n.position), cx, 1.0 if gid % 2 == 0 else -1.0, gid * 977 + 13)
+		st.set_meta("nodes", duels)
+		storms.append(st)
+
+func _update_storms() -> void:
+	for st in storms:
+		if st == null or not is_instance_valid(st):
+			continue
+		var nodes: Array = st.get_meta("nodes")
+		st.set_focus(RunManager.current_node in nodes or _travel_target in nodes)
+
+func _build_covers(layers: Array[Array]) -> void:
+	var groups: Dictionary = {}
+	for layer in layers:
+		for node in layer:
+			if node.covered and node.cave_id >= 0:
+				if not groups.has(node.cave_id):
+					groups[node.cave_id] = []
+				groups[node.cave_id].append(node)
+	for gid in groups:
+		var nodes: Array = groups[gid]
+		nodes.sort_custom(func(x: MapNode, y: MapNode): return x.cave_order < y.cave_order)
+		var pts: Array = []
+		var done: Array = []
+		for n in nodes:
+			pts.append(n.position)
+			done.append(n.revealed)
+		var cv := MapCover.new()
+		add_child(cv)
+		if forest != null:
+			cv.board_rect = forest._board_rect
+		for gid2 in groups:
+			if gid2 != gid:
+				var ns: Array = groups[gid2].duplicate()
+				ns.sort_custom(func(x: MapNode, y: MapNode): return x.cave_order < y.cave_order)
+				var npts: Array = []
+				for n3 in ns:
+					npts.append(n3.position)
+				cv.neighbors.append({"pts": npts, "edge": ns[0].cave_edge, "seed": int(gid2) * 131 + 5 + int(ns[0].id.x) * 17})
+		var others: Array = []
+		var paths: Array = []
+		for l2 in layers:
+			for n2 in l2:
+				if not (n2 in nodes):
+					others.append(n2.position)
+				for ch in n2.children:
+					var fg := Vector2i((n2.position / TILE_SIZE).round())
+					var tg := Vector2i((ch.position / TILE_SIZE).round())
+					var cells: Array = [fg]
+					var gcur: Vector2i = fg
+					for st in ForestTrail.build_steps(fg, tg):
+						gcur += st
+						cells.append(gcur)
+					paths.append(cells)
+		# Caminho que a PEÇA faz (sempre em diagonal) ao entrar e sair: as bocas ficam nele.
+		var all_cave_nodes: Array = []
+		for gid3 in groups:
+			all_cave_nodes.append_array(groups[gid3])
+		for n4 in all_cave_nodes:
+			var ng := Vector2i((n4.position / TILE_SIZE).round())
+			for l3 in layers:
+				for n5 in l3:
+					if n4 in n5.children:
+						var pg := Vector2i((n5.position / TILE_SIZE).round())
+						var pc: Array = [pg]
+						pc.append_array(MapPlayerPawn.calculate_diagonal_path(pg, ng))
+						cv.pawn_paths.append(pc)
+			for ch2 in n4.children:
+				var cg := Vector2i((ch2.position / TILE_SIZE).round())
+				var pc2: Array = [ng]
+				pc2.append_array(MapPlayerPawn.calculate_diagonal_path(ng, cg))
+				cv.pawn_paths.append(pc2)
+		cv.setup(pts, nodes[0].cave_edge, done, int(gid) * 131 + 5 + int(nodes[0].id.x) * 17, others, paths)
+		cv.set_meta("nodes", nodes)
+		cv.hovered.connect(func(i: int, on: bool): _on_node_hover(nodes[i], on))
+		cv.clicked.connect(func(i: int): _on_node_clicked(nodes[i]))
+		caves.append(cv)
+		for n in nodes:
+			covers[n] = cv
+		for ri in range(nodes.size()):
+			cv.set_reachable(ri, RunManager.current_node != null and (nodes[ri] in RunManager.current_node.children or nodes[ri] == RunManager.current_node))
+
+func _cave_index(cv, node: MapNode) -> int:
+	var nodes: Array = cv.get_meta("nodes")
+	return nodes.find(node)
+
+func _update_covers() -> void:
+	if caves.is_empty() or player_pawn == null:
+		return
+	var glow: float = 0.0
+	var ext_r: float = 0.0
+	var ext_wp := Vector2.ZERO
+	for cv in caves:
+		if cv == null or not is_instance_valid(cv):
+			continue
+		var nodes: Array = cv.get_meta("nodes")
+		var cur: MapNode = RunManager.current_node
+		var active: bool = false
+		for n in nodes:
+			if n == _travel_target or n == _travel_from or (n == cur and n.revealed):
+				active = true
+		var wp: Vector2 = player_pawn.position
+		if not player_pawn.visible:
+			wp = cur.position if cur != null else nodes[0].position
+		cv.update_spot(wp, active)
+		if active and cv.spot_r > ext_r:
+			ext_r = cv.spot_r
+			ext_wp = wp
+		# Caminhos que saem da gruta ficam iluminados (o exterior escurece).
+		var exits: Array = []
+		if active and cur != null and cur in nodes:
+			for k in cur.children:
+				if not (k in nodes):
+					exits.append([cur.position, k.position])
+		cv.set_exits(exits)
+		glow = maxf(glow, cv.lit)
+	# O foco de uma gruta também abre o teto das vizinhas coladas nela.
+	if ext_r > 0.0:
+		for cv2 in caves:
+			if cv2 != null and is_instance_valid(cv2) and cv2.spot_r <= 0.0:
+				cv2.ext_spot(ext_wp, ext_r)
+	if sky_bg != null and is_instance_valid(sky_bg):
+		sky_bg.cave_glow = glow
+
 func _on_node_hover(node: MapNode, entered: bool) -> void:
+	if covers.has(node) and is_instance_valid(covers[node]):
+		var cv = covers[node]
+		cv.set_hover(entered and RunManager.current_node != null and node in RunManager.current_node.children, _cave_index(cv, node))
 	_hovered_node = node if entered else (null if _hovered_node == node else _hovered_node)
 	_update_nodes_visual_state()
 
@@ -535,6 +786,11 @@ func _update_nodes_visual_state() -> void:
 		if layout_label:
 			layout_label.add_theme_color_override("font_color", label_col.lerp(Color(0.75, 0.9, 1.0), 0.6))
 	_refresh_lines()
+	for cnode in covers:
+		var ccv = covers[cnode]
+		if ccv != null and is_instance_valid(ccv):
+			ccv.set_clickable(_cave_index(ccv, cnode), RunManager.current_node != null and cnode in RunManager.current_node.children and not is_traveling)
+			ccv.set_reachable(_cave_index(ccv, cnode), RunManager.current_node != null and (cnode in RunManager.current_node.children or cnode == RunManager.current_node))
 
 func _on_node_clicked(node: MapNode) -> void:
 	if Time.get_ticks_msec() - _drag_end_msec < 150:
@@ -553,18 +809,40 @@ func _on_node_clicked(node: MapNode) -> void:
 	player_pawn.position = RunManager.current_node.position if RunManager.current_node != null else node.position
 	pawn_rest_node = null
 	player_pawn.visible = true
+	_travel_from = RunManager.current_node
 	_set_current_node(node, true)
 	
+	_travel_target = node
+	# No quadro em que a peça toca o nodo ela já vira a imagem encaixada (a peça
+	# avulsa deixava ver a borda escura do soquete por um instante).
+	player_pawn.landed.connect(func():
+		pawn_rest_node = node
+		player_pawn.visible = false
+		_update_nodes_visual_state(), CONNECT_ONE_SHOT)
 	await player_pawn.jump_to_node(node.position, TILE_SIZE)
 
 	# Chegou: o peão volta a ficar "encaixado" no sprite do soquete.
 	pawn_rest_node = node
 	player_pawn.visible = false
 	_update_nodes_visual_state()
+
+	# Nodo coberto: o foco já mostrou o interior; segura um instante, abre uma
+	# janela no teto e, se todos os nodos da gruta já foram vistos, desfaz a rocha.
+	if node.covered and not node.revealed:
+		node.revealed = true
+		var cv = covers.get(node)
+		if cv != null and is_instance_valid(cv):
+			cv.update_spot(node.position, true)
+			Juice.sparkle(self, node_buttons[node].global_position + node_buttons[node].size * 0.5, 18)
+			await get_tree().create_timer(0.9).timeout
+			await cv.reveal_node(_cave_index(cv, node), 0.45)
+	_travel_target = null
+	_travel_from = null
 	
 	RunManager.current_board_size = node.board_size
 	RunManager.current_board_layout = node.board_layout
 	RunManager.current_node_type = node.type
+	RunManager.current_node_storm = node.storm and (node.type == MapNode.NodeType.Duelo or node.type == MapNode.NodeType.DueloForte)
 	
 	match node.type:
 		MapNode.NodeType.Duelo, MapNode.NodeType.DueloForte, MapNode.NodeType.Chefe:
@@ -604,7 +882,12 @@ func _scroll_camera(dy: float) -> void:
 		return
 	if _cam_tween != null and _cam_tween.is_valid():
 		_cam_tween.kill()
-	camera.position.y = _camera_target_y(camera.position.y + dy)
+	_set_cam_y(_camera_target_y(_cam_y + dy))
+
+func _set_cam_y(v: float) -> void:
+	_cam_y = v
+	if camera != null:
+		camera.position.y = roundf(v)
 
 func _modal_open() -> bool:
 	return inventory_ui != null and inventory_ui.visible
@@ -655,6 +938,29 @@ func _handle_scroll_input(event: InputEvent) -> bool:
 	return false
 
 func _process(delta: float) -> void:
+	_update_covers()
+	_update_storms()
+	# A peça fica POR CIMA da rocha até entrar pela boca; lá dentro, por baixo do teto.
+	if player_pawn != null and player_pawn.visible:
+		var under: bool = false
+		var vis: float = 1.0
+		var in_mouth: bool = false
+		for cvz in caves:
+			if cvz == null or not is_instance_valid(cvz):
+				continue
+			var ms: Array = cvz.mouth_state(player_pawn.position)
+			if not ms.is_empty():
+				# atravessando a boca: escurece e encolhe para dentro do vão, reaparece do outro lado
+				in_mouth = true
+				vis = ms[0]
+				under = ms[1]
+				break
+			if cvz.roof_at(player_pawn.position):
+				under = true
+		player_pawn.z_index = 10 if under else 30
+		var dk: float = 0.25 + 0.75 * vis
+		player_pawn.modulate = Color(dk, dk, dk, vis) if in_mouth else Color.WHITE
+		player_pawn.scale = Vector2.ONE * (0.72 + 0.28 * vis) if in_mouth else Vector2.ONE
 	if is_traveling or _modal_open():
 		return
 	var dir := 0.0
@@ -670,6 +976,6 @@ func _move_camera_to_node(target_node: MapNode) -> void:
 		_cam_tween.kill()
 	var tween = create_tween()
 	_cam_tween = tween
-	tween.tween_property(camera, "position:y", _camera_target_y(target_node.position.y), 0.85)\
+	tween.tween_method(_set_cam_y, _cam_y, _camera_target_y(target_node.position.y), 0.85)\
 		.set_trans(Tween.TRANS_SINE)\
 		.set_ease(Tween.EASE_OUT)

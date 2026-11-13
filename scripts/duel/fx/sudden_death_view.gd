@@ -429,10 +429,14 @@ func _draw_counter() -> void:
 # ---------------------------------------------------------------------
 # Faixa vermelha cruzando a tela com "MORTE SÚBITA". `stall`: começou por
 # impasse (ninguém avançava). Bloqueia cliques e some sozinho (~3 s).
-func play_intro(_turns_left: int = 0, _stall: bool = false, shake_node: Node = null) -> void:
+func play_intro(_turns_left: int = 0, stall: bool = false, shake_node: Node = null) -> void:
 	if _intro_busy:
 		return
 	_intro_busy = true
+	# Ligada pelo impasse (ninguém avançava): o aviso e o contador dizem IMPASSE.
+	var title: String = "IMPASSE" if stall else "MORTE SÚBITA"
+	if _title_label != null:
+		_title_label.text = title
 	Sfx.play("morte_subita")   # o impacto cai junto com a palavra batendo (~0,16 s)
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -475,7 +479,7 @@ func play_intro(_turns_left: int = 0, _stall: bool = false, shake_node: Node = n
 		band.add_child(line2)
 
 	var word := Label.new()
-	word.text = "MORTE SÚBITA"
+	word.text = title
 	word.set_anchors_preset(Control.PRESET_FULL_RECT)
 	word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	word.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

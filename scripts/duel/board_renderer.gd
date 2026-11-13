@@ -70,6 +70,8 @@ func _draw() -> void:
 				draw_rect(rect, board.grid_border_color, false, 1.0)
 
 	for pos in board.scorched_tiles.keys():
+		if board.crystal_tiles.has(pos):
+			continue   # cristal do Ricochete: desenhado junto com as peças
 		var tile_rect = Rect2(board_offset.x + pos.x * cell_size, board_offset.y + pos.y * cell_size, cell_size, cell_size)
 		if board.sand_tiles.has(pos):
 			_draw_sand_cover(tile_rect, pos)
@@ -81,6 +83,8 @@ func _draw() -> void:
 	_draw_trap_tiles(board, board_offset, cell_size)
 	_draw_quicksand_tiles(board, board_offset, cell_size)
 	_draw_desert_boss_telegraph(board_offset, cell_size)
+	_draw_sandstorm_telegraph(board_offset, cell_size)
+	MineBossFx.draw_under(self, host, board, board_offset, cell_size)
 	_draw_light_tile_laws(board, board_offset, cell_size)
 
 	if board.rule_pipeline != null and (board.rule_pipeline.has_rule("sacred_zone") or board.rule_pipeline.has_rule("power_center")):
@@ -179,6 +183,8 @@ func _draw() -> void:
 			if pos == host.animating_coronation_tile or pos == host.moving_piece_tile:
 				continue
 
+			if piece_obj == Board.EMPTY and board.crystal_tiles.has(pos):
+				MineBossFx.draw_crystal(self, board_offset + Vector2(c * cell_size + cell_size / 2.0, r * cell_size + cell_size / 2.0), cell_size, pos)
 			if piece_obj != Board.EMPTY:
 				# Peças do chefe somem na névoa; árvores e as suas continuam visíveis.
 				if piece_obj.owner_team == host.ai_team and host.current_duel != null and host.current_duel.is_fogged(pos):
@@ -273,6 +279,37 @@ func _draw_quicksand_tiles(board: Board, board_offset: Vector2, cell_size: float
 		draw_rect(Rect2(ctr - Vector2(2, 2), Vector2(4, 4)), Color(0.2, 0.12, 0.06, 0.95))
 		PixelRenderer.draw_pixel_corners(self, rect, Color(0.8, 0.55, 0.25, 0.9), 8.0, 2.0)
 
+# Tempestade de areia: a fileira por onde a próxima rajada vai passar, com setas de
+# pixel correndo no sentido do vento. Fica mais forte quando falta 1 rodada.
+func _draw_sandstorm_telegraph(board_offset: Vector2, cell_size: float) -> void:
+	if host == null or host.current_duel == null or host.current_duel.sandstorm == null:
+		return
+	var st: SandstormMod = host.current_duel.sandstorm
+	if st.gust_row < 0:
+		return
+	var t: float = Time.get_ticks_msec() / 1000.0
+	var soon: bool = st.plies_to_gust() <= 2
+	var pulse: float = 0.5 + 0.5 * sin(t * (7.0 if soon else 3.5))
+	var r: int = st.gust_row
+	var rect := Rect2(board_offset.x, board_offset.y + r * cell_size, host.board.cols * cell_size, cell_size)
+	draw_rect(rect, Color(0.92, 0.72, 0.38, (0.10 if not soon else 0.16) + 0.10 * pulse))
+	var edge := Color(1.0, 0.86, 0.55, 0.55 + 0.35 * pulse)
+	var u: float = maxf(2.0, round(cell_size / 22.0))
+	draw_rect(Rect2(rect.position, Vector2(rect.size.x, u)), edge)
+	draw_rect(Rect2(rect.position + Vector2(0, rect.size.y - u), Vector2(rect.size.x, u)), edge)
+	# setas ">" (ou "<") de pixel deslizando pela fileira
+	var n: int = host.board.cols
+	var spd: float = cell_size * (1.6 if soon else 0.8)
+	var col := Color(1.0, 0.93, 0.70, 0.75)
+	for k in range(n):
+		var fx: float = fposmod(float(k) * cell_size + t * spd * float(st.dir), rect.size.x)
+		var cx: float = rect.position.x + fx
+		var cy: float = rect.position.y + cell_size * 0.5
+		for j in range(4):
+			var ox: float = float(j) * u * float(st.dir)
+			draw_rect(Rect2(Vector2(cx + ox - u * 4.0 * float(st.dir), cy - u * float(j) - u * 0.5), Vector2(u, u)), col)
+			draw_rect(Rect2(Vector2(cx + ox - u * 4.0 * float(st.dir), cy + u * float(j) - u * 0.5), Vector2(u, u)), col)
+
 # Casas que a lei do chefe do deserto vai afetar no próximo ciclo.
 func _draw_desert_boss_telegraph(board_offset: Vector2, cell_size: float) -> void:
 	if host == null or not (host.current_duel is DuelBossDesert):
@@ -349,7 +386,9 @@ func _draw_fire_tiles(board: Board, board_offset: Vector2, cell_size: float) -> 
 # Marcas de status na peça: bolha azul = escudo (Lei do Luto); grade violeta = imobilizada (Emboscada);
 # selo dourado com número = Dama temporária (Herdeiro, turnos restantes).
 func _draw_piece_status(piece: BoardPiece, center: Vector2, size: float) -> void:
-	if piece.rooted_turns > 0 and host.board != null and host.board.hungry_roots_team != 0:
+	if piece.rooted_turns > 0 and piece.dazzled:
+		MineBossFx.draw_dazzle(self, center, size)
+	elif piece.rooted_turns > 0 and host.board != null and host.board.hungry_roots_team != 0:
 		_draw_roots_front(piece, center, size)
 	elif piece.rooted_turns > 0:
 		var half = size * 0.34
@@ -575,6 +614,8 @@ func _draw_night_and_status(board: Board, board_offset: Vector2, cell_size: floa
 	var area = Rect2(board_offset, Vector2(board.cols * cell_size, board.rows * cell_size))
 	if dark > 0.0:
 		draw_rect(area, Color(0.04, 0.05, 0.16, dark))
+	if dark > 0.0 or host.current_duel.sandstorm != null:
+		var fcol: Color = host.current_duel.fog_color()
 		# Névoa: cobre TODA casa distante das suas peças por igual (vazia ou
 		# não), com bruma que se move — não dá pra deduzir onde há peças.
 		var t = Time.get_ticks_msec() / 1000.0
@@ -584,7 +625,7 @@ func _draw_night_and_status(board: Board, board_offset: Vector2, cell_size: floa
 				if f <= 0.0:
 					continue
 				var fr = Rect2(board_offset.x + c * cell_size, board_offset.y + r * cell_size, cell_size, cell_size)
-				draw_rect(fr, Color(0.42, 0.48, 0.66, f * 0.6))
+				draw_rect(fr, Color(fcol.r, fcol.g, fcol.b, f * 0.6))
 				for k in range(2):
 					var ph = t * 0.3 + (c * 1.7 + r * 2.3) + k * 3.1
 					var off = Vector2(sin(ph) * 0.25, cos(ph * 0.8) * 0.2) * cell_size
@@ -593,7 +634,7 @@ func _draw_night_and_status(board: Board, board_offset: Vector2, cell_size: floa
 					var clipped = br.intersection(area) # a bruma não vaza pra moldura
 					if clipped.size.x > 0.0 and clipped.size.y > 0.0:
 						var src = Rect2((clipped.position - br.position) / sz * 128.0, clipped.size / sz * 128.0)
-						draw_texture_rect_region(_get_mist_tex(), clipped, src, Color(0.8, 0.85, 1.0, f * 0.55))
+						draw_texture_rect_region(_get_mist_tex(), clipped, src, Color(fcol.r, fcol.g, fcol.b, f * 0.55).lightened(0.3))
 	var status: String = host.current_duel.get_status_text()
 	if status != "":
 		var font = ThemeDB.fallback_font

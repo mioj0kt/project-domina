@@ -43,7 +43,7 @@ static func get_lesson_goal(step: int) -> String:
 		TutorialManager.Step.DUEL_3_CARDS_AND_LAWS:
 			return "Usar o que você comprou num duelo"
 		TutorialManager.Step.BET:
-			return "Moeda: branca ou preta"
+			return "Moeda: a sua cor ou a do adversário"
 	return ""
 
 static func get_objectives(step: int) -> Array:
@@ -96,7 +96,7 @@ static func get_objectives(step: int) -> Array:
 				{"event": "bet_stake", "text": "Escolha quanto ouro arriscar",
 				"spot": "bet_gold", "caption": "ARRISQUE OURO",
 				"done_tip": "Se acertar a cor, você ganha 80% a mais do que apostou. Errou, perde o que apostou."},
-				{"event": "bet_call", "text": "Chame BRANCA ou PRETA",
+				{"event": "bet_call", "text": "Chame um lado da moeda",
 				"spot": "bet_call", "caption": "ESCOLHA UM LADO",
 				"done_tip": ""},
 				{"event": "bet_resolved", "text": "Veja a moeda cair",
@@ -117,7 +117,7 @@ static func get_intro_lines() -> Array:
 
 static func get_duel1_intro_lines() -> Array:
 	return [
-		{"t": "Esse é o seu primeiro duelo. Todo duelo começa com uma moeda decidindo o seu lado. Dessa vez você é as brancas, que sempre jogam primeiro.", "spot": "board"},
+		{"t": "Esse é o seu primeiro duelo. Todo duelo começa com uma moeda: de um lado a sua cor, do outro a do adversário. A cor que cair joga primeiro. Dessa vez caiu a sua.", "spot": "board"},
 		{"t": "As peças andam na diagonal, uma casa por vez, sempre pra frente. Capturar é pular por cima de uma peça inimiga que tenha casa vazia logo atrás.", "spot": "board"},
 		{"t": "Se tiver captura, você TEM que fazer. A peça que pode capturar fica com um contorno amarelo piscando, igual essa aqui.", "spot": "cell:3,4", "caption": "CAPTURA OBRIGATÓRIA"},
 		{"t": "Chegou na última fileira do inimigo? A peça é virada de cabeça pra baixo e vira Dama: anda quantas casas quiser e captura pra trás também.", "spot": "row:0", "caption": "FILEIRA DE COROAÇÃO"},
@@ -189,10 +189,10 @@ static func get_duel3_intro_lines() -> Array:
 static func get_bet_intro_lines() -> Array:
 	return [
 		{"t": "Chegamos na Mesa de Apostas! Aqui o ouro vai pra sorte.", "spot": "gold"},
-		"A moeda tem dois lados: uma peça comum BRANCA e uma PRETA. Se cair o lado que você chamou, você ganha.",
+		"A moeda tem dois lados: uma peça da SUA cor e uma da cor do ADVERSÁRIO. Se cair o lado que você chamou, você ganha.",
 		{"t": "Primeiro escolha o que arriscar. Com ouro, se acertar você ganha 80% a mais do valor apostado — e só dá para apostar até metade do seu ouro por vez. Na run de verdade você pode apostar quantas vezes quiser.", "spot": "bet_gold", "caption": "ARRISQUE OURO"},
 		{"t": "Também dá para arriscar uma Carta ou uma Lei sua por uma versão melhor. Vale quando o item é fraco.", "spot": "bet_special"},
-		"Depois você chama BRANCA ou PRETA. As Cartas e Leis de moeda nos duelos seguem a mesma ideia: o efeito bom fica com quem joga na COR que cair.",
+		"Depois você chama um dos lados. As Cartas e Leis de moeda nos duelos seguem a mesma ideia: o efeito bom fica com quem joga na COR que cair.",
 		"Na run de verdade aposta é opcional, mas aqui vamos treinar uma rodada. Arrisca o menor valor!",
 	]
 

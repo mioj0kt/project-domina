@@ -71,7 +71,13 @@ func _tutorial_ensure_law_gold() -> void:
 # Tutorial: enquanto a Lei pedida não foi comprada, Cartas ficam travadas (gastar
 # o ouro antes impediria de comprar a Lei). Reroll e Remover ficam travados no
 # tutorial inteiro: só gastariam ouro que os objetivos precisam.
+# Tutorial: depois de comprar a Lei, as Cartas continuam travadas (e o objetivo
+# de comprar Carta só aparece) quando o Guia terminar de falar do quadro de Leis.
+var _tutorial_hold_cards: bool = false
+
 func _tutorial_cards_locked() -> bool:
+	if _tutorial_hold_cards:
+		return true
 	if not TutorialManager.is_active:
 		return false
 	for id in TutorialManager.SHOP_LAW_IDS:
@@ -162,10 +168,10 @@ func _setup_ui() -> void:
 	center_box.add_child(header)
 
 	# -------------------------------------------------------------
-	# SEÇÃO 1: LEIS PERMANENTES
+	# SEÇÃO 1: LEIS
 	# -------------------------------------------------------------
 	var laws_title = Label.new()
-	laws_title.text = "― LEIS PERMANENTES ―"
+	laws_title.text = "― LEIS ―"
 	laws_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	laws_title.add_theme_font_size_override("font_size", 30)
 	laws_title.add_theme_color_override("font_color", Color(0.5, 0.82, 1.0))
@@ -392,11 +398,13 @@ func _on_buy_law_pressed(index: int) -> void:
 		RunManager.gold -= _law_price(law)
 		RunManager.register_shop_purchase()
 		laws_for_sale.remove_at(index)
-		TutorialManager.report_event("shop_buy_law")
 		if TutorialManager.is_active and hud_bar != null and hud_bar.is_laws_collapsed():
+			# o objetivo seguinte (comprar Carta) só acende depois da fala do Guia
+			_tutorial_hold_cards = true
 			_refresh_store_state()
 			_tutorial_reveal_law_board()
 			return
+		TutorialManager.report_event("shop_buy_law")
 	_refresh_store_state()
 
 func _on_law_replaced(_old: RuleCard, new_rule: RuleCard) -> void:
@@ -640,11 +648,16 @@ func _run_tutorial_intro() -> void:
 # explica. A Loja fica travada enquanto isso.
 func _tutorial_reveal_law_board() -> void:
 	tutorial_intro_playing = true
+	tutorial_guide_view.hold_objective_spot = true   # nada destacado enquanto o quadro desce
 	await get_tree().create_timer(0.8).timeout   # dá tempo de ver o ouro diminuir
 	await hud_bar.tutorial_reveal_laws()
 	await get_tree().create_timer(0.25).timeout
 	await tutorial_guide_view.play_sequence(TutorialManager.get_shop_law_board_lines())
 	tutorial_intro_playing = false
+	_tutorial_hold_cards = false
+	TutorialManager.report_event("shop_buy_law")
+	_refresh_store_state()
+	tutorial_guide_view.hold_objective_spot = false
 
 func _on_tutorial_inventory_visibility() -> void:
 	if inventory_ui.visible:

@@ -13,6 +13,6 @@ func _init() -> void:
 	priority = 11
 
 func get_move_trigger_banner(piece: BoardPiece, from_pos: Vector2i, to_pos: Vector2i, _was_capture: bool) -> Dictionary:
-	if not piece.is_king and to_pos.y - from_pos.y == 2:
+	if not piece.is_king and to_pos.x == from_pos.x and to_pos.y - from_pos.y == 2 * back_dy():
 		return {"text": "RECUO!", "color": Color(0.3, 0.75, 1.0)}
 	return {}

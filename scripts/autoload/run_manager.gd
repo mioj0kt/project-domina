@@ -4,6 +4,9 @@ var current_board_size: Vector2i = Vector2i(8, 8)
 # Disposição inicial das peças do duelo atual (Board.LAYOUT_*); só duelos sorteados usam outra.
 var current_board_layout: String = Board.LAYOUT_CLASSIC
 var current_node_type: int = 1
+# O duelo atual acontece dentro de uma tempestade de areia (Deserto). O efeito no duelo
+# ainda não foi definido: quem for implementar lê esta flag (ver main.gd, _apply_sandstorm).
+var current_node_storm: bool = false
 var _gold: int = 0
 # Com DebugFlags ligadas: ouro infinito (leitura fixa, escritas ignoradas).
 var gold: int:
@@ -56,6 +59,7 @@ func advance_to_next_biome() -> void:
 	current_board_size = Vector2i(8, 8)
 	current_board_layout = Board.LAYOUT_CLASSIC
 	current_node_type = 1
+	current_node_storm = false
 	clear_ambush()
 
 var map_data: Array[Array] = []
@@ -82,6 +86,13 @@ var player_deck: Array[ActionCard] = []
 var forest_boss_law_id: String = ""
 # Idem para o chefe do Deserto das Torres.
 var desert_boss_law_id: String = ""
+# Idem para o chefe da Mina dos Cristais.
+var mine_boss_law_id: String = ""
+
+func get_mine_boss_law_id(options: Array) -> String:
+	if mine_boss_law_id == "" or not options.has(mine_boss_law_id):
+		mine_boss_law_id = options[randi() % options.size()]
+	return mine_boss_law_id
 
 func get_desert_boss_law_id(options: Array) -> String:
 	if desert_boss_law_id == "" or not options.has(desert_boss_law_id):
@@ -146,11 +157,13 @@ func start_new_run():
 	current_board_size = Vector2i(8, 8)
 	current_board_layout = Board.LAYOUT_CLASSIC
 	current_node_type = 1
+	current_node_storm = false
 	map_data = []
 	current_node = null
 	visited_connections = []
 	forest_boss_law_id = ""
 	desert_boss_law_id = ""
+	mine_boss_law_id = ""
 	# DebugFlags.MAP_BIOME_OVERRIDE força o bioma inicial (mapa, fundos, transições).
 	map_biome = DebugFlags.MAP_BIOME_OVERRIDE if BIOME_TITLES.has(DebugFlags.MAP_BIOME_OVERRIDE) else "floresta"
 	biome_intro_pending = true   # o 1º mapa também mostra o nome do bioma (FLORESTA)

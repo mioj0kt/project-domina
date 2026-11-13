@@ -87,6 +87,9 @@ var _blocker: Control
 var _line_spot_id: String = ""
 var _line_spot_caption: String = ""
 var _obj_spot_id: String = ""
+# Quem chama pode segurar o destaque do objetivo por um tempo (ex.: Loja do
+# tutorial, enquanto o quadro de Leis desce depois da compra).
+var hold_objective_spot: bool = false
 var _obj_spot_caption: String = ""
 var _obj_spot_dim: float = DIM_OBJECTIVE
 var _obj_idle_tip: String = ""
@@ -802,7 +805,7 @@ func _active_spot() -> Dictionary:
 		var ri = _resolve(_pulse_spot_id)
 		if ri.size != Vector2.ZERO:
 			return {"rect": ri.grow(8.0), "caption": "", "dim": 0.0}
-	if not is_showing_sequence and _obj_spot_id != "":
+	if not is_showing_sequence and not hold_objective_spot and _obj_spot_id != "":
 		var r2 = _resolve(_obj_spot_id)
 		if r2.size != Vector2.ZERO:
 			return {"rect": r2, "caption": _obj_spot_caption, "dim": _obj_spot_dim}

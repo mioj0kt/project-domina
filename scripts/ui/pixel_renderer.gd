@@ -7,6 +7,9 @@ static func get_piece_texture(piece_obj: BoardPiece) -> Texture2D:
 	if piece_obj == null:
 		return null
 
+	# Peças comuns e Damas: cor escolhida pelo jogador (PieceSkin).
+	if not piece_obj.is_mummy and (piece_obj.owner_team == Board.WHITE or piece_obj.owner_team == Board.BLACK):
+		return PieceSkin.team_texture(piece_obj.owner_team, piece_obj.is_king)
 	var path = piece_obj.get_texture()
 	if path != "" and ResourceLoader.exists(path):
 		if not texture_cache.has(path):
@@ -155,6 +158,10 @@ static func draw_piece(canvas: CanvasItem, piece_obj: BoardPiece, center: Vector
 	if piece_obj.is_cactus:
 		if not _draw_boss_sprite(canvas, _CACTUS_SPRITES, piece_obj, center, cell_size, scale_factor):
 			_draw_cactus(canvas, center, cell_size, scale_factor)
+		return
+
+	if piece_obj.is_rock:
+		MineBossFx.draw_rock(canvas, piece_obj, center, cell_size, scale_factor)
 		return
 
 	if piece_obj.is_sarcophagus:

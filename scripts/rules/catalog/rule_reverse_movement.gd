@@ -15,6 +15,6 @@ func modify_move_directions(piece: BoardPiece, current_dirs: Array[Vector2i], _h
 	return current_dirs
 
 func get_move_trigger_banner(piece: BoardPiece, from_pos: Vector2i, to_pos: Vector2i, _was_capture: bool) -> Dictionary:
-	if not piece.is_king and to_pos.y > from_pos.y:
+	if not piece.is_king and (to_pos.y - from_pos.y) * back_dy() > 0:
 		return {"text": "REVERSO!", "color": Color(0.3, 0.75, 1.0)}
 	return {}

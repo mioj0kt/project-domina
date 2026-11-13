@@ -25,7 +25,7 @@ func get_enemy_fixed_rules() -> Array[RuleCard]:
 	return rules
 
 func get_enemy_random_rule_count() -> int:
-	return 1
+	return EnemyScaling.hard_rules()
 
 func get_enemy_card_count() -> int:
-	return 3
+	return EnemyScaling.hard_cards()

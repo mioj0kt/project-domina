@@ -63,11 +63,15 @@ func start_match_flow() -> void:
 		_host.board.rule_pipeline.emit_event(&"duel_started", {}, _host.board)
 
 	var coin_center = _host.board_offset + Vector2((_host.board.cols * _host.cell_size) / 2.0, (_host.board.rows * _host.cell_size) / 2.0)
+	# Moeda de abertura: um lado é a cor do jogador, o outro a do adversário.
+	# Quem cair, começa (na lógica, quem começa é o time Board.WHITE).
+	PieceSkin.human_team = Board.WHITE
 	_host.coin_flip_view.play_toss(coin_center, _host.cell_size)
 
 func on_coin_flip_completed(player_won_white: bool) -> void:
 	_host.human_team = Board.WHITE if player_won_white else Board.BLACK
 	_host.ai_team = Board.BLACK if player_won_white else Board.WHITE
+	PieceSkin.human_team = _host.human_team
 
 	_host.board.setup_match(_host.human_team, _host.ai_team)
 	_apply_tutorial_position()
@@ -249,6 +253,10 @@ func handle_cell_click(pos: Vector2i) -> void:
 			# desenho normal do tabuleiro volta a mostrá-la — precisa que a
 			# grade já esteja atualizada nesse momento).
 			var promoted = board.make_move(m)
+			# Leis da Mina: vagoneta (a peça pode ter ido parar em outra casa) e pepitas.
+			pos = await _play_mine_move_events(pos, true)
+			if m.has("ricochet"):
+				_pop_ricochet(m["ricochet"])
 
 			# Só conta pro ouro do duelo se a peça realmente morreu (o Escudo
 			# pode ter impedido a captura).
@@ -367,6 +375,18 @@ func _show_rule_move_banner(piece: BoardPiece, from_pos: Vector2i, to_pos: Vecto
 	# Os banners empilham para cima, um acima do outro.
 	var shown: int = 0
 	for r in _host.board.rule_pipeline.active_rules:
+		# Só Leis que valem para o dono da peça acendem (antes, Leis do jogador
+		# acendiam também nos movimentos do inimigo).
+		if not r.applies_to_team(piece.owner_team, _host.board.human_team_color):
+			continue
+		# Salto Camarada: só acende se realmente passou por cima de uma aliada.
+		if r.id == "ally_hop":
+			var mid := Vector2i(int((from_pos.x + to_pos.x) / 2.0), int((from_pos.y + to_pos.y) / 2.0))
+			var mp = null
+			if abs(to_pos.x - from_pos.x) == 2 and abs(to_pos.y - from_pos.y) == 2 and _host.board.is_valid_pos(mid.y, mid.x):
+				mp = _host.board.grid[mid.y][mid.x]
+			if mp == null or mp.owner_team != piece.owner_team:
+				continue
 		var banner = r.get_move_trigger_banner(piece, from_pos, to_pos, was_capture)
 		if not banner.is_empty():
 			_host.rule_banner_view.pop_rule_trigger(screen_pos - Vector2(0.0, 34.0 * shown), banner["text"], banner["color"], r.id)
@@ -376,8 +396,15 @@ func _show_rule_move_banner(piece: BoardPiece, from_pos: Vector2i, to_pos: Vecto
 func _show_rule_promotion_banner(to_pos: Vector2i, screen_pos: Vector2) -> void:
 	if _host.board.rule_pipeline == null:
 		return
+	# Coroação pelo Garimpo não é obra de lei nenhuma.
+	if to_pos == _nugget_crowned_at:
+		return
+	var piece: BoardPiece = _host.board.grid[to_pos.y][to_pos.x]
 	for r in _host.board.rule_pipeline.active_rules:
-		var banner = r.get_promotion_trigger_banner(to_pos)
+		# lei do outro lado (ex.: Promoção Relâmpago do inimigo) não acende na sua coroação
+		if piece != null and not r.applies_to_team(piece.owner_team, _host.board.human_team_color):
+			continue
+		var banner = r.get_promotion_trigger_banner(to_pos, piece, _host.board)
 		if not banner.is_empty():
 			_host.rule_banner_view.pop_rule_trigger(screen_pos, banner["text"], banner["color"], r.id)
 			return
@@ -385,9 +412,14 @@ func _show_rule_promotion_banner(to_pos: Vector2i, screen_pos: Vector2) -> void:
 # Lei da Ascensão: só mira peças INIMIGAS (owner_team diferente do
 # human_team_color do tabuleiro) — se a lei estiver ativa e a peça
 # promovida for do inimigo, vira uma moeda antes de confirmar a
-# promoção. Devolve true se a promoção deve seguir em frente (moeda não
-# aplicável, ou a moeda caiu na cor da peça), false se deve ser cancelada (caiu a outra cor —
-# a função já reverte piece.is_king nesse caso).
+# promoção. A peça SEMPRE vira Dama agora (devolve sempre true): se a moeda cair na
+# cor dela, é uma coroação normal; se cair na outra cor, a coroação é "barrada" e a
+# nova Dama fica PRESA (injogável) por ASCENSION_FREEZE_TURNS turnos do dono dela.
+# Turnos do dono em que a Dama barrada pela Lei da Ascensão fica sem poder jogar. O
+# efeito usa rooted_turns (mesma trava da Emboscada); +1 porque o fim do turno em que
+# ela é coroada já desconta um (tick_piece_effects).
+const ASCENSION_FREEZE_TURNS: int = 4
+
 func _maybe_resolve_ascension_law(host: Node2D, piece: BoardPiece, center: Vector2) -> bool:
 	var board = host.board
 	if board.rule_pipeline == null:
@@ -412,15 +444,16 @@ func _maybe_resolve_ascension_law(host: Node2D, piece: BoardPiece, center: Vecto
 
 	var coin_view: CoinFlipView = host.card_coin_flip_view
 	# Favorável = a moeda cair na cor da peça que está sendo promovida.
-	coin_view.play_toss_for_team(center, host.cell_size, piece.owner_team, "PROMOCAO CONFIRMADA!", "PROMOCAO NEGADA!")
+	coin_view.play_toss_for_team(center, host.cell_size, piece.owner_team, "COROACAO CONFIRMADA!", "DAMA PRESA POR 4 TURNOS!")
 	var confirmed: bool = await coin_view.flip_completed
 
 	host.is_resolving_card_effect = false
 
 	if not confirmed:
-		piece.is_king = false
+		piece.is_king = true
+		piece.rooted_turns = ASCENSION_FREEZE_TURNS + 1
 
-	return confirmed
+	return true
 
 # ==========================================
 # TURNO DA IA / FIM DE TURNO
@@ -518,6 +551,9 @@ func _ai_execute_move_chain(ai_move: Dictionary) -> Vector2i:
 
 		await host.piece_movement_view.play_move_jump(from_center, to_center, moving_piece, host.cell_size, was_capture)
 		host.moving_piece_tile = Vector2i(-1, -1)
+		# Leis da IA que agiram neste movimento também acendem (Ponte de Recuo,
+		# Movimento Reverso, Salto Camarada...). Antes só o jogador tinha banner.
+		_show_rule_move_banner(moving_piece, from_pos, target_pos, was_capture, to_center)
 
 		# Última Chance: se a vítima é uma Dama do jogador, a moeda gira ANTES do
 		# golpe; salva = a captura falha (como no Escudo) e a Dama é rebaixada/coroada.
@@ -530,6 +566,10 @@ func _ai_execute_move_chain(ai_move: Dictionary) -> Vector2i:
 
 		var promoted = board.make_move(ai_move)
 		board.last_chance_piece = null
+		target_pos = await _play_mine_move_events(target_pos, false)
+		final_pos = target_pos
+		if ai_move.has("ricochet"):
+			_pop_ricochet(ai_move["ricochet"])
 
 		# Capturas da IA não rendem ouro (DuelBase.on_piece_captured é só do
 		# jogador); só marcam que o jogador perdeu uma peça (Retaliação) — e
@@ -663,7 +703,64 @@ func _find_ai_card_target(card: ActionCard, board: Board, host: Node2D) -> Varia
 			# Aposta só quando está perdendo em material.
 			@warning_ignore("incompatible_ternary")
 			return Vector2i.ZERO if _ai_material(board, host.ai_team) < _ai_material(board, host.human_team) else null
+		"ashes":
+			return _ai_find_ashes_target(card, board, host)
+		"flame_wall":
+			return _ai_find_flame_wall_target(card, board, host)
+		"place_sarcophagus":
+			return _ai_find_tree_target(card, board, host)
+		# Morte Súbita (no fim conta as peças): quem está na frente quer o relógio
+		# curto, quem está atrás quer mais tempo.
+		"clock_cut":
+			@warning_ignore("incompatible_ternary")
+			return Vector2i.ZERO if _ai_material(board, host.ai_team) > _ai_material(board, host.human_team) else null
+		"extension", "pause":
+			@warning_ignore("incompatible_ternary")
+			return Vector2i.ZERO if _ai_material(board, host.ai_team) < _ai_material(board, host.human_team) else null
+		"sudden_start":
+			@warning_ignore("incompatible_ternary")
+			return Vector2i.ZERO if _ai_material(board, host.ai_team) >= _ai_material(board, host.human_team) + 2 else null
+		"recycle":
+			# Só recicla uma carta de verdade (não outra Reciclar) e com espaço na mão.
+			if ai_deck_mgr == null or ai_deck_mgr.discard_pile.is_empty() or ai_deck_mgr.hand.size() > 4:
+				return null
+			var last_card: ActionCard = ai_deck_mgr.discard_pile.back()
+			@warning_ignore("incompatible_ternary")
+			return Vector2i.ZERO if last_card.id != "recycle" else null
 	return null
+
+# Cinzas: casa em chamas colada (na diagonal) a uma peça da IA, que a impede de andar.
+func _ai_find_ashes_target(card: ActionCard, board: Board, host: Node2D) -> Variant:
+	for pos in board.fire_tiles.keys():
+		if not card.is_valid_target(board, pos, host.ai_team, {}):
+			continue
+		for d in [Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]:
+			var q: Vector2i = pos + d
+			if board.is_valid_pos(q.y, q.x):
+				var p: BoardPiece = board.grid[q.y][q.x]
+				if p != Board.EMPTY and p.owner_team == host.ai_team:
+					return pos
+	return null
+
+# Muro de Chamas: a fileira onde o jogador tem mais casas para andar (pelo menos 2).
+func _ai_find_flame_wall_target(card: ActionCard, board: Board, host: Node2D) -> Variant:
+	var by_row: Dictionary = {}
+	for m in board.get_all_valid_moves(host.human_team):
+		if m.get("is_capture", false):
+			continue
+		var pos: Vector2i = m["to"]
+		if board.grid[pos.y][pos.x] == Board.EMPTY and card.is_valid_target(board, pos, host.ai_team, {}):
+			if not by_row.has(pos.y):
+				by_row[pos.y] = []
+			if not by_row[pos.y].has(pos):
+				by_row[pos.y].append(pos)
+	var best: Variant = null
+	var best_n: int = 1
+	for row in by_row:
+		if by_row[row].size() > best_n:
+			best_n = by_row[row].size()
+			best = by_row[row][0]
+	return best
 
 # Brasa / Terra Queimada / Mão Sombria: casa livre para onde o jogador iria andar.
 func _ai_find_human_destination_target(card: ActionCard, board: Board, host: Node2D) -> Variant:
@@ -917,10 +1014,14 @@ func _ai_landing_is_safe(board: Board, from: Vector2i, to: Vector2i, ai_team: in
 
 func _process_boss_turn_events() -> void:
 	var host = _host
+	if host.current_duel != null and host.current_duel.sandstorm != null:
+		await _process_sandstorm_events(host.current_duel.sandstorm)
 	if not (host.current_duel is DuelBoss):
 		return
 
 	var boss_duel = host.current_duel as DuelBoss
+	if boss_duel is DuelBossMine:
+		(boss_duel as DuelBossMine).mover_team = host.current_turn
 	await _process_boss_law_events(boss_duel)
 	if boss_duel.should_trigger_devour:
 		boss_duel.should_trigger_devour = false
@@ -938,6 +1039,29 @@ func _process_boss_turn_events() -> void:
 		boss_duel.should_spawn_new_flies = false
 		boss_duel.roll_next_hazard_tiles()
 		await host.frog_animation_view.spawn_new_flies(boss_duel.hazard_tiles)
+
+# Tempestade de areia: a rajada passa pela fileira marcada e as peças ali deslizam uma
+# casa na diagonal (somem num redemoinho de areia e reaparecem na casa nova).
+func _process_sandstorm_events(st: SandstormMod) -> void:
+	var host = _host
+	for ev in st.advance():
+		if ev["type"] != "gust":
+			continue
+		var center = host.board_offset + Vector2(host.board.cols * host.cell_size / 2.0, (float(ev["row"]) + 0.5) * host.cell_size)
+		host.rule_banner_view.pop_rule_trigger(center, "RAJADA DE AREIA!", Color(0.95, 0.78, 0.45), "sandstorm")
+		Sfx.play("lei")
+		var moves: Array = ev["moves"]
+		if moves.is_empty():
+			await get_tree().create_timer(0.5).timeout
+			continue
+		var tw = create_tween().set_parallel(true)
+		for mv in moves:
+			var to: Vector2i = mv[1]
+			host.piece_spawn_scales[to] = 0.0
+			tw.tween_method(func(v): host.piece_spawn_scales[to] = v, 0.0, 1.0, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		await tw.finished
+		for mv2 in moves:
+			host.piece_spawn_scales.erase(mv2[1])
 
 # Eventos das Leis do chefe que não são do Sapo (Noite da Coruja / Floresta
 # Fecha): a lógica vive em DuelBoss.advance_turn(); aqui só se mostra.
@@ -991,6 +1115,34 @@ func _process_boss_law_events(boss_duel: DuelBoss) -> void:
 					tw2.tween_method(func(v): host.piece_spawn_scales[pos] = v, 0.0, 1.0, 0.45)\
 						.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 				await tw2.finished
+			"lantern":
+				host.rule_banner_view.pop_rule_trigger(center, "O LAMPIÃO ACENDE!", Color(1.0, 0.88, 0.5), "lantern")
+				Sfx.play("lei")
+				for hp in ev["hit"]:
+					var hc = host.board_offset + Vector2(hp.x * host.cell_size + host.cell_size / 2.0, hp.y * host.cell_size + host.cell_size / 2.0)
+					host.rule_banner_view.pop_rule_trigger(hc, "OFUSCADA!", Color(1.0, 0.95, 0.65))
+				await get_tree().create_timer(0.8).timeout
+			"crystal":
+				host.rule_banner_view.pop_rule_trigger(center, "UM CRISTAL BROTA!", Color(0.72, 0.6, 1.0), "ricochet")
+				Sfx.play("brotar")
+				await get_tree().create_timer(0.5).timeout
+			"cave_warn":
+				host.rule_banner_view.pop_rule_trigger(center, "O TETO ESTÁ RACHANDO!", Color(1.0, 0.55, 0.45), "cave_in")
+				await get_tree().create_timer(0.6).timeout
+			"cave_in":
+				host.rule_banner_view.pop_rule_trigger(center, "DESABAMENTO!", Color(1.0, 0.55, 0.45), "cave_in")
+				if host.mine_overlay != null:
+					await host.mine_overlay.play_cave_in(ev["rocks"], ev["killed"])
+				else:
+					for kv in ev["killed"]:
+						host.board.piece_destroyed.emit(kv[0], kv[1])
+				await get_tree().create_timer(0.3).timeout
+			"nugget_spawn":
+				Sfx.play("brotar")
+				var tw4 = create_tween()
+				host.board.rule_fired.emit("nuggets")
+				tw4.tween_interval(0.25)
+				await tw4.finished
 			"trees":
 				host.rule_banner_view.pop_rule_trigger(center, "A FLORESTA SE FECHA!", Color(0.45, 0.9, 0.4), "closing_forest")
 				var tw = create_tween().set_parallel(true)
@@ -1002,6 +1154,44 @@ func _process_boss_law_events(boss_duel: DuelBoss) -> void:
 
 func end_turn() -> void:
 	await _conclude_turn(_host.human_team)
+
+# Leis da Mina: anima o que o último make_move fez (vagoneta, pepita coletada) e
+# devolve a casa onde a peça terminou. Se a 3ª pepita coroou OUTRA peça (quem
+# coletou já era Dama), a coroação dela toca aqui.
+var _nugget_crowned_at := Vector2i(-1, -1)
+
+func _play_mine_move_events(pos: Vector2i, by_player: bool) -> Vector2i:
+	var host = _host
+	var board: Board = host.board
+	_nugget_crowned_at = Vector2i(-1, -1)
+	if board.mine_events.is_empty():
+		return pos
+	var evs: Array = board.mine_events.duplicate()
+	board.mine_events.clear()
+	for ev in evs:
+		match ev["type"]:
+			"rail":
+				pos = ev["to"]
+				if host.mine_overlay != null:
+					await host.mine_overlay.play_rail_ride(ev)
+			"nugget":
+				if host.mine_overlay != null:
+					await host.mine_overlay.play_nugget(ev)
+				var cp: Vector2i = ev["crown"]
+				if cp == ev["pos"]:
+					_nugget_crowned_at = cp
+				if cp != Vector2i(-1, -1) and cp != ev["pos"] and board.grid[cp.y][cp.x] != Board.EMPTY:
+					host.boss_say("promote_player" if by_player else "promote_boss")
+					var cc = host.board_offset + Vector2(cp.x * host.cell_size + host.cell_size / 2.0, cp.y * host.cell_size + host.cell_size / 2.0)
+					host.animating_coronation_tile = cp
+					await host.king_animation_view.play_coronation(cc, host.cell_size, board.grid[cp.y][cp.x])
+					host.animating_coronation_tile = Vector2i(-1, -1)
+	return pos
+
+func _pop_ricochet(mirror: Vector2i) -> void:
+	var host = _host
+	var c = host.board_offset + Vector2(mirror.x * host.cell_size + host.cell_size / 2.0, mirror.y * host.cell_size + host.cell_size / 2.0)
+	host.rule_banner_view.pop_rule_trigger(c, "RICOCHETE!", Color(0.72, 0.6, 1.0), "ricochet")
 
 # Botão "IGNORAR ... EXTRA": o jogador abre mão do passo extra, da 2ª jogada da
 # Dama Voadora ou do turno extra e passa a vez. O turno (e os eventos do chefe)

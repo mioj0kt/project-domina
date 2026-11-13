@@ -60,6 +60,8 @@ var tutorial_warned: bool = false     # jogador escolheu 'jogar mesmo assim' sem
 var tutorial_done: bool = false       # jogador já concluiu o tutorial até o fim
 # O Grimório começa BLOQUEADO e abre ao fim da 1ª run (derrota ou vitória).
 var grimorio_unlocked: bool = false
+# Biomas que o jogador já pisou pelo menos uma vez (decide quais ilhas voam no fundo).
+var visited_biomes: Array[String] = []
 var grimorio_just_unlocked: bool = false   # só na sessão: mostra o aviso "desbloqueado" uma vez
 
 # Estatísticas da run em andamento (zeradas em RunManager.start_new_run).
@@ -98,6 +100,8 @@ func load_data() -> void:
 	# Saves antigos (sem a chave) já jogaram: quem tem qualquer progresso começa com o Grimório aberto.
 	var legacy_open: bool = _coroas > 0 or not unlocked_rules.is_empty() or not unlocked_cards.is_empty() or oficina_tour_seen or run_over_tour_seen or alpha_end_seen
 	grimorio_unlocked = bool(cfg.get_value("meta", "grimorio_unlocked", legacy_open))
+	# Saves antigos: quem já tinha progresso certamente passou pela floresta.
+	visited_biomes = _to_str_array(cfg.get_value("meta", "visited_biomes", ["floresta"] if (legacy_open or tutorial_done) else []))
 	_sanitize()
 
 func save_data() -> void:
@@ -112,6 +116,7 @@ func save_data() -> void:
 	cfg.set_value("meta", "alpha_end_seen", alpha_end_seen)
 	cfg.set_value("meta", "tutorial_warned", tutorial_warned)
 	cfg.set_value("meta", "grimorio_unlocked", grimorio_unlocked)
+	cfg.set_value("meta", "visited_biomes", visited_biomes)
 	cfg.save(SAVE_PATH)
 
 func _to_str_array(v) -> Array[String]:
@@ -150,6 +155,11 @@ func mark_tutorial_done() -> void:
 		tutorial_done = true
 		save_data()
 
+func mark_biome_visited(b: String) -> void:
+	if b != "" and not visited_biomes.has(b):
+		visited_biomes.append(b)
+		save_data()
+
 func reset_all() -> void:
 	_coroas = 0
 	unlocked_rules.clear()
@@ -162,6 +172,7 @@ func reset_all() -> void:
 	tutorial_warned = false
 	grimorio_unlocked = false
 	grimorio_just_unlocked = false
+	visited_biomes.clear()
 	last_summary = {}
 	reset_run_stats()
 	save_data()

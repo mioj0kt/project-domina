@@ -75,6 +75,8 @@ func _load_settings() -> void:
 	display_mode = clampi(int(cfg.get_value("display", "mode", 0)), 0, 2)
 	screen_fx = bool(cfg.get_value("display", "screen_fx", true))
 	Juice.screen_fx = screen_fx
+	PieceSkin.set_player(int(cfg.get_value("pieces", "player", 0)))
+	PieceSkin.set_star(int(cfg.get_value("pieces", "player_star", 0)))
 	var r = cfg.get_value("display", "resolution", resolution)
 	if r is Vector2i:
 		resolution = r
@@ -89,11 +91,17 @@ func _sync_mode_from_window() -> void:
 		DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN: display_mode = 2
 		_: display_mode = 0
 
+# Usado pela tela "MINHA PEÇA" do menu para gravar a cor escolhida.
+func save_now() -> void:
+	_save_settings()
+
 func _save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("display", "mode", display_mode)
 	cfg.set_value("display", "resolution", resolution)
 	cfg.set_value("display", "screen_fx", screen_fx)
+	cfg.set_value("pieces", "player", PieceSkin.player_idx)
+	cfg.set_value("pieces", "player_star", PieceSkin.player_star)
 	for k in volumes.keys():
 		cfg.set_value("audio", String(k), volumes[k])
 	cfg.save(SAVE_PATH)

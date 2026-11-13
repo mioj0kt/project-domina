@@ -119,6 +119,22 @@ var released_mummy_owner: Dictionary = {}
 # Isca do Sapo (carta): [{"pos": Vector2i, "turns": int}] — a língua do sapo
 # devora o que estiver na casa quando "turns" (jogadas) chega a 0.
 var bait_flies: Array = []
+# --- Leis do Chefe da Mina ---
+# Ricochete: casas de cristal (também ficam em scorched_tiles, que é o bloqueio).
+# Uma captura que pousaria num cristal ricocheteia para a diagonal espelhada.
+var crystal_tiles: Dictionary = {}
+# Trilhos: [{"a": Vector2i, "b": Vector2i, "cells": [Vector2i...]}]. Quem PARA numa
+# ponta (movimento simples) é levado pela vagoneta até a outra, se estiver livre.
+var rail_lines: Array = []
+# Garimpo: pepitas nas casas (Vector2i -> true) e quantas cada time juntou (0..2).
+# A 3ª pepita coroa quem coletou e o contador volta a zero.
+var nugget_tiles: Dictionary = {}
+var nugget_counts: Dictionary = {}
+const NUGGETS_FOR_CROWN: int = 3
+# Fora da simulação: o que o último make_move fez nas leis da mina, para a view
+# animar (passeio de vagoneta, pepita coletada). O controlador consome e limpa.
+var mine_events: Array = []
+
 # Quantos turnos (do próprio time) a peça fica enraizada depois de capturar.
 const HUNGRY_ROOTS_TURNS: int = 2
 var _capturers: Array = []
@@ -199,6 +215,11 @@ func clear_board() -> void:
 	released_mummy_owner.clear()
 	bait_flies.clear()
 	_capturers.clear()
+	crystal_tiles.clear()
+	rail_lines.clear()
+	nugget_tiles.clear()
+	nugget_counts.clear()
+	mine_events.clear()
 
 # Concede à peça em `pos` a possibilidade de andar `distance` casas (caminho
 # livre) nas direções `dirs` neste turno, além dos movimentos normais.
@@ -510,6 +531,20 @@ func get_piece_captures(r: int, c: int) -> Array:
 					break
 				var captured_pos = Vector2i(cc, cr)
 				var landing_dist = dist + 1
+				# Ricochete: a primeira casa depois da vítima é um cristal -> a Dama
+				# quica e segue pela diagonal espelhada a partir da vítima.
+				var first_land := Vector2i(c + d.x * landing_dist, r + d.y * landing_dist)
+				if crystal_tiles.has(first_land):
+					var d2 := Vector2i(-d.x, d.y)
+					var k2: int = 1
+					while true:
+						var bp: Vector2i = captured_pos + d2 * k2
+						if not is_valid_pos(bp.y, bp.x) or scorched_tiles.has(bp) or grid[bp.y][bp.x] != EMPTY:
+							break
+						captures.append({"from": Vector2i(c, r), "to": bp, "is_capture": true, "captured": captured_pos,
+							"optional": occupant.is_tree, "ricochet": first_land})
+						k2 += 1
+					break
 				while true:
 					var lr = r + d.y * landing_dist
 					var lc = c + d.x * landing_dist
@@ -562,7 +597,17 @@ func get_piece_captures(r: int, c: int) -> Array:
 				continue # casa livre: o alcance estendido continua pra frente
 
 			# Primeira peça no caminho: ou é capturável aqui, ou bloqueia a linha.
-			if not is_valid_pos(landing_r, landing_c) or grid[landing_r][landing_c] != EMPTY or scorched_tiles.has(Vector2i(landing_c, landing_r)):
+			# Ricochete: se a casa do pouso é um cristal, a peça quica na vítima e
+			# pousa na casa espelhada (mesma fileira do pouso, do outro lado).
+			var mirror := Vector2i(-1, -1)
+			if crystal_tiles.has(Vector2i(landing_c, landing_r)):
+				var bounce := Vector2i(cap_c - d.x, cap_r + d.y)
+				if not is_valid_pos(bounce.y, bounce.x) or grid[bounce.y][bounce.x] != EMPTY or scorched_tiles.has(bounce):
+					break
+				mirror = Vector2i(landing_c, landing_r)
+				landing_c = bounce.x
+				landing_r = bounce.y
+			elif not is_valid_pos(landing_r, landing_c) or grid[landing_r][landing_c] != EMPTY or scorched_tiles.has(Vector2i(landing_c, landing_r)):
 				break
 
 			if target == _protected_piece and piece_obj.owner_team == _protected_attacker_team:
@@ -580,14 +625,17 @@ func get_piece_captures(r: int, c: int) -> Array:
 				if has_iron_crown and target.owner_team != human_team_color and target.is_king and not is_king:
 					break
 
-				captures.append({
+				var cap_move := {
 					"from": Vector2i(c, r),
 					"to": Vector2i(landing_c, landing_r),
 					"is_capture": true,
 					"captured": Vector2i(cap_c, cap_r),
 					"optional": target.is_tree
-				})
-			elif can_hop_allies and dist == 1:
+				}
+				if mirror != Vector2i(-1, -1):
+					cap_move["ricochet"] = mirror
+				captures.append(cap_move)
+			elif can_hop_allies and dist == 1 and mirror == Vector2i(-1, -1):
 				captures.append({
 					"from": Vector2i(c, r),
 					"to": Vector2i(landing_c, landing_r),
@@ -898,6 +946,14 @@ func make_move(move_dict: Dictionary) -> bool:
 				"from": from_pos,
 				"to": to_pos
 			}, self)
+		# Trilhos: parou na ponta de um trilho -> a vagoneta leva até a outra ponta.
+		var rail_dest: Dictionary = rail_ride_from(to_pos)
+		if not rail_dest.is_empty():
+			grid[to_pos.y][to_pos.x] = EMPTY
+			grid[rail_dest["to"].y][rail_dest["to"].x] = piece
+			if not is_simulation:
+				mine_events.append({"type": "rail", "from": to_pos, "to": rail_dest["to"], "cells": rail_dest["cells"], "piece": piece})
+			to_pos = rail_dest["to"]
 
 	# Terra Queimada: quem POUSA numa casa em chamas é destruído.
 	if fire_tiles.has(to_pos):
@@ -923,6 +979,26 @@ func make_move(move_dict: Dictionary) -> bool:
 		if not is_simulation and get_all_valid_moves(piece.owner_team).is_empty():
 			piece.rooted_turns = 0
 
+	# Garimpo: pousou numa pepita -> coleta. A 3ª coroa (quem coletou, ou a peça
+	# comum mais adiantada do time, se quem coletou já é Dama).
+	var nugget_crowned: bool = false
+	if nugget_tiles.has(to_pos) and grid[to_pos.y][to_pos.x] == piece and piece.owner_team != NEUTRAL:
+		nugget_tiles.erase(to_pos)
+		var n: int = int(nugget_counts.get(piece.owner_team, 0)) + 1
+		var crown_pos := Vector2i(-1, -1)
+		if n >= NUGGETS_FOR_CROWN:
+			if not piece.is_king:
+				piece.is_king = true
+				nugget_crowned = true
+				crown_pos = to_pos
+			else:
+				crown_pos = _crown_most_advanced(piece.owner_team)
+			if pipeline != null and crown_pos != Vector2i(-1, -1):
+				pipeline.emit_event(&"on_promotion", {"piece": grid[crown_pos.y][crown_pos.x], "pos": crown_pos}, self)
+		nugget_counts[piece.owner_team] = 0 if n >= NUGGETS_FOR_CROWN else n
+		if not is_simulation:
+			mine_events.append({"type": "nugget", "pos": to_pos, "team": piece.owner_team, "count": n, "crown": crown_pos})
+
 	# Herdeiro que chega ao fim do tabuleiro vira Dama de verdade.
 	if piece.is_king and piece.temp_king_turns > 0:
 		var end_row = 0 if piece.owner_team == human_team_color else rows - 1
@@ -947,7 +1023,44 @@ func make_move(move_dict: Dictionary) -> bool:
 					"pos": to_pos
 				}, self)
 
-	return promoted
+	return promoted or nugget_crowned
+
+# Trilhos: se `pos` é a ponta de um trilho e a outra ponta está livre, devolve
+# {"to": outra ponta, "cells": casas do trilho de pos até lá}; senão {}.
+func rail_ride_from(pos: Vector2i) -> Dictionary:
+	for line in rail_lines:
+		var cells: Array = line["cells"]
+		var dest := Vector2i(-1, -1)
+		var path: Array = []
+		if pos == line["a"]:
+			dest = line["b"]
+			path = cells.duplicate()
+		elif pos == line["b"]:
+			dest = line["a"]
+			path = cells.duplicate()
+			path.reverse()
+		else:
+			continue
+		if grid[dest.y][dest.x] == EMPTY and not scorched_tiles.has(dest):
+			return {"to": dest, "cells": path}
+	return {}
+
+# Garimpo: coroa a peça comum mais adiantada do time (a mais perto da coroação).
+func _crown_most_advanced(team: int) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var best_d: int = 999
+	for r in range(rows):
+		for c in range(cols):
+			var p: BoardPiece = grid[r][c]
+			if p == EMPTY or p.owner_team != team or p.is_king or p.is_tree:
+				continue
+			var d: int = r if team == human_team_color else rows - 1 - r
+			if d < best_d:
+				best_d = d
+				best = Vector2i(c, r)
+	if best != Vector2i(-1, -1):
+		grid[best.y][best.x].is_king = true
+	return best
 
 func count_pieces(team: int, kings_only: bool = false) -> int:
 	var count = 0
@@ -994,6 +1107,10 @@ func clone() -> Board:
 	new_b.sun_tiles = sun_tiles.duplicate()
 	new_b.quicksand_tiles = quicksand_tiles.duplicate()
 	new_b.lit_tiles = lit_tiles.duplicate(true)
+	new_b.crystal_tiles = crystal_tiles.duplicate()
+	new_b.rail_lines = rail_lines
+	new_b.nugget_tiles = nugget_tiles.duplicate()
+	new_b.nugget_counts = nugget_counts.duplicate()
 
 	for r in range(rows):
 		for c in range(cols):
