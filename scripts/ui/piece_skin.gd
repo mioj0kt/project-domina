@@ -29,6 +29,8 @@ const BIOME_ENEMIES: Dictionary = {
 	"floresta": [[5, 0], [10, 4], [2, 2]],    # verde/dourada, marrom/verde, vermelha/prata (cogumelo)
 	"deserto": [[4, 1], [3, 7], [10, 0]],     # amarela/vermelha, laranja/preta, marrom/dourada
 	"mina": [[8, 3], [6, 5], [11, 4]],        # roxa/azul, ciano/roxa, cinza/verde (cristais)
+	"cume": [[7, 2], [6, 2], [11, 3]],        # azul/prata, ciano/prata, cinza/azul (gelo)
+	"caldeira": [[2, 0], [3, 1], [1, 0]],     # vermelha/dourada, laranja/vermelha, preta/dourada (forja)
 }
 const CLASSIC_BLACK_CHANCE: float = 0.38
 const CLASSIC_WHITE_CHANCE: float = 0.30

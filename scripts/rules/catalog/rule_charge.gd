@@ -15,6 +15,9 @@ func _init() -> void:
 	rarity = Rarity.RARE
 	priority = 18
 
+func get_charge_state() -> Array:
+	return [charges, MAX_CHARGES]
+
 func modify_capture_reach(_piece: BoardPiece, base_reach: int, _board: RefCounted) -> int:
 	return base_reach + charges
 

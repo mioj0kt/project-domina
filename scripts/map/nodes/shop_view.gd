@@ -261,6 +261,7 @@ func _create_law_item_ui(law: RuleCard, index: int) -> Control:
 
 	var card_visual = RuleCardVisual.new(law, rule_tooltip, _laws_revealed, SHOP_CARD_SCALE)
 	wrapper.add_child(card_visual)
+	NewBadge.attach(card_visual, true, law.id)
 
 	var current_gold = RunManager.gold if RunManager != null else 0
 	var can_afford = current_gold >= _law_price(law)
@@ -305,6 +306,7 @@ func _create_action_card_shop_item_ui(card: ActionCard, index: int) -> Control:
 	var card_visual = ActionCardVisual.new(card, true, SHOP_ACTION_SCALE)
 	card_visual.mouse_filter = Control.MOUSE_FILTER_STOP
 	wrapper.add_child(card_visual)
+	NewBadge.attach(card_visual, false, card.id)
 
 	# Hover conectado ao ActionCardTooltip
 	card_visual.mouse_entered.connect(func():

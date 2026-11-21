@@ -216,6 +216,7 @@ func _show_offers() -> void:
 	if offers.is_empty():
 		_set_text("O Arcano está vazio. Você já conhece todas as Cartas disponíveis.")
 		return
+	_set_leave_compact(true)
 	match mode:
 		Mode.PICK_ONE:
 			_set_text("Escolha 1 entre %d cartas." % offers.size())
@@ -278,7 +279,11 @@ func _build_double() -> void:
 		holder.add_child(b)
 		row.add_child(holder)
 		vis.play_flip_reveal(0.1 + i * 0.1)
-	_confirm_btn = _small_button("LEVAR AS 2 ESCOLHIDAS", C_GOLD, 420)
+	# O botão de levar é o GRANDE da tela; sair sem levar fica pequeno e apagado
+	# (antes era o contrário e o jogador saía sem as cartas sem querer).
+	_confirm_btn = _small_button("LEVAR AS 2 ESCOLHIDAS", C_GOLD, CHOICE_W + 120.0)
+	_confirm_btn.custom_minimum_size.y = 84
+	_confirm_btn.add_theme_font_size_override("font_size", 32)
 	_confirm_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_confirm_btn.pressed.connect(func(): _choose(selected.duplicate()))
 	body.add_child(_confirm_btn)
@@ -294,7 +299,23 @@ func _refresh_double(buttons: Array) -> void:
 		var vis: Control = e["vis"]
 		vis.modulate = Color(1.0, 1.0, 1.0) if on or selected.size() < 2 else Color(0.6, 0.6, 0.65)
 	if _confirm_btn != null:
-		_confirm_btn.disabled = selected.size() != 2
+		var ready: bool = selected.size() == 2
+		_confirm_btn.disabled = not ready
+		_confirm_btn.text = "LEVAR AS 2 ESCOLHIDAS" if ready else "ESCOLHA MAIS %d CARTA%s" % [2 - selected.size(), "" if selected.size() == 1 else "S"]
+		if ready:
+			Juice.pulse(_confirm_btn, 1.06, 0.25)
+
+# Sair sem levar nada: pequeno e discreto enquanto há cartas para escolher.
+func _set_leave_compact(on: bool) -> void:
+	if on:
+		leave_btn.text = "SAIR SEM LEVAR NADA"
+		leave_btn.custom_minimum_size = Vector2(320, 48)
+		leave_btn.add_theme_font_size_override("font_size", 20)
+		leave_btn.modulate = Color(1, 1, 1, 0.75)
+	else:
+		leave_btn.custom_minimum_size = Vector2(CHOICE_W, 72)
+		leave_btn.add_theme_font_size_override("font_size", 32)
+		leave_btn.modulate = Color.WHITE
 
 # --- 1 dupla entre 3 ---
 func _build_pairs() -> void:
@@ -408,6 +429,7 @@ func _deliver() -> void:
 		RunManager.add_card_to_deck(c)
 	_clear_body()
 	_set_text("O Arcano entrega: %s." % _names(pending))
+	_set_leave_compact(false)
 	leave_btn.text = "SEGUIR VIAGEM"
 	if hud_bar != null:
 		hud_bar.refresh_deck()

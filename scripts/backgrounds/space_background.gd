@@ -28,7 +28,7 @@ static var _island_cache: Dictionary = {}   # caminho -> Texture2D
 # ilha_<grupo>_1..5.png. "menu" (as do tutorial) aparecem sempre; as de cada
 # bioma só depois que o jogador visitou aquele bioma pelo menos uma vez.
 const ISLAND_PATTERN := "res://assets/sprites/menu/ilhas/ilha_%s_%d.png"
-const ISLAND_GROUPS: Array[String] = ["menu", "floresta", "deserto", "mina"]
+const ISLAND_GROUPS: Array[String] = ["menu", "floresta", "deserto", "mina", "cume", "caldeira"]
 const ISLAND_VARIANTS: int = 5
 const ISLAND_DEPTHS: Array[Dictionary] = [
 	{"scale": 0.5, "tint": 0.55, "speed": 4.0, "bob": 4.0},
@@ -68,6 +68,18 @@ const BIOME_SKY: Dictionary = {
 		"a": [Color(0.20, 0.55, 0.55, 0.05), Color(0.22, 0.60, 0.58, 0.09), Color(0.30, 0.70, 0.66, 0.13)],
 		"b": [Color(0.40, 0.65, 0.80, 0.03), Color(0.42, 0.70, 0.85, 0.06), Color(0.50, 0.78, 0.90, 0.09)],
 		"stars": [Color("#efe6cf"), Color("#a9dcef"), Color("#7fd1c0"), Color("#6fb6d8"), Color("#cfeee6")],
+	},
+	"cume": {
+		"top": Color("#0b1424"), "bottom": Color("#16243a"),
+		"a": [Color(0.30, 0.80, 0.66, 0.04), Color(0.34, 0.86, 0.70, 0.07), Color(0.44, 0.92, 0.76, 0.11)],
+		"b": [Color(0.55, 0.62, 0.95, 0.03), Color(0.60, 0.66, 0.98, 0.06), Color(0.72, 0.76, 1.00, 0.09)],
+		"stars": [Color("#f4f7fa"), Color("#f4f7fa"), Color("#e4f6ff"), Color("#a9dcef"), Color("#6fe0b8"), Color("#b79cf0")],
+	},
+	"caldeira": {
+		"top": Color("#140c10"), "bottom": Color("#2e1414"),
+		"a": [Color(0.85, 0.30, 0.15, 0.05), Color(0.90, 0.34, 0.16, 0.09), Color(0.96, 0.45, 0.20, 0.13)],
+		"b": [Color(0.40, 0.28, 0.32, 0.04), Color(0.45, 0.32, 0.36, 0.07), Color(0.55, 0.40, 0.42, 0.10)],
+		"stars": [Color("#efe6cf"), Color("#ffe08a"), Color("#ffa53a"), Color("#f0662a"), Color("#b8aeab")],
 	},
 }
 static var _nebula_cache: Dictionary = {}
@@ -144,6 +156,14 @@ func _ready() -> void:
 	if biome == "mina":
 		_build_cave_fx(rng)
 
+	# 3c. Cume Congelado: aurora ondulando no alto e rajadas de neve cruzando a tela.
+	if biome == "cume":
+		_build_aurora(rng)
+
+	# 3d. Caldeira: fumaça no alto, brilho de lava no horizonte, cinza e brasas.
+	if biome == "caldeira":
+		_build_caldeira_sky(rng)
+
 	# 4. Ilhas-tabuleiro e peças voando (da mais longe para a mais perto).
 	if biome != "mina":
 		_build_floaters(rng)
@@ -174,6 +194,12 @@ func _process(delta: float) -> void:
 		if _cave_fx.visible:
 			_cave_fx.queue_redraw()
 	_update_floaters(delta)
+	if _aurora_fx != null:
+		_aurora_fx.queue_redraw()
+	if _smoke_fx != null:
+		_smoke_fx.queue_redraw()
+	if _glow_fx != null:
+		_glow_fx.queue_redraw()
 
 func _build_cave_fx(rng: RandomNumberGenerator) -> void:
 	if _blob_tex == null:
@@ -467,3 +493,156 @@ func _update_floaters(delta: float) -> void:
 			n.scale.x = maxf(0.2, absf(cos(_t * 0.9 + f["phase"]))) * bs
 
 # (As ilhas agora vêm prontas de assets/sprites/menu/ilhas/.)
+
+
+# ---------------------------------------------------------------------------
+# Cume Congelado: faixas de aurora (assets/sprites/mapa/ceu/cume/aurora_N.png)
+# esticadas na largura da tela, ondulando e respirando devagar no alto do céu,
+# e rajadas de neve (rajada_N.png) que cruzam a tela com o vento.
+# ---------------------------------------------------------------------------
+const AURORA_DIR := "res://assets/sprites/mapa/ceu/cume/"
+var _aurora_fx: Node2D = null
+var _aurora_bands: Array = []   # [Texture2D, y (fração), escala, velocidade, fase]
+var _sky_gusts: Array = []      # [Texture2D, y (fração), velocidade, atraso, escala]
+var _sky_flakes: Array = []     # [x, y (frações), queda px/s, fase, forma]
+
+func _build_aurora(rng: RandomNumberGenerator) -> void:
+	_aurora_fx = Node2D.new()
+	_aurora_fx.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_aurora_fx.material = mat
+	_aurora_fx.draw.connect(_draw_aurora)
+	add_child(_aurora_fx)
+	var ys: Array[float] = [0.06, 0.14, 0.24]
+	for i in range(3):
+		var p: String = AURORA_DIR + "aurora_%d.png" % (i + 1)
+		if ResourceLoader.exists(p):
+			_aurora_bands.append([load(p), ys[i], 4.0 - float(i) * 0.5, rng.randf_range(6.0, 14.0) * (1.0 if i % 2 == 0 else -1.0), rng.randf() * TAU])
+	for i in range(140):
+		_sky_flakes.append([rng.randf(), rng.randf(), rng.randf_range(20.0, 60.0), rng.randf() * TAU, 0 if i % 4 != 0 else (1 if i % 12 != 0 else 2)])
+	for i in range(10):
+		var gp: String = AURORA_DIR + "rajada_%d.png" % (i % 4 + 1)
+		if ResourceLoader.exists(gp):
+			_sky_gusts.append([load(gp), rng.randf_range(0.08, 0.95), rng.randf_range(0.10, 0.22), rng.randf() * 8.0, float(3 + i % 2)])
+
+func _draw_aurora() -> void:
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	# cada faixa aparece UMA vez (as pontas da arte já somem sozinhas), larga como a
+	# tela, balançando de um lado para o outro e "respirando"
+	var sc: float = maxf(2.0, floorf(vp.x / 320.0 * 0.95))
+	for b in _aurora_bands:
+		var tex: Texture2D = b[0]
+		var tw: float = tex.get_width() * sc
+		var th: float = tex.get_height() * sc
+		var breathe: float = 0.30 + 0.25 * sin(_t * 0.22 + float(b[4]))
+		var x0: float = round((vp.x - tw) * 0.5 + sin(_t * 0.05 + float(b[4])) * float(b[3]) * 6.0)
+		var col_w: float = 4.0 * sc
+		var cols: int = int(tex.get_width() / 4.0)
+		for c in range(cols):
+			var px: float = x0 + float(c) * col_w
+			# ondulação: cada coluna de 4 px sobe e desce um pouco, como cortina
+			var wave: float = round(sin(px * 0.005 + _t * 0.45 + float(b[4])) * 3.0) * sc
+			_aurora_fx.draw_texture_rect_region(tex, Rect2(px, float(b[1]) * vp.y + wave, col_w, th),
+				Rect2(float(c) * 4.0, 0.0, 4.0, tex.get_height()), Color(1, 1, 1, breathe))
+	var wind: float = 0.4 + 0.6 * pow(maxf(0.0, sin(_t * 0.33 + 0.7)), 2.0)
+	# neve no céu (atrás das ilhas e do tabuleiro), empurrada pelo mesmo vento
+	var fu: float = 3.0
+	for f in _sky_flakes:
+		var fy: float = fposmod(float(f[1]) * vp.y + _t * float(f[2]), vp.y + 20.0) - 10.0
+		var fx: float = fposmod(float(f[0]) * vp.x + _t * float(f[2]) * (0.8 + wind) + sin(_t * 0.8 + float(f[3])) * 10.0, vp.x + 20.0) - 10.0
+		ForestBackground.draw_flake(_aurora_fx, Vector2(floorf(fx), floorf(fy)), fu, int(f[4]), Color(0.75, 0.82, 0.9, 0.35))
+	for g in _sky_gusts:
+		var gt: Texture2D = g[0]
+		var gs: float = float(g[4])
+		var gsz: Vector2 = gt.get_size() * gs
+		var travel: float = vp.x + gsz.x * 2.0
+		var cycle: float = travel / (vp.x * float(g[2]) * (0.6 + wind))
+		var k: float = fposmod(_t + float(g[3]) * cycle, cycle) / cycle
+		var a: float = sin(k * PI) * (0.25 + 0.45 * wind)
+		_aurora_fx.draw_texture_rect(gt, Rect2(Vector2(-gsz.x + k * travel, float(g[1]) * vp.y).round(), gsz), false, Color(1, 1, 1, a))
+
+
+# ---------------------------------------------------------------------------
+# Caldeira: faixas de fumaça (fumaca_N) passando devagar no alto, brilho de lava
+# (brilho_lava_N) pulsando no horizonte (embaixo), nuvens de cinza (nuvem_cinza_N)
+# cruzando a tela e brasas subindo. Arte em assets/sprites/mapa/ceu/caldeira/.
+# ---------------------------------------------------------------------------
+const CALDEIRA_SKY_DIR := "res://assets/sprites/mapa/ceu/caldeira/"
+var _smoke_fx: Node2D = null
+var _glow_fx: Node2D = null
+var _smoke_bands: Array = []    # [Texture2D, y (fração), velocidade, fase]
+var _glow_bands: Array = []     # [Texture2D, y (fração do fundo), fase]
+var _ash_clouds: Array = []     # [Texture2D, y, velocidade, atraso, escala]
+var _embers: Array = []         # [x, y (frações), subida px/s, fase, tamanho]
+
+func _build_caldeira_sky(rng: RandomNumberGenerator) -> void:
+	_glow_fx = Node2D.new()
+	_glow_fx.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var add := CanvasItemMaterial.new()
+	add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_glow_fx.material = add
+	_glow_fx.draw.connect(_draw_caldeira_glow)
+	add_child(_glow_fx)
+	_smoke_fx = Node2D.new()
+	_smoke_fx.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_smoke_fx.draw.connect(_draw_caldeira_smoke)
+	add_child(_smoke_fx)
+	var ys: Array[float] = [0.04, 0.13, 0.22]
+	for i in range(3):
+		var p: String = CALDEIRA_SKY_DIR + "fumaca_%d.png" % (i + 1)
+		if ResourceLoader.exists(p):
+			_smoke_bands.append([load(p), ys[i], rng.randf_range(5.0, 11.0) * (1.0 if i % 2 == 0 else -1.0), rng.randf() * TAU])
+	for i in range(2):
+		var gp: String = CALDEIRA_SKY_DIR + "brilho_lava_%d.png" % (i + 1)
+		if ResourceLoader.exists(gp):
+			_glow_bands.append([load(gp), 0.92 - float(i) * 0.06, rng.randf() * TAU])
+	for i in range(8):
+		var cp: String = CALDEIRA_SKY_DIR + "nuvem_cinza_%d.png" % (i % 4 + 1)
+		if ResourceLoader.exists(cp):
+			_ash_clouds.append([load(cp), rng.randf_range(0.10, 0.9), rng.randf_range(0.04, 0.09), rng.randf() * 8.0, float(3 + i % 2)])
+	for i in range(70):
+		_embers.append([rng.randf(), rng.randf(), rng.randf_range(14.0, 46.0), rng.randf() * TAU, 1 if i % 5 != 0 else 2])
+
+func _draw_caldeira_glow() -> void:
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	var sc: float = maxf(2.0, ceilf(vp.x / 320.0))
+	for b in _glow_bands:
+		var tex: Texture2D = b[0]
+		var sz: Vector2 = tex.get_size() * sc
+		var a: float = 0.45 + 0.25 * sin(_t * 0.6 + float(b[2]))
+		var y: float = round(float(b[1]) * vp.y - sz.y * 0.5)
+		_glow_fx.draw_texture_rect(tex, Rect2(Vector2(round((vp.x - sz.x) * 0.5), y), sz), false, Color(1, 1, 1, a))
+	# brasas subindo e balançando
+	for e in _embers:
+		var ey: float = fposmod(float(e[1]) * vp.y - _t * float(e[2]), vp.y + 20.0) - 10.0
+		var ex: float = fposmod(float(e[0]) * vp.x + sin(_t * 0.9 + float(e[3])) * 14.0, vp.x)
+		var life: float = clampf(ey / vp.y, 0.0, 1.0)   # some ao chegar no alto
+		var s: float = 3.0 * float(e[4])
+		var col := Color(1.0, 0.45 + 0.4 * life, 0.15, 0.25 + 0.45 * life)
+		_glow_fx.draw_rect(Rect2(Vector2(floorf(ex / 3.0) * 3.0, floorf(ey / 3.0) * 3.0), Vector2(s, s)), col)
+
+func _draw_caldeira_smoke() -> void:
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	var sc: float = maxf(2.0, floorf(vp.x / 320.0 * 0.95))
+	for b in _smoke_bands:
+		var tex: Texture2D = b[0]
+		var tw: float = tex.get_width() * sc
+		var th: float = tex.get_height() * sc
+		var x0: float = round(fposmod(_t * float(b[2]) + float(b[3]) * 100.0, tw))
+		var y: float = float(b[1]) * vp.y
+		var a: float = 0.55 + 0.15 * sin(_t * 0.2 + float(b[3]))
+		var x: float = x0 - tw
+		while x < vp.x:
+			_smoke_fx.draw_texture_rect(tex, Rect2(Vector2(x, y).round(), Vector2(tw, th)), false, Color(1, 1, 1, a))
+			x += tw
+	for g in _ash_clouds:
+		var gt: Texture2D = g[0]
+		var gs: float = float(g[4])
+		var gsz: Vector2 = gt.get_size() * gs
+		var travel: float = vp.x + gsz.x * 2.0
+		var cycle: float = travel / (vp.x * float(g[2]))
+		var k: float = fposmod(_t + float(g[3]) * cycle, cycle) / cycle
+		var a2: float = sin(k * PI) * 0.6
+		_smoke_fx.draw_texture_rect(gt, Rect2(Vector2(-gsz.x + k * travel, float(g[1]) * vp.y + k * 40.0).round(), gsz), false, Color(1, 1, 1, a2))
+

@@ -31,7 +31,10 @@ func _play_fade_in() -> void:
 	tw.tween_callback(layer.queue_free)
 
 # Quanto o logo + botões sobem em relação ao centro da tela.
-const MENU_RAISE_PX: float = 70.0
+const MENU_RAISE_PX: float = 40.0
+
+var _board: MenuBoard = null
+
 
 func _setup_ui() -> void:
 	var canvas = CanvasLayer.new()
@@ -46,48 +49,36 @@ func _setup_ui() -> void:
 	center_box.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	center_box.grow_vertical = Control.GROW_DIRECTION_BOTH
 	center_box.alignment = BoxContainer.ALIGNMENT_CENTER
-	center_box.add_theme_constant_override("separation", 22)
+	center_box.add_theme_constant_override("separation", 14)
 	canvas.add_child(center_box)
 
 	center_box.add_child(_make_logo())
 
 	var spacer = Control.new()
-	spacer.custom_minimum_size = Vector2(10, 30)
+	spacer.custom_minimum_size = Vector2(10, 4)
 	center_box.add_child(spacer)
 
-	var play_btn = _make_menu_button("JOGAR", Color(0.12, 0.22, 0.16), Color(0.3, 0.9, 0.4))
-	play_btn.pressed.connect(_on_play_pressed)
-	center_box.add_child(play_btn)
-
-	var meta_btn = _make_menu_button("GRIMÓRIO", Color(0.2, 0.16, 0.08), Color(0.85, 0.64, 0.25))
-	meta_btn.pressed.connect(_on_meta_pressed)
-	center_box.add_child(meta_btn)
+	# O menu é uma ilha com um tabuleiro: cada linha é uma opção (placa cravada
+	# no tabuleiro) e a peça do jogador pula até a opção sob o mouse.
+	_board = MenuBoard.new()
+	_board.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_board.add_option("JOGAR", _on_play_pressed)
+	var meta_btn := _board.add_option("GRIMÓRIO", _on_meta_pressed, not MetaProgress.grimorio_unlocked)
 	# Grimório bloqueado até o fim da 1ª run (derrota ou vitória).
 	if not MetaProgress.grimorio_unlocked:
-		meta_btn.text = "GRIMÓRIO  (BLOQUEADO)"
-		meta_btn.disabled = true
-		meta_btn.modulate = Color(1, 1, 1, 0.55)
 		meta_btn.tooltip_text = "Termine sua primeira run para desbloquear o Grimório."
-		center_box.add_child(_menu_note("Termine sua primeira run para desbloquear o Grimório.", Color(0.94, 0.9, 0.81, 0.6)))
 	elif MetaProgress.grimorio_just_unlocked:
 		MetaProgress.grimorio_just_unlocked = false
-		var note := _menu_note("GRIMÓRIO DESBLOQUEADO!", Color(1.0, 0.85, 0.3))
-		center_box.add_child(note)
-		var tw := create_tween().set_loops(6)
-		tw.tween_property(meta_btn, "modulate", Color(1.5, 1.3, 0.9), 0.5)
-		tw.tween_property(meta_btn, "modulate", Color.WHITE, 0.5)
+		_board.set_new(1)
+	_board.add_option("TUTORIAL", _on_tutorial_pressed)
+	_board.add_option("SAIR", _on_quit_pressed)
+	center_box.add_child(_board)
 
-	var piece_btn = _make_menu_button("MINHA PEÇA", Color(0.16, 0.12, 0.2), Color(0.75, 0.55, 0.95))
-	piece_btn.pressed.connect(_on_piece_pressed)
-	center_box.add_child(piece_btn)
-
-	var tutorial_btn = _make_menu_button("TUTORIAL", Color(0.12, 0.16, 0.24), Color(0.35, 0.7, 1.0))
-	tutorial_btn.pressed.connect(_on_tutorial_pressed)
-	center_box.add_child(tutorial_btn)
-
-	var quit_btn = _make_menu_button("SAIR", Color(0.2, 0.1, 0.12), Color(0.8, 0.3, 0.35))
-	quit_btn.pressed.connect(_on_quit_pressed)
-	center_box.add_child(quit_btn)
+	# A rocha da ilha fica pendurada abaixo do tabuleiro: reserva o espaço dela.
+	var base_space := Control.new()
+	base_space.custom_minimum_size = Vector2(1, _board.base_height() - 40.0)
+	base_space.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center_box.add_child(base_space)
 
 	_add_version_label(canvas)
 	_add_reset_button(canvas)
@@ -142,10 +133,11 @@ func _menu_note(text: String, color: Color) -> Label:
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l
 
-func _make_menu_button(text: String, _bg_color: Color, border_color: Color) -> Button:
+# Botão com caixa (usado no aviso do tutorial).
+func _make_box_button(text: String, border_color: Color) -> Button:
 	var btn = Button.new()
 	btn.text = text
-	btn.custom_minimum_size = Vector2(360, 68)
+	btn.custom_minimum_size = Vector2(330, 64)
 	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	btn.add_theme_font_size_override("font_size", 28)
 	PixelUI.skin_button(btn, border_color)
@@ -229,14 +221,6 @@ func _on_meta_pressed() -> void:
 		return
 	SceneTransition.go(META_SCENE_PATH)
 
-# Personalização: cor das peças do jogador e da estrela da Dama.
-func _on_piece_pressed() -> void:
-	if get_node_or_null("PieceCustomize") != null:
-		return
-	var view := PieceCustomizeView.new()
-	view.name = "PieceCustomize"
-	add_child(view)
-
 func _on_tutorial_pressed() -> void:
 	if TutorialManager != null:
 		TutorialManager.start_tutorial()
@@ -296,14 +280,14 @@ func _show_tutorial_warning() -> void:
 	row.add_theme_constant_override("separation", 20)
 	v.add_child(row)
 
-	var tut_btn := _make_menu_button("FAZER O TUTORIAL", Color.BLACK, Color(0.35, 0.7, 1.0))
+	var tut_btn := _make_box_button("FAZER O TUTORIAL", Color(0.35, 0.7, 1.0))
 	tut_btn.custom_minimum_size = Vector2(330, 64)
 	tut_btn.pressed.connect(func():
 		_close_tutorial_warning()
 		_on_tutorial_pressed())
 	row.add_child(tut_btn)
 
-	var play_btn := _make_menu_button("JOGAR MESMO ASSIM", Color.BLACK, Color(0.3, 0.9, 0.4))
+	var play_btn := _make_box_button("JOGAR MESMO ASSIM", Color(0.3, 0.9, 0.4))
 	play_btn.custom_minimum_size = Vector2(330, 64)
 	play_btn.pressed.connect(func():
 		MetaProgress.mark_tutorial_warned()   # não pergunta de novo

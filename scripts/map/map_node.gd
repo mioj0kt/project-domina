@@ -33,6 +33,12 @@ var cave_edge: bool = false    # a gruta tem túnel entre os dois primeiros
 var storm: bool = false
 var storm_id: int = -1
 
+# Cume Congelado: duelo num glaciar de gelo fino / nodo em cima de uma ponte de corda
+# (fileira do desfiladeiro). Os duelos ganham um efeito próprio.
+var glacier: bool = false
+var glacier_id: int = -1
+var bridge: bool = false
+
 # Disposição inicial das peças (ver Board.layout_cells); só duelos comuns/fortes sorteiam.
 var board_layout: String = Board.LAYOUT_CLASSIC
 

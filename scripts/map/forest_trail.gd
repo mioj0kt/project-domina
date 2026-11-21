@@ -109,13 +109,13 @@ static var _recolor_cache: Dictionary = {}
 # Biomas em que o trecho "selecionado" NÃO ganha o dourado: usa a arte "normal"
 # (a cor original da trilha). O caminho disponível já é indicado pelos anéis dos
 # nós; o dourado da floresta destoava do mapa. Tire o bioma daqui para voltar.
-const SELECTED_KEEPS_ORIGINAL: Array[String] = ["floresta", "deserto", "mina"]
+const SELECTED_KEEPS_ORIGINAL: Array[String] = ["floresta", "deserto", "mina", "cume", "caldeira"]
 # Biomas sem o contorno pulsante no trecho selecionado (nos trilhos diagonais da
 # mina ele vira uma escadinha de quadrados).
 # Biomas cuja arte de trilha vem com a cor invertida (pasta casa_clara = trilho
 # escuro): aqui a trilha clara vai na casa clara e a escura na casa escura.
-const SWAP_TILE_COLOR: Array[String] = []
-const NO_SELECT_OUTLINE: Array[String] = ["mina"]
+const SWAP_TILE_COLOR: Array[String] = ["caldeira"]
+const NO_SELECT_OUTLINE: Array[String] = ["mina", "cume", "caldeira"]
 
 static func _recolored(tex: Texture2D, st: String, key: String, biome_id: String = "") -> Texture2D:
 	if not STATE_RAMPS.has(st):

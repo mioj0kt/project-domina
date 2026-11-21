@@ -20,7 +20,7 @@ const RARITY_COLORS: Array[Color] = [
 	Color(0.81, 0.76, 0.65), Color(0.25, 0.5, 0.6), Color(0.54, 0.36, 0.75), Color(0.85, 0.64, 0.25)]
 const RARITY_NAMES: Array[String] = ["COMUM", "RARA", "ÉPICA", "LENDÁRIA"]
 
-enum Tab { MAQUINA, LEIS, CARTAS }
+enum Tab { MAQUINA, LEIS, CARTAS, PECA }
 var _tab: int = Tab.MAQUINA
 var _machine: OrbitalMachine = null
 var _machine_busy: bool = false
@@ -97,7 +97,7 @@ func _ready() -> void:
 	_tabs_row = tabs
 	tabs.add_theme_constant_override("separation", 10)
 	v.add_child(tabs)
-	var names := ["ORÁCULO", "LEIS", "CARTAS"]
+	var names := ["ORÁCULO", "LEIS", "CARTAS", "MINHA PEÇA"]
 	for i in range(names.size()):
 		var b := _btn(names[i], Color.WHITE, Vector2(200, 48), 22)
 		b.pressed.connect(_set_tab.bind(i))
@@ -203,8 +203,9 @@ func _refresh() -> void:
 		Tab.MAQUINA: _build_machine()
 		Tab.LEIS: _build_rules()
 		Tab.CARTAS: _build_cards()
+		Tab.PECA: _grid_holder.add_child(PieceCustomizeView.new())
 	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if _tab == Tab.MAQUINA else ScrollContainer.SCROLL_MODE_AUTO
-	_side_panel.visible = _tab != Tab.MAQUINA   # a mochila só aparece em Leis/Cartas
+	_side_panel.visible = _tab == Tab.LEIS or _tab == Tab.CARTAS   # a mochila só aparece em Leis/Cartas
 	# No Oráculo o quadro de fundo também some: só o painel da máquina.
 	_window_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new() if _tab == Tab.MAQUINA else _window_style)
 	_grid_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -317,7 +318,7 @@ func _build_cards() -> void:
 
 # ---- Máquina orbital (sorteia uma Carta OU uma Lei) ----
 func _build_machine() -> void:
-	var price: int = MetaProgress.MACHINE_PRICE
+	var price: int = MetaProgress.machine_price()
 	var cards_left: int = MetaProgress.remaining_of(false)
 	var rules_left: int = MetaProgress.remaining_of(true)
 	var remaining: int = cards_left + rules_left
@@ -777,7 +778,7 @@ func _tour_target(id: String) -> Rect2:
 	match id:
 		"coroas": c = _coroas_panel
 		"tabs":
-			# Só os 3 botões das abas (a linha inteira é bem mais larga que eles).
+			# Só os botões das abas (a linha inteira é bem mais larga que eles).
 			if not _tab_btns.is_empty():
 				var tabs_rect: Rect2 = _tab_btns[0].get_global_rect()
 				for tb in _tab_btns:

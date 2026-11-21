@@ -70,8 +70,8 @@ func _draw() -> void:
 				draw_rect(rect, board.grid_border_color, false, 1.0)
 
 	for pos in board.scorched_tiles.keys():
-		if board.crystal_tiles.has(pos):
-			continue   # cristal do Ricochete: desenhado junto com as peças
+		if board.crystal_tiles.has(pos) or board.snow_tiles.has(pos) or board.water_tiles.has(pos):
+			continue   # cristal do Ricochete (junto com as peças) / neve da Avalanche (CumeBossFx)
 		var tile_rect = Rect2(board_offset.x + pos.x * cell_size, board_offset.y + pos.y * cell_size, cell_size, cell_size)
 		if board.sand_tiles.has(pos):
 			_draw_sand_cover(tile_rect, pos)
@@ -85,6 +85,7 @@ func _draw() -> void:
 	_draw_desert_boss_telegraph(board_offset, cell_size)
 	_draw_sandstorm_telegraph(board_offset, cell_size)
 	MineBossFx.draw_under(self, host, board, board_offset, cell_size)
+	CumeBossFx.draw_under(self, host, board, board_offset, cell_size)
 	_draw_light_tile_laws(board, board_offset, cell_size)
 
 	if board.rule_pipeline != null and (board.rule_pipeline.has_rule("sacred_zone") or board.rule_pipeline.has_rule("power_center")):
@@ -201,6 +202,8 @@ func _draw() -> void:
 				PixelRenderer.draw_piece(self, piece_obj, center, cell_size, scale_factor)
 				_draw_piece_status(piece_obj, center, cell_size * scale_factor)
 
+	_draw_ricochet_paths(board_offset, cell_size)
+	CumeBossFx.draw_over(self, host, board, board_offset, cell_size)
 	_draw_gust_preview(board_offset, cell_size)
 	_draw_gust_slide(board, board_offset, cell_size)
 	_draw_silence_badges(board, board_offset, cell_size)
@@ -320,15 +323,61 @@ func _draw_sandstorm_telegraph(board_offset: Vector2, cell_size: float) -> void:
 			draw_rect(Rect2(Vector2(cx + ox - u * 0.5, cy - u * float(j) - u * 0.5), Vector2(u, u)), col)
 			draw_rect(Rect2(Vector2(cx + ox - u * 0.5, cy + u * float(j) - u * 0.5), Vector2(u, u)), col)
 
+# Ricochete: com uma peça selecionada, cada captura que vai bater num cristal
+# mostra o caminho inteiro — tracejado até o cristal (por cima da vítima), um
+# "V" de luz no cristal e a seta até a casa espelhada onde a peça vai pousar.
+func _draw_ricochet_paths(board_offset: Vector2, cell_size: float) -> void:
+	if host == null or host.valid_moves_for_selected.is_empty():
+		return
+	var t: float = Time.get_ticks_msec() / 1000.0
+	var pulse: float = 0.5 + 0.5 * sin(t * 6.0)
+	var u: float = maxf(2.0, round(cell_size / 22.0))
+	var col := Color(0.86, 0.78, 1.0)
+	var dark := Color(0.12, 0.08, 0.2, 0.55)
+	for m in host.valid_moves_for_selected:
+		if not m.has("ricochet"):
+			continue
+		var a: Vector2 = board_offset + (Vector2(m["from"]) + Vector2(0.5, 0.5)) * cell_size
+		var c: Vector2 = board_offset + (Vector2(m["ricochet"]) + Vector2(0.5, 0.5)) * cell_size
+		var l: Vector2 = board_offset + (Vector2(m["to"]) + Vector2(0.5, 0.5)) * cell_size
+		# 1) ida: pontinhos andando da peça até o cristal
+		var d1: Vector2 = (c - a).normalized()
+		var len1: float = a.distance_to(c) - cell_size * 0.3
+		var step: float = u * 3.0
+		var s: float = fposmod(t * cell_size * 0.9, step) + cell_size * 0.3
+		while s < len1:
+			var q: Vector2 = (a + d1 * s).round()
+			draw_rect(Rect2(q - Vector2(u, u) * 0.5 + Vector2(1, 1), Vector2(u, u)), dark)
+			draw_rect(Rect2(q - Vector2(u, u) * 0.5, Vector2(u, u)), Color(col, 0.85))
+			s += step
+		# 2) o cristal brilha (anel de cantos pulsando)
+		var cr := Rect2(c - Vector2(cell_size, cell_size) * 0.5, Vector2(cell_size, cell_size))
+		draw_rect(cr, Color(0.7, 0.55, 1.0, 0.10 + 0.12 * pulse))
+		PixelRenderer.draw_pixel_corners(self, cr.grow(-u), Color(col, 0.6 + 0.4 * pulse), cell_size * 0.2, u)
+		# 3) volta: linha cheia do cristal até o pouso, com ponta de seta
+		var hit: Vector2 = c.lerp(a, 0.18)
+		var d2: Vector2 = (l - hit).normalized()
+		var side := Vector2(-d2.y, d2.x)
+		var tip: Vector2 = l - d2 * cell_size * 0.22
+		var neck: Vector2 = tip - d2 * cell_size * 0.16
+		draw_line(hit + Vector2(1, 1), neck + Vector2(1, 1), dark, u)
+		draw_line(hit, neck, Color(col, 0.95), u)
+		draw_colored_polygon(PackedVector2Array([tip, neck + side * cell_size * 0.11, neck - side * cell_size * 0.11]), Color(col, 0.95))
+		# faísca no ponto do choque
+		var sp: float = u * (2.0 + 1.5 * pulse)
+		draw_rect(Rect2(hit - Vector2(sp, u * 0.5), Vector2(sp * 2.0, u)), Color(1, 1, 1, 0.9))
+		draw_rect(Rect2(hit - Vector2(u * 0.5, sp), Vector2(u, sp * 2.0)), Color(1, 1, 1, 0.9))
+
 # Rajada anunciada: cada peça que vai ser empurrada ganha uma SETA grossa (com
 # contorno escuro, legível em casa clara e escura) até a casa onde vai parar, e lá
 # aparece um "fantasma" da peça piscando. Peça que não tem para onde ir não ganha
 # seta (fica parada). Some enquanto a rajada está passando.
 func _draw_gust_preview(board_offset: Vector2, cell_size: float) -> void:
-	if host == null or host.current_duel == null or host.current_duel.sandstorm == null or not host.gust_anim.is_empty():
+	if host == null or host.current_duel == null or not host.gust_anim.is_empty():
 		return
-	var st: SandstormMod = host.current_duel.sandstorm
-	if st.gust_row < 0:
+	# tempestade de areia (fileira) ou ponte de corda (colunas): mesma leitura
+	var st = host.current_duel.sandstorm if host.current_duel.sandstorm != null else host.current_duel.bridge
+	if st == null or st.gust_row < 0:
 		return
 	var t: float = Time.get_ticks_msec() / 1000.0
 	var soon: bool = st.plies_to_gust() <= 2
@@ -491,7 +540,10 @@ func _draw_fire_tiles(board: Board, board_offset: Vector2, cell_size: float) -> 
 func _draw_piece_status(piece: BoardPiece, center: Vector2, size: float) -> void:
 	if host.board != null and not piece.is_tree and host.board.counterstrike_turns.get(piece.owner_team, 0) > 0:
 		_draw_counterstrike_spikes(center, size)
-	if piece.rooted_turns > 0 and piece.dazzled:
+	CumeBossFx.draw_piece_marks(self, piece, center, size)
+	if piece.rooted_turns > 0 and piece.winded:
+		CumeBossFx.draw_winded(self, center, size)
+	elif piece.rooted_turns > 0 and piece.dazzled:
 		MineBossFx.draw_dazzle(self, center, size)
 	elif piece.rooted_turns > 0 and host.board != null and host.board.hungry_roots_team != 0:
 		_draw_roots_front(piece, center, size)
@@ -516,11 +568,17 @@ func _draw_piece_status(piece: BoardPiece, center: Vector2, size: float) -> void
 		draw_circle(center, rad, Color(0.35, 0.65, 1.0, 0.16 + 0.1 * pulse))
 		draw_arc(center, rad, 0, TAU, 32, Color(0.55, 0.8, 1.0, 0.75 + 0.25 * pulse), 3.0)
 		# Selo de escudo no canto inferior esquerdo.
-		var sc = center + Vector2(-size * 0.3, size * 0.3)
-		var s = size * 0.13
+		# O número no selo = quantos turnos do dono o escudo ainda dura.
+		var sc = center + Vector2(-size * 0.3, size * 0.24)
+		var s = size * 0.2
 		var shield_pts = PackedVector2Array([sc + Vector2(-s, -s), sc + Vector2(s, -s), sc + Vector2(s, s * 0.2), sc + Vector2(0, s * 1.3), sc + Vector2(-s, s * 0.2)])
-		draw_colored_polygon(shield_pts, Color(0.3, 0.6, 0.95))
+		draw_colored_polygon(shield_pts, Color(0.16, 0.36, 0.7))
 		draw_polyline(PackedVector2Array([shield_pts[0], shield_pts[1], shield_pts[2], shield_pts[3], shield_pts[4], shield_pts[0]]), Color(0.9, 0.97, 1.0), 2.0)
+		var sfs: int = 32 if size >= 60.0 else 16
+		var stxt := str(piece.shield_turns)
+		var sbase: float = sc.y + s * 0.15 + (_BADGE_FONT.get_ascent(sfs) - _BADGE_FONT.get_descent(sfs)) / 2.0
+		draw_string(_BADGE_FONT, Vector2(sc.x - s + 1, sbase + 1), stxt, HORIZONTAL_ALIGNMENT_CENTER, s * 2.0, sfs, Color(0.05, 0.08, 0.16))
+		draw_string(_BADGE_FONT, Vector2(sc.x - s, sbase), stxt, HORIZONTAL_ALIGNMENT_CENTER, s * 2.0, sfs, Color(1, 1, 1))
 	if piece.temp_king_turns > 0:
 		var badge = center + Vector2(size * 0.3, -size * 0.3)
 		draw_circle(badge, size * 0.15, Color(0.14, 0.1, 0.17))

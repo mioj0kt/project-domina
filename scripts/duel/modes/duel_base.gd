@@ -7,6 +7,9 @@ var ai_team: int = Board.BLACK
 var captures_by_player: int = 0
 # Duelo dentro de uma tempestade de areia (mapa do Deserto). null = duelo normal.
 var sandstorm: SandstormMod = null
+# Cume: duelo em cima de uma ponte de corda (null = normal) / num glaciar de gelo fino.
+var bridge: BridgeMod = null
+var thin_ice: bool = false
 
 func setup(p_board: Board, p_human_team: int, p_ai_team: int, _sudden_death_mgr: SuddenDeathManager) -> void:
 	board = p_board
@@ -19,6 +22,26 @@ func setup(p_board: Board, p_human_team: int, p_ai_team: int, _sudden_death_mgr:
 	if RunManager != null and RunManager.current_node_storm and not TutorialManager.is_active and not (self is DuelBoss):
 		sandstorm = SandstormMod.new()
 		sandstorm.setup(p_board, p_human_team, p_ai_team, self is DuelHard)
+	bridge = null
+	thin_ice = false
+	if RunManager != null and not TutorialManager.is_active and not (self is DuelBoss):
+		if RunManager.current_node_bridge:
+			bridge = BridgeMod.new()
+			bridge.setup(p_board, p_human_team, p_ai_team)
+		if RunManager.current_node_glacier:
+			thin_ice = true
+			p_board.thin_ice = true
+
+# Duelo com perigo de terreno (tempestade, ponte, gelo fino): paga mais e dá Lei.
+func is_hazard() -> bool:
+	return sandstorm != null or bridge != null or thin_ice
+
+func hazard_label() -> String:
+	if bridge != null:
+		return "PONTE:"
+	if thin_ice:
+		return "GELO FINO:"
+	return "TEMPESTADE:"
 
 func apply_board_modifiers() -> void:
 	pass
@@ -42,7 +65,13 @@ func get_darkness() -> float:
 	return 0.0
 
 func get_status_text() -> String:
-	return sandstorm.get_status_text() if sandstorm != null else ""
+	if sandstorm != null:
+		return sandstorm.get_status_text()
+	if bridge != null:
+		return bridge.get_status_text()
+	if thin_ice and board != null:
+		return "GELO FINO: A CASA TRINCA NA 1ª SAÍDA E AFUNDA NA 2ª (%d/%d)" % [board.water_tiles.size(), board.thin_ice_hole_cap()]
+	return ""
 
 func is_fogged(pos: Vector2i) -> bool:
 	return fog_strength(pos) > 0.0
@@ -107,7 +136,7 @@ func calculate_reward_gold() -> Dictionary:
 
 	# Tempestade de areia: o risco paga mais.
 	var storm_gold = 0
-	if sandstorm != null:
+	if is_hazard():
 		storm_gold = 8 if self is DuelHard else 5
 
 	var total = base_gold + capture_gold + surviving_pieces + bonus_gold + storm_gold
@@ -121,5 +150,6 @@ func calculate_reward_gold() -> Dictionary:
 		"survival": surviving_pieces,
 		"bonus": bonus_gold,
 		"storm": storm_gold,
+		"storm_label": hazard_label(),
 		"total": total
 	}

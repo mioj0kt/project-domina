@@ -110,7 +110,7 @@ func _build_medal() -> void:
 				col = INK
 			else:
 				# Feltro em xadrez 6x6 + vinheta em dither.
-				var chk: bool = ((x / 6) + (y / 6)) % 2 == 0
+				var chk: bool = (floori(x / 6.0) + floori(y / 6.0)) % 2 == 0
 				col = PLUM_M if chk else PLUM_D
 				if r > R - 12.0 and bay < 2:
 					col = col.darkened(0.25)
@@ -138,7 +138,6 @@ func _draw() -> void:
 	if _tex == null:
 		_build_medal()
 	var c := Vector2(_snap(size.x / 2.0), _snap(size.y / 2.0))
-	var r: float = _radius()
 	var side: float = GRID * PX
 	# Sombra pontilhada + corpo do medalhão.
 	draw_texture_rect(_tex, Rect2(c - Vector2(side, side) / 2.0, Vector2(side, side)), false)

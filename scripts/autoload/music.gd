@@ -14,17 +14,27 @@ const TRACKS := {
 	"floresta": "res://assets/audio/musica/mapa/floresta.ogg",
 	"deserto": "res://assets/audio/musica/mapa/deserto.ogg",
 	"mina": "res://assets/audio/musica/mapa/mina.ogg",
+	"cume": "res://assets/audio/musica/mapa/cume.ogg",
+	# Caldeira ainda sem trilha própria: usa a do Deserto (calor) até gerar a dela.
+	"caldeira": "res://assets/audio/musica/mapa/deserto.ogg",
 }
 # (+6 dB em relação à versão antiga: a trilha estava baixa mesmo no 100%)
-const TRACK_DB := {"menu": -1.0, "floresta": -2.0, "deserto": -2.0, "mina": -2.0}
+const TRACK_DB := {"menu": -1.0, "floresta": -2.0, "deserto": -2.0, "mina": -2.0, "cume": -2.0, "caldeira": -2.0}
 const SILENT_DB := -60.0
 # Seções de duelo: musica/duelo/<bioma>/ e musica/duelo/chefe_<bioma>/ (os nomes dos
 # arquivos continuam os que tools/music_*.py geram).
 const DUEL_DIR := "res://assets/audio/musica/duelo/"
 
-const DUEL_SECTIONS := {"floresta": 6, "deserto": 6, "mina": 6, "boss_floresta": 6, "boss_deserto": 6, "boss_mina": 6}
-const DUEL_SD_SECTIONS := {"floresta": 2, "deserto": 2, "mina": 2, "boss_floresta": 2, "boss_deserto": 2, "boss_mina": 2}   # Morte Súbita: andamento maior, mais seco e urgente
+const DUEL_SECTIONS := {"floresta": 6, "deserto": 6, "mina": 6, "cume": 6, "boss_floresta": 6, "boss_deserto": 6, "boss_mina": 6, "boss_cume": 6}
+const DUEL_SD_SECTIONS := {"floresta": 2, "deserto": 2, "mina": 2, "cume": 2, "boss_floresta": 2, "boss_deserto": 2, "boss_mina": 2, "boss_cume": 2}   # Morte Súbita: andamento maior, mais seco e urgente
+# Biomas sem seções de duelo próprias usam as de outro (provisório).
+const DUEL_ALIAS := {"caldeira": "deserto", "boss_caldeira": "boss_deserto"}
 const DUEL_BASE_DB := -3.0
+
+## Chave de duelo que realmente tem seções (aplica DUEL_ALIAS); "" se nenhuma.
+static func duel_key(key: String) -> String:
+	key = String(DUEL_ALIAS.get(key, key))
+	return key if DUEL_SECTIONS.has(key) else ""
 const DUEL_TENSION_DB := -2.0
 const MUFFLE_HZ := 900.0
 const OPEN_HZ := 20500.0

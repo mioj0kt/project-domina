@@ -30,6 +30,12 @@ const SKIN_DESERT := "desert"
 #  - SKIN_MINE: duelos da Mina dos Cristais. Mesma montagem do Deserto (casas e
 #    borda em folha do mapa do bioma), com a arte da mina.
 const SKIN_MINE := "mine"
+#  - SKIN_CUME: duelos do Cume Congelado. Mesma montagem (casas + borda do mapa);
+#    a borda de pedra com neve fica inteira FORA das casas, como a da Mina.
+const SKIN_CUME := "cume"
+#  - SKIN_CALDEIRA: duelos da Caldeira. Mesma montagem do Cume (borda de basalto
+#    inteira fora das casas), com escorridas de lava saindo por baixo da borda.
+const SKIN_CALDEIRA := "caldeira"
 
 const _DESERT_DIR := "res://assets/sprites/biomas/deserto/tabuleiro/"
 const _DESERT_LIGHT: Array[String] = [
@@ -53,9 +59,32 @@ const _MINE_DARK: Array[String] = [
 ]
 # Estilos montados a partir de casas + borda em folha (deserto, mina): mesma
 # geometria da folha 13x12, só muda a arte.
+# Sem as casas congeladas (casa_gelo_*): no duelo elas ficam reservadas para as
+# cartas e Leis de gelo.
+const _CUME_DIR := "res://assets/sprites/biomas/cume/tabuleiro/"
+const _CUME_LIGHT: Array[String] = [
+	"casa_clara_1", "casa_clara_1", "casa_clara_2", "casa_clara_3", "casa_clara_4", "casa_clara_5",
+	"casa_clara_6", "casa_clara_7", "casa_clara_8", "casa_clara_9", "casa_clara_10", "casa_clara_11", "casa_clara_12",
+]
+const _CUME_DARK: Array[String] = [
+	"casa_escura_1", "casa_escura_1", "casa_escura_2", "casa_escura_3", "casa_escura_4", "casa_escura_5",
+	"casa_escura_6", "casa_escura_7", "casa_escura_8", "casa_escura_9", "casa_escura_10", "casa_escura_11", "casa_escura_12",
+]
+# Caldeira: só as casas normais (lava, brasa, cinza, bigorna... ficam para as Leis).
+const _CALDEIRA_DIR := "res://assets/sprites/biomas/caldeira/tabuleiro/"
+const _CALDEIRA_LIGHT: Array[String] = [
+	"casa_clara_1", "casa_clara_1", "casa_clara_2", "casa_clara_3", "casa_clara_4", "casa_clara_5",
+	"casa_clara_6", "casa_clara_7", "casa_clara_8", "casa_clara_9", "casa_clara_10", "casa_clara_11", "casa_clara_12",
+]
+const _CALDEIRA_DARK: Array[String] = [
+	"casa_escura_1", "casa_escura_1", "casa_escura_2", "casa_escura_3", "casa_escura_4", "casa_escura_5",
+	"casa_escura_6", "casa_escura_7", "casa_escura_8", "casa_escura_9", "casa_escura_10", "casa_escura_11", "casa_escura_12",
+]
 const _SHEET_SKINS := {
 	SKIN_DESERT: {"dir": _DESERT_DIR, "light": _DESERT_LIGHT, "dark": _DESERT_DARK},
 	SKIN_MINE: {"dir": _MINE_DIR, "light": _MINE_LIGHT, "dark": _MINE_DARK},
+	SKIN_CUME: {"dir": _CUME_DIR, "light": _CUME_LIGHT, "dark": _CUME_DARK},
+	SKIN_CALDEIRA: {"dir": _CALDEIRA_DIR, "light": _CALDEIRA_LIGHT, "dark": _CALDEIRA_DARK},
 }
 static func _is_sheet(skin_id: String) -> bool:
 	return _SHEET_SKINS.has(skin_id)
@@ -280,7 +309,7 @@ static func has_sprite(skin_id: String = SKIN_WOOD) -> bool:
 # quem centraliza o tabuleiro na viewport, já que a moldura cresce PRA
 # FORA do retângulo das casinhas (ver draw_frame).
 static func get_frame_px(cell_size: float, skin_id: String = SKIN_WOOD) -> float:
-	if skin_id == SKIN_MINE:
+	if skin_id == SKIN_MINE or skin_id == SKIN_CUME or skin_id == SKIN_CALDEIRA:
 		return cell_size * (_MINE_FRAME_T / _D_TILE)
 	if _is_sheet(skin_id):
 		return cell_size * (_D_MARGIN_Y / _D_TILE)
@@ -520,6 +549,12 @@ static func _draw_sheet_frame(canvas: CanvasItem, skin_id: String, board_offset:
 	if skin_id == SKIN_MINE:
 		_draw_mine_frame(canvas, board_offset, rows, cols, cell_size, tint)
 		return
+	if skin_id == SKIN_CUME:
+		_draw_cume_frame(canvas, board_offset, rows, cols, cell_size, tint)
+		return
+	if skin_id == SKIN_CALDEIRA:
+		_draw_cume_frame(canvas, board_offset, rows, cols, cell_size, tint, SKIN_CALDEIRA, _CALDEIRA_DRIP)
+		return
 	var tex: Texture2D = _sheets[skin_id]["frame"]
 	var S: float = cell_size / _D_TILE
 	var W: float = tex.get_width()
@@ -623,3 +658,40 @@ static func _draw_mine_frame(canvas: CanvasItem, board_offset: Vector2, rows: in
 	canvas.draw_texture_rect_region(tex, Rect2(Vector2(outer_end.x - cd.x, outer_pos.y), cd), Rect2(Vector2(W - cn, 0.0), cs), tint)
 	canvas.draw_texture_rect_region(tex, Rect2(Vector2(outer_pos.x, outer_end.y - cd.y), cd), Rect2(Vector2(0.0, H - cn), cs), tint)
 	canvas.draw_texture_rect_region(tex, Rect2(outer_end - cd, cd), Rect2(Vector2(W - cn, H - cn), cs), tint)
+
+
+# ---------------------------------------------------------------------
+# Moldura do Cume Congelado: pedra escura com neve em cima e sincelos embaixo,
+# 18 px nativos INTEIROS fora das casas (mesma geometria da folha da Mina).
+# Cada lado repete o lado inteiro da folha (cantos de 18x18 por cima).
+# ---------------------------------------------------------------------
+# Caldeira: a faixa de baixo da folha tem 18 px de borda + 9 px de escorridas de
+# lava penduradas (que ficam por baixo da borda, fora do tabuleiro).
+const _CALDEIRA_DRIP: float = 9.0
+
+static func _draw_cume_frame(canvas: CanvasItem, board_offset: Vector2, rows: int, cols: int, cell_size: float, tint: Color, skin_id: String = SKIN_CUME, drip: float = 0.0) -> void:
+	if not _sheets.has(skin_id) or _sheets[skin_id]["frame"] == null:
+		return
+	var tex: Texture2D = _sheets[skin_id]["frame"]
+	var W: float = tex.get_width()
+	var H: float = tex.get_height()
+	var S: float = cell_size / _D_TILE
+	var tt: float = _MINE_FRAME_T
+	var T: float = tt * S
+	var bw: float = cols * cell_size
+	var bh: float = rows * cell_size
+	var outer_pos: Vector2 = board_offset - Vector2(T, T)
+	var outer_end: Vector2 = board_offset + Vector2(bw, bh) + Vector2(T, T)
+	_fill_strip(canvas, tex, Rect2(tt, 0.0, W - tt * 2.0, tt), Rect2(board_offset.x, outer_pos.y, bw, T), true, S, tint)
+	var bt: float = tt + drip   # faixa de baixo (+ escorridas)
+	_fill_strip(canvas, tex, Rect2(tt, H - bt, W - tt * 2.0, bt), Rect2(board_offset.x, outer_end.y - T, bw, bt * S), true, S, tint)
+	_fill_strip(canvas, tex, Rect2(0.0, tt, tt, H - bt - tt), Rect2(outer_pos.x, board_offset.y, T, bh), false, S, tint)
+	_fill_strip(canvas, tex, Rect2(W - tt, tt, tt, H - bt - tt), Rect2(outer_end.x - T, board_offset.y, T, bh), false, S, tint)
+	var cd := Vector2(tt, tt) * S
+	var cs := Vector2(tt, tt)
+	canvas.draw_texture_rect_region(tex, Rect2(outer_pos, cd), Rect2(Vector2.ZERO, cs), tint)
+	canvas.draw_texture_rect_region(tex, Rect2(Vector2(outer_end.x - cd.x, outer_pos.y), cd), Rect2(Vector2(W - tt, 0.0), cs), tint)
+	var cdb := Vector2(tt, bt) * S
+	var csb := Vector2(tt, bt)
+	canvas.draw_texture_rect_region(tex, Rect2(Vector2(outer_pos.x, outer_end.y - cd.y), cdb), Rect2(Vector2(0.0, H - bt), csb), tint)
+	canvas.draw_texture_rect_region(tex, Rect2(Vector2(outer_end.x - cd.x, outer_end.y - cd.y), cdb), Rect2(Vector2(W - tt, H - bt), csb), tint)

@@ -260,6 +260,10 @@ func refresh(enemy_rules: Array[RuleCard]) -> void:
 			var mini_visual = RuleCardVisual.new(rule, null, true, law_board.slot_size / RuleCardVisual.CARD_SIZE)
 			mini_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			slot.add_child(mini_visual)
+			if not rule.get_charge_state().is_empty():
+				var badge := RuleChargeBadge.new()
+				badge.setup(rule, law_board.slot_size)
+				slot.add_child(badge)
 			slot.mouse_filter = Control.MOUSE_FILTER_STOP
 		else:
 			slot.mouse_filter = Control.MOUSE_FILTER_IGNORE

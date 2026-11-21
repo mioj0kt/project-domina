@@ -14,6 +14,9 @@ const DECK_PANEL_H: float = 610.0
 const PANEL_W: float = 440.0
 # Linha do topo (Leis + Ouro): botões grandes, sprites ampliados 2x.
 const TOP_BTN_H: float = 52.0
+# Centro do encaixe redondo dos sprites painel_leis/painel_dinheiro (13, 11 no
+# sprite de 80x26, desenhado em 2x).
+const HUD_SOCKET_CENTER := Vector2(26, 22)
 
 var gold_label: Label
 var gold_panel_ctrl: Control   # painel inteiro do ouro (para destaques do tutorial)
@@ -115,7 +118,7 @@ func _build_side_panel() -> void:
 	top_row.add_child(laws_btn)
 	# Ícone no slot da esquerda do painel (o sprite vem vazio ali).
 	var laws_icon = PixelUI.make_hud_icon("icone_leis", 32.0)
-	laws_icon.position = Vector2(14, (TOP_BTN_H - 32.0) * 0.5)
+	laws_icon.position = HUD_SOCKET_CENTER - Vector2(16, 16)
 	laws_icon.size = Vector2(32, 32)
 	laws_btn.add_child(laws_icon)
 
@@ -132,7 +135,7 @@ func _build_side_panel() -> void:
 	gold_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	gold_wrap.add_child(gold_panel)
 	var gold_icon = PixelUI.make_hud_icon("icone_dinheiro", 32.0)
-	gold_icon.position = Vector2(14, (TOP_BTN_H - 32.0) * 0.5)
+	gold_icon.position = HUD_SOCKET_CENTER - Vector2(16, 16)
 	gold_icon.size = Vector2(32, 32)
 	gold_wrap.add_child(gold_icon)
 	_build_rigged_badge(gold_wrap, half_w)
@@ -446,6 +449,10 @@ func refresh_deck() -> void:
 			mini_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			mini_visual.position = Vector2.ZERO
 			slot.add_child(mini_visual)
+			if not rule.get_charge_state().is_empty():
+				var badge := RuleChargeBadge.new()
+				badge.setup(rule, law_board.slot_size)
+				slot.add_child(badge)
 			slot.mouse_filter = Control.MOUSE_FILTER_STOP
 		else:
 			# Sem quadrado vazio: slot fica sem conteúdo nenhum, só o

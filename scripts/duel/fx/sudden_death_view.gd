@@ -250,6 +250,7 @@ var _sub_label: Label
 var _turns: int = 0
 var _max: int = 1
 var _paused: bool = false
+var _pause_rounds: int = 1
 var _active: bool = false
 var _time: float = 0.0
 var _intro_busy: bool = false
@@ -349,7 +350,8 @@ func get_counter_rect() -> Rect2:
 	return Rect2(_counter.position, _counter.size)
 
 # Chamado pelo manager sempre que algo muda.
-func set_state(active: bool, turns_left: int, max_turns: int, paused: bool) -> void:
+func set_state(active: bool, turns_left: int, max_turns: int, paused: bool, pause_rounds: int = 1) -> void:
+	_pause_rounds = pause_rounds
 	var changed_turn: bool = active and _active and turns_left != _turns
 	_active = active
 	_turns = turns_left
@@ -364,7 +366,7 @@ func set_state(active: bool, turns_left: int, max_turns: int, paused: bool) -> v
 
 func _refresh_texts() -> void:
 	_num_label.text = str(maxi(_turns, 0))
-	_sub_label.text = "PAUSADA" if _paused else ("ÚLTIMO TURNO!" if _turns == 1 else "TURNOS RESTANTES")
+	_sub_label.text = (("PAUSADA (%d RODADAS)" % _pause_rounds) if _pause_rounds > 1 else "PAUSADA") if _paused else ("ÚLTIMO TURNO!" if _turns == 1 else "TURNOS RESTANTES")
 	_num_label.add_theme_color_override("font_color", _num_color())
 	_sub_label.add_theme_color_override("font_color", C_BLUE if _paused else (C_RED if _turns <= WARN_TURNS else C_CREAM))
 	_title_label.add_theme_color_override("font_color", C_BLUE if _paused else C_RED)

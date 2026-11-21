@@ -10,7 +10,7 @@ func _init() -> void:
 	icon_path = "res://assets/sprites/cards/icons/all_or_nothing.png"
 	name = "Tudo ou Nada"
 	description = "Escolha uma peça sua e gire a moeda. Na sua cor, ela vira Dama e destrói as peças inimigas coladas nela. Senão, ela é destruída."
-	rarity = Rarity.RARE
+	rarity = Rarity.LEGENDARY
 	target_type = TargetType.ALLY_PIECE
 
 func can_play(board: Board, team: int, context: Dictionary = {}) -> bool:

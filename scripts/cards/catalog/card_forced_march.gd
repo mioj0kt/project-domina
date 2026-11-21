@@ -10,7 +10,7 @@ func _init() -> void:
 	icon_path = "res://assets/sprites/cards/icons/forced_march.png"
 	name = "Marcha Forçada"
 	description = "Obriga uma peça inimiga comum a andar uma casa para a frente na diagonal, se estiver livre. Você escolhe para qual lado."
-	rarity = Rarity.COMMON
+	rarity = Rarity.EPIC
 	target_type = TargetType.ENEMY_PIECE
 
 func can_play(board: Board, team: int, context: Dictionary = {}) -> bool:

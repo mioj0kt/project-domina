@@ -1,12 +1,16 @@
 class_name RuleRevenge
 extends RuleCard
 
+const NEEDED: int = 5
 var revenge_charges: int = 0
+
+func get_charge_state() -> Array:
+	return [mini(revenge_charges, NEEDED), NEEDED]
 
 func _init() -> void:
 	id = "revenge"
 	name = "Vingança"
-	description = "Cada peça sua destruída dá 1 Carga de Vingança. Com 5 cargas, sua próxima captura gasta todas: +5 de ouro e coroa a peça que capturou."
+	description = "Cada peça sua destruída dá 1 Carga de Vingança. Com 5 cargas, sua próxima captura gasta todas: +3 de ouro e coroa a peça que capturou."
 	category = Category.CAPTURE
 	scope = Scope.PLAYER_ONLY
 	priority = 25

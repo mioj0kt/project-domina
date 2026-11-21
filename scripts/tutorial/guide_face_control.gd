@@ -19,6 +19,8 @@ const TEXTURES := {
 	"boss_floresta": "res://assets/sprites/retratos/boss_floresta_talk.png",
 	"boss_deserto": "res://assets/sprites/retratos/boss_deserto_talk.png",
 	"boss_mina": "res://assets/sprites/retratos/boss_mina_talk.png",
+	"boss_cume": "res://assets/sprites/retratos/boss_cume_talk.png",
+	"boss_caldeira": "res://assets/sprites/retratos/boss_caldeira_talk.png",
 }
 var fallback_tint: Color = Color.WHITE
 const FALLBACK_PATH := "res://assets/sprites/retratos/evil_talk.png"

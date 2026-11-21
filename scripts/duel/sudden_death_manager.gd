@@ -200,8 +200,9 @@ func extend(turns: int) -> void:
 	max_turns = maxi(max_turns, turns_left)
 	_refresh_view()
 
+# Várias Pausas no mesmo turno se SOMAM (2 cartas = 2 rodadas congeladas).
 func apply_pause(ticks: int) -> void:
-	pause_ticks = ticks
+	pause_ticks += ticks
 	_refresh_view()
 
 func _resolve_points(board: Board, human_team: int, ai_team: int) -> void:
@@ -241,4 +242,4 @@ func _resolve_points(board: Board, human_team: int, ai_team: int) -> void:
 var view: SuddenDeathView = null
 func _refresh_view() -> void:
 	if view != null:
-		view.set_state(is_active, turns_left, max_turns, pause_ticks > 0)
+		view.set_state(is_active, turns_left, max_turns, pause_ticks > 0, int(ceil(pause_ticks / 2.0)))

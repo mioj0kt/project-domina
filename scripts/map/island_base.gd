@@ -38,6 +38,10 @@ static var _cache: Dictionary = {}
 
 ## Bioma do mapa ("tutorial", "floresta", "deserto", "mina"). Defina antes de build().
 var biome: String = ""
+## Quanto (px de mundo) a base sobe por trás da moldura. Usado no Cume, cuja
+## moldura termina numa franja de sincelos transparente embaixo: sem subir, ficava
+## um vão de céu entre o tabuleiro e a ilha.
+var top_overlap_px: float = 0.0
 var _unit: int = 3
 var _sand: bool = false              # deserto: desenha a areia caindo
 var _sand_spots: Array = []          # [x, y, semente, comprimento, ritmo, intermitente]
@@ -64,19 +68,52 @@ func build(board_rect: Rect2, unit: int, camera: Camera2D) -> void:
 		_tex = _make_biome_texture(biome, w, _sand_spots)
 		_height_px = float(ART_HEIGHT * unit)
 		_sand = biome == "deserto" and not _sand_spots.is_empty()
+		_setup_floating_rocks(w)
 	else:
 		_tex = _make_art_texture(w) if _has_art() else _make_texture(w, _height_units(w))
 		_height_px = float(_tex.get_height() * unit)
-	position = Vector2(board_rect.position.x, board_rect.end.y - float(unit) * float(OVERLAP_UNITS))
+	position = Vector2(board_rect.position.x, round(board_rect.end.y - float(unit) * float(OVERLAP_UNITS) - top_overlap_px))
 	queue_redraw()
 
 func set_camera(camera: Camera2D) -> void:
 	_camera = camera
 
 func extra_height() -> float:
-	return _height_px - float(_unit) * float(OVERLAP_UNITS)
+	return _height_px - float(_unit) * float(OVERLAP_UNITS) - top_overlap_px
+
+# Cume: pedrinhas congeladas soltas flutuando em volta da base, cada uma no seu
+# ritmo (sobe e desce em passos de pixel). [Texture2D, x, y (px de arte), fase, amplitude]
+const ROCK_DIR := "rochas_congeladas/rocha_flutuante_%d.png"
+var _rocks: Array = []
+
+func _setup_floating_rocks(w: int) -> void:
+	_rocks.clear()
+	if biome != "cume":
+		return
+	var texs: Array = []
+	for i in range(1, 9):
+		var p: String = (BIOME_DIR % biome) + ROCK_DIR % i
+		if ResourceLoader.exists(p):
+			texs.append(load(p))
+	if texs.is_empty():
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("cume_rocks_%d" % w)
+	@warning_ignore("integer_division")
+	var n: int = clampi(w / 45, 5, 12)
+	for i in range(n):
+		# lados da base e um pouco abaixo dela, longe do meio (onde descem os sincelos)
+		var side: bool = rng.randf() < 0.5
+		var x: float = rng.randf_range(-24.0, w * 0.22) if side else rng.randf_range(w * 0.78, w + 24.0)
+		var y: float = rng.randf_range(8.0, ART_HEIGHT + 20.0)
+		_rocks.append([texs[rng.randi() % texs.size()], x, y, rng.randf() * TAU, rng.randf_range(1.0, 3.0)])
 
 func _draw() -> void:
+	var u0: float = float(_unit)
+	for rk in _rocks:
+		var rt: Texture2D = rk[0]
+		var dy: float = round(sin(_t * 0.8 + float(rk[3])) * float(rk[4]))
+		draw_texture_rect(rt, Rect2(Vector2(float(rk[1]), float(rk[2]) + dy) * u0, rt.get_size() * u0), false)
 	if _tex != null:
 		draw_texture_rect(_tex, Rect2(Vector2.ZERO, _tex.get_size() * float(_unit)), false)
 	# deserto: fios de areia caindo da rocha, em loop
@@ -135,7 +172,7 @@ func _process(delta: float) -> void:
 	if _camera == null or not is_instance_valid(_camera):
 		return
 	_t += delta
-	if _sand:
+	if _sand or not _rocks.is_empty():
 		queue_redraw()
 	var steps: float = round(sin(_t * TAU / BOB_PERIOD) * float(BOB_STEPS))
 	_camera.offset = Vector2(0.0, steps * float(_unit))
@@ -187,7 +224,7 @@ static func _make_biome_texture(b: String, w: int, sand_out: Array) -> ImageText
 		if ResourceLoader.exists(dir + "base_faixa_%d.png" % i):
 			strips.append(_img(dir + "base_faixa_%d.png" % i))
 	var pends: Array = []
-	for i in range(1, 7):
+	for i in range(1, 13):
 		if b == "deserto" and i == 1:
 			continue  # fio de areia parado: no deserto a areia cai por código
 		if ResourceLoader.exists(dir + "pendente_%d.png" % i):

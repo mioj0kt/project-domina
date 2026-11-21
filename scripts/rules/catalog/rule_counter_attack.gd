@@ -25,6 +25,9 @@ func on_game_event(event_name: StringName, context: Dictionary, board: RefCounte
 				charges = mini(MAX_CHARGES, charges + 1)
 				board.rule_fired.emit(id)
 
+func get_charge_state() -> Array:
+	return [charges, MAX_CHARGES]
+
 func consume_charges() -> int:
 	var n = charges
 	charges = 0

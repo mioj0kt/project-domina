@@ -16,14 +16,15 @@ extends RefCounted
 # Continua exigindo build de debug onde já exigia (OS.is_debug_build()).
 #   COM SHORTCUTS = true (e build de debug): COROAS e OURO INFINITOS. Os gastos não
 #   descontam e o save real de Coroas não é alterado.
-const SHORTCUTS: bool = false
+const SHORTCUTS: bool = true
 const INFINITE_VALUE: int = 999999
 
 static func infinite_resources() -> bool:
 	return SHORTCUTS and OS.is_debug_build()
 
 # Pré-visualização de bioma do mapa: "" = segue o RunManager (floresta);
-# "deserto" força o Deserto das Torres e "mina" a Mina dos Cristais (ainda sem chefe
-# próprio) em qualquer run NOVA (mapa, fundos dos
+# "deserto" força o Deserto das Torres, "mina" a Mina dos Cristais, "cume" o Cume Congelado
+# e "caldeira" a Caldeira como bioma INICIAL de qualquer run NOVA (dali a run segue a
+# ordem normal de RunManager.BIOME_ORDER) (mapa, fundos dos
 # duelos/loja/aposta e cores das transições). Deixe "" na build final.
-const MAP_BIOME_OVERRIDE: String = ""
+const MAP_BIOME_OVERRIDE: String = "caldeira"

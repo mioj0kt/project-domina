@@ -129,6 +129,25 @@ var silenced_turns: Dictionary = {}
 # Contragolpe: time protegido -> turnos do ADVERSÁRIO que ainda faltam. Quem
 # capturar uma peça desse time é destruído no pouso.
 var counterstrike_turns: Dictionary = {}
+# --- Leis do Chefe do Cume ---
+# Gelo Escorregadio: casas de gelo (Vector2i -> true). Quem PARA numa (movimento
+# simples) escorrega mais uma casa na mesma direção, se estiver livre.
+var ice_tiles: Dictionary = {}
+# --- Glaciar de Gelo Fino (duelo num nodo de glaciar, mapa do Cume) ---
+# Cada casa do miolo aguenta UMA saída: a primeira peça que sai dela deixa o gelo
+# trincado (cracked_tiles); a segunda saída afunda a casa (water_tiles + bloqueio em
+# scorched_tiles até o fim do duelo). Vale na simulação: a IA enxerga.
+var thin_ice: bool = false
+var cracked_tiles: Dictionary = {}
+var water_tiles: Dictionary = {}
+const WATER_ROUNDS: int = 99999
+# Avalanche: montes de neve (Vector2i -> true); o bloqueio fica em scorched_tiles.
+var snow_tiles: Dictionary = {}
+# Cordada: pares de peças do chefe amarradas [[BoardPiece, BoardPiece], ...].
+var rope_pairs: Array = []
+const ROPE_REACH: int = 3
+# Última peça que se mexeu (jogada de verdade), para Geada / Ar Rarefeito.
+var last_moved_piece: BoardPiece = null
 signal counterstrike_hit(pos: Vector2i, attacker: BoardPiece)
 # Trilhos: [{"a": Vector2i, "b": Vector2i, "cells": [Vector2i...]}]. Quem PARA numa
 # ponta (movimento simples) é levado pela vagoneta até a outra, se estiver livre.
@@ -184,7 +203,7 @@ func set_theme_for_duel(is_hard_or_boss: bool) -> void:
 		light_tile_tint = Color(0.85, 0.55, 0.55)
 		dark_tile_tint = Color(0.55, 0.30, 0.32)
 		frame_tint = Color(0.9, 0.65, 0.65)
-		if skin_id == BoardSkin.SKIN_DESERT or skin_id == BoardSkin.SKIN_MINE:
+		if skin_id == BoardSkin.SKIN_DESERT or skin_id == BoardSkin.SKIN_MINE or skin_id == BoardSkin.SKIN_CUME or skin_id == BoardSkin.SKIN_CALDEIRA:
 			# A areia clara tingida de vermelho vira rosa: no deserto o tom é
 			# só um leve escurecimento quente, sem lavar as casas de rosa.
 			light_tile_tint = Color(0.92, 0.80, 0.70)
@@ -225,6 +244,13 @@ func clear_board() -> void:
 	crystal_tiles.clear()
 	silenced_turns.clear()
 	counterstrike_turns.clear()
+	ice_tiles.clear()
+	thin_ice = false
+	cracked_tiles.clear()
+	water_tiles.clear()
+	snow_tiles.clear()
+	rope_pairs.clear()
+	last_moved_piece = null
 	rail_lines.clear()
 	nugget_tiles.clear()
 	nugget_counts.clear()
@@ -245,6 +271,7 @@ func tick_scorched_tiles() -> void:
 		scorched_tiles[pos] -= 1
 		if scorched_tiles[pos] <= 0:
 			scorched_tiles.erase(pos)
+			snow_tiles.erase(pos)   # Avalanche: o monte de neve derrete junto
 	# Lei das Cinzas: toda chama some 1 turno mais cedo.
 	var fire_decay: int = 2 if (rule_pipeline != null and rule_pipeline.has_rule("cinders")) else 1
 	for pos in fire_tiles.keys():
@@ -302,6 +329,8 @@ func tick_piece_effects(team: int) -> Array:
 				continue
 			if p.rooted_turns > 0:
 				p.rooted_turns -= 1
+			if p.rooted_turns == 0:
+				p.winded = false
 			if p.shield_turns > 0:
 				p.shield_turns -= 1
 			if p.temp_king_turns > 0:
@@ -520,7 +549,7 @@ func get_piece_captures(r: int, c: int) -> Array:
 	if piece_obj == EMPTY:
 		return captures
 
-	if piece_obj.rooted_turns > 0:
+	if piece_obj.rooted_turns > 0 or piece_obj.frozen:
 		return captures
 
 	var is_king: bool = piece_obj.is_king
@@ -685,7 +714,7 @@ func get_piece_moves(r: int, c: int) -> Array:
 	if piece_obj == EMPTY:
 		return moves
 
-	if piece_obj.rooted_turns > 0:
+	if piece_obj.rooted_turns > 0 or piece_obj.frozen:
 		return moves
 
 	var is_king: bool = piece_obj.is_king
@@ -904,6 +933,8 @@ func make_move(move_dict: Dictionary) -> bool:
 	var piece: BoardPiece = grid[from_pos.y][from_pos.x]
 	grid[from_pos.y][from_pos.x] = EMPTY
 	grid[to_pos.y][to_pos.x] = piece
+	if not is_simulation:
+		last_moved_piece = piece
 	if move_dict.get("retreat_hop", false):
 		piece.back_hop_used = true
 
@@ -972,6 +1003,9 @@ func make_move(move_dict: Dictionary) -> bool:
 					"piece": cap_piece,
 					"pos": cap_pos
 				}, self)
+			# Cordada (chefe do Cume): a parceira amarrada à vítima é puxada para a casa dela.
+			if not is_simulation and not rope_pairs.is_empty():
+				_rope_pull(cap_piece, cap_pos)
 			# Contragolpe: a vítima estava protegida -> quem capturou morre no pouso
 			# (vale também em simulação, para a IA evitar a armadilha).
 			if counterstrike_turns.get(cap_piece.owner_team, 0) > 0 and piece.owner_team != cap_piece.owner_team:
@@ -989,6 +1023,14 @@ func make_move(move_dict: Dictionary) -> bool:
 				"from": from_pos,
 				"to": to_pos
 			}, self)
+		# Gelo Escorregadio: parou no gelo -> escorrega mais uma casa (vale na simulação: a IA enxerga).
+		var slide_to: Vector2i = ice_slide_dest(from_pos, to_pos)
+		if slide_to.x >= 0:
+			grid[to_pos.y][to_pos.x] = EMPTY
+			grid[slide_to.y][slide_to.x] = piece
+			if not is_simulation:
+				mine_events.append({"type": "slide", "from": to_pos, "to": slide_to, "piece": piece})
+			to_pos = slide_to
 		# Trilhos: parou na ponta de um trilho -> a vagoneta leva até a outra ponta.
 		var rail_dest: Dictionary = rail_ride_from(to_pos)
 		if not rail_dest.is_empty():
@@ -1067,7 +1109,81 @@ func make_move(move_dict: Dictionary) -> bool:
 					"pos": to_pos
 				}, self)
 
+	if thin_ice:
+		_thin_ice_leave(move_dict["from"])
 	return promoted or nugget_crowned
+
+# Gelo Fino: quantas casas podem afundar no duelo (o tabuleiro nunca vira só água).
+func thin_ice_hole_cap() -> int:
+	return maxi(3, int(float((rows - 2) * cols) * 0.5 * 0.3))
+
+# Uma peça acabou de sair de `pos`.
+func _thin_ice_leave(pos: Vector2i) -> void:
+	if pos.y < 1 or pos.y > rows - 2 or grid[pos.y][pos.x] != EMPTY:
+		return   # as fileiras das pontas são margem firme
+	if scorched_tiles.has(pos) or fire_tiles.has(pos):
+		return
+	if not cracked_tiles.has(pos):
+		cracked_tiles[pos] = true
+		if not is_simulation:
+			mine_events.append({"type": "ice_crack", "pos": pos})
+		return
+	if water_tiles.size() >= thin_ice_hole_cap():
+		return
+	water_tiles[pos] = true
+	scorched_tiles[pos] = WATER_ROUNDS
+	if not is_simulation:
+		# nunca deixa um lado sem jogada por causa de um buraco
+		if get_all_valid_moves(WHITE).is_empty() or get_all_valid_moves(BLACK).is_empty():
+			water_tiles.erase(pos)
+			scorched_tiles.erase(pos)
+			return
+		mine_events.append({"type": "ice_break", "pos": pos})
+
+# Gelo Escorregadio: peça que foi de `from` para `to` (movimento simples) e parou
+# no gelo escorrega mais uma casa na mesma direção, se a casa estiver livre e não
+# for a fileira de coroação de uma peça comum. Devolve a casa final ou (-1, -1).
+func ice_slide_dest(from_pos: Vector2i, to_pos: Vector2i) -> Vector2i:
+	if not ice_tiles.has(to_pos):
+		return Vector2i(-1, -1)
+	var d := Vector2i(signi(to_pos.x - from_pos.x), signi(to_pos.y - from_pos.y))
+	if d.x == 0 or d.y == 0:
+		return Vector2i(-1, -1)
+	var nxt: Vector2i = to_pos + d
+	if not is_valid_pos(nxt.y, nxt.x) or grid[nxt.y][nxt.x] != EMPTY or scorched_tiles.has(nxt) or fire_tiles.has(nxt):
+		return Vector2i(-1, -1)
+	var p: BoardPiece = grid[to_pos.y][to_pos.x]
+	if p != EMPTY and not p.is_king:
+		var promo: int = 0 if p.owner_team == human_team_color else rows - 1
+		if nxt.y == promo:
+			return Vector2i(-1, -1)
+	return nxt
+
+func find_piece(p: BoardPiece) -> Vector2i:
+	for r in range(rows):
+		for c in range(cols):
+			if grid[r][c] == p:
+				return Vector2i(c, r)
+	return Vector2i(-1, -1)
+
+# Cordada: a vítima tinha parceira amarrada e a corda está esticada o bastante?
+# A parceira é puxada para a casa onde a vítima estava (que acabou de vagar).
+func _rope_pull(victim: BoardPiece, at: Vector2i) -> void:
+	for i in range(rope_pairs.size()):
+		var pair: Array = rope_pairs[i]
+		if not pair.has(victim):
+			continue
+		rope_pairs.remove_at(i)
+		var partner: BoardPiece = pair[1] if pair[0] == victim else pair[0]
+		var ppos: Vector2i = find_piece(partner)
+		if ppos.x < 0 or grid[at.y][at.x] != EMPTY:
+			return
+		if maxi(absi(ppos.x - at.x), absi(ppos.y - at.y)) > ROPE_REACH:
+			return
+		grid[ppos.y][ppos.x] = EMPTY
+		grid[at.y][at.x] = partner
+		mine_events.append({"type": "rope", "from": ppos, "to": at, "piece": partner})
+		return
 
 # Trilhos: se `pos` é a ponta de um trilho e a outra ponta está livre, devolve
 # {"to": outra ponta, "cells": casas do trilho de pos até lá}; senão {}.
@@ -1153,6 +1269,10 @@ func clone() -> Board:
 	new_b.lit_tiles = lit_tiles.duplicate(true)
 	new_b.crystal_tiles = crystal_tiles.duplicate()
 	new_b.counterstrike_turns = counterstrike_turns.duplicate()
+	new_b.ice_tiles = ice_tiles.duplicate()
+	new_b.thin_ice = thin_ice
+	new_b.cracked_tiles = cracked_tiles.duplicate()
+	new_b.water_tiles = water_tiles.duplicate()
 	new_b.silenced_turns = silenced_turns.duplicate()
 	new_b.rail_lines = rail_lines
 	new_b.nugget_tiles = nugget_tiles.duplicate()

@@ -47,6 +47,33 @@ const BIOMES: Dictionary = {
 		"cave": [Color("07131a"), Color("1a3a42"), Color("7fd1c0")],
 		"trans_a": Color("0d1c22"), "trans_b": Color("1d3a40"), "trans_boss": Color("2a1418"), "trans_edge": Color("4fb3a0"),
 	},
+	"cume": {
+		"top": Color("0f1a2b"), "bottom": Color("1c2a40"),
+		"line": Color("23364f"), "dot": Color("4f6f8f"), "fill": Color("142236"),
+		"patterns": ["losango", "xadrez", "estrelas", "diagonal", "chevron", "trama"],
+		# Vento com neve (fiapos brancos que aceleram nas rajadas, o mesmo sistema
+		# da areia do deserto), flocos caindo de lado e aurora no alto.
+		"wind": Color("f4f7fa"), "n_wind": 40,
+		"snow": Color("f4f7fa"), "n_snow": 170,
+		"aurora": true,
+		# Faíscas de aurora (verde-água) no lugar dos vaga-lumes.
+		"fireflies": Color("6fe0b8"), "n_fireflies": 10,
+		"leaves": [Color("dfe8ef"), Color("a9dcef"), Color("c3d2de")], "n_leaves": 0,
+		"spores": Color("a9dcef"), "n_spores": 30,
+		"trans_a": Color("0f1a2b"), "trans_b": Color("23364f"), "trans_boss": Color("2a1418"), "trans_edge": Color("a9dcef"),
+	},
+	"caldeira": {
+		"top": Color("1c1013"), "bottom": Color("2a1414"),
+		"line": Color("3a1d1d"), "dot": Color("6e2a22"), "fill": Color("221215"),
+		"patterns": ["losango", "xadrez", "escamas", "diagonal", "chevron", "tijolos"],
+		# Brasas subindo (no lugar dos vaga-lumes e dos esporos) e cinza caindo
+		# de lado (o mesmo sistema da neve do Cume, em cinza e bem mais rala).
+		"fireflies": Color("ffa53a"), "n_fireflies": 18,
+		"leaves": [Color("f0662a"), Color("c63a22"), Color("ffe08a")], "n_leaves": 0,
+		"spores": Color("f0662a"), "n_spores": 60,
+		"snow": Color("9a9095"), "n_snow": 60,
+		"trans_a": Color("1c1013"), "trans_b": Color("3a1d1d"), "trans_boss": Color("2a1418"), "trans_edge": Color("f0662a"),
+	},
 	"tutorial": {
 		"top": Color("231a2a"), "bottom": Color("1a1420"),
 		"line": Color("3a2b41"), "dot": Color("5a4561"), "fill": Color("2a2031"),
@@ -77,6 +104,9 @@ var _leaves: Array[Dictionary] = []
 var _spores: Array[Dictionary] = []
 var _winds: Array[Dictionary] = []
 var _tumbles: Array[Dictionary] = []
+var _snow: Array[Dictionary] = []
+var _snow_fx: Node2D = null
+var _aurora: Array = []   # [Texture2D, y (fração), velocidade, fase]
 var _scroll_vel: Vector2 = SCROLL_SPEED
 var _wind_phase: float = 0.0   # tempo "acelerado" pelas rajadas
 var _gust: float = 0.0         # 0..1, força da rajada atual
@@ -139,6 +169,11 @@ func _ready() -> void:
 	_vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_vignette)
+	if int(_cfg.get("n_snow", 0)) > 0:
+		_snow_fx = Node2D.new()
+		_snow_fx.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_snow_fx.draw.connect(_draw_snow)
+		add_child(_snow_fx)
 
 	# Direção e velocidade do rolar do padrão variam a cada visita.
 	var dirs: Array[Vector2] = [Vector2(1, 0.57), Vector2(-1, 0.57), Vector2(1, -0.57), Vector2(-1, -0.57),
@@ -160,6 +195,14 @@ func _ready() -> void:
 		var tb := {"x": 0.0, "y": 0.5, "spd": 60.0, "r": 4.0, "ph": 0.0, "wait": 0.0}
 		_respawn_tumble(tb, true)
 		_tumbles.append(tb)
+	for i in range(int(_cfg.get("n_snow", 0))):
+		_snow.append({"x": rng.randf(), "y": rng.randf(), "ph": rng.randf() * TAU,
+			"fall": rng.randf_range(28.0, 80.0), "u": 3 if i % 23 == 0 else (2 if i % 7 == 0 else (1 if i % 3 == 0 else 0))})
+	if bool(_cfg.get("aurora", false)):
+		for k in range(3):
+			var ap: String = "res://assets/sprites/mapa/ceu/cume/aurora_%d.png" % (k + 1)
+			if ResourceLoader.exists(ap):
+				_aurora.append([load(ap), 0.04 + 0.08 * float(k), rng.randf_range(6.0, 12.0) * (1.0 if k % 2 == 0 else -1.0), rng.randf() * TAU])
 	for i in range(int(_cfg["n_spores"])):
 		_spores.append({"x": rng.randf(), "y": rng.randf(), "ph": rng.randf() * TAU,
 			"rise": rng.randf_range(5.0, 14.0), "u": 2 + (i % 2)})
@@ -320,6 +363,17 @@ func _draw_all() -> void:
 			_canvas.draw_texture_rect(_tile_tex, Rect2(Vector2(i * tile, j * tile) - Vector2(tile, tile) + off, Vector2(tile, tile)), false)
 	if _cfg.has("cave"):
 		draw_cave_spikes(_canvas, vp, u, _cfg["cave"], _t)
+	# Cume: aurora no alto, bem discreta (o duelo fica por cima).
+	var asc: float = maxf(2.0, floorf(vp.x / 320.0 * 0.95))
+	for ab in _aurora:
+		var atex: Texture2D = ab[0]
+		var aw: float = atex.get_width() * asc
+		var ax: float = (vp.x - aw) * 0.5 + sin(_t * 0.05 + float(ab[3])) * float(ab[2]) * 5.0
+		var aa: float = 0.16 + 0.12 * sin(_t * 0.3 + float(ab[3]))
+		_canvas.draw_texture_rect(atex, Rect2(Vector2(ax, float(ab[1]) * vp.y).round(), atex.get_size() * asc), false, Color(1, 1, 1, aa))
+	if _snow_fx != null:
+		_snow_fx.queue_redraw()
+
 	# Esporos subindo (mais ao fundo, bem discretos).
 	var spore_col: Color = _cfg["spores"]
 	for s in _spores:
@@ -465,3 +519,18 @@ static func draw_cave_spikes(canvas: CanvasItem, vp: Vector2, u: float, cols: Ar
 					var py: float = ty if side == 0 else vp.y - ty - step
 					var a: float = 0.45 + 0.45 * (sin(t_now * 1.2 + cx) * 0.5 + 0.5)
 					canvas.draw_rect(Rect2(floorf(cx - step * 0.5), floorf(py - (0.0 if side == 1 else step)), step, step * 2.0), Color(tip.r, tip.g, tip.b, a))
+
+# Cume: flocos caindo de lado, empurrados pelas rajadas. Ficam numa camada POR
+# CIMA da vinheta (senão somem nas bordas escurecidas).
+func _draw_snow() -> void:
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	var u: float = _unit(vp)
+	if not _snow.is_empty():
+		var sc: Color = _cfg["snow"]
+		var fu: float = maxf(3.0, round(u * 0.75))
+		for f in _snow:
+			var shape: int = int(f["u"])
+			var fy: float = fposmod(float(f["y"]) * vp.y + _t * float(f["fall"]), vp.y + 30.0) - 15.0
+			var fx: float = fposmod(float(f["x"]) * vp.x + _wind_phase * float(f["fall"]) * 1.4 + sin(_t + float(f["ph"])) * 8.0, vp.x + 30.0) - 15.0
+			var fa: float = 0.6 + 0.1 * float(shape) + 0.12 * sin(float(f["ph"]))
+			ForestBackground.draw_flake(_snow_fx, Vector2(floorf(fx), floorf(fy)), fu, shape, Color(sc.r, sc.g, sc.b, clampf(fa, 0.2, 0.95)))

@@ -45,6 +45,15 @@ var fuse: bool = false
 var back_hop_used: bool = false
 # Lei da Guarda Real: Dama inicial que NÃO conta para ativar a Morte Súbita.
 var sd_exempt: bool = false
+# --- Chefe do Cume ---
+# Geada: turnos do dono parada e sozinha (0..3); com 3 vira gelo (frozen): não
+# anda nem captura até uma peça aliada parar colada nela.
+var frost: int = 0
+var frozen: bool = false
+# Ar Rarefeito: a peça presa (rooted_turns) está sem fôlego — só muda o desenho.
+var winded: bool = false
+# Luz Polar: escudo da aurora (a próxima captura contra ela falha).
+var polar_shield: bool = false
 
 static func make_tree() -> BoardPiece:
 	var t = BoardPiece.new(Board.NEUTRAL, false)
@@ -101,4 +110,8 @@ func clone() -> BoardPiece:
 	copy.fuse = fuse
 	copy.back_hop_used = back_hop_used
 	copy.sd_exempt = sd_exempt
+	copy.frost = frost
+	copy.frozen = frozen
+	copy.winded = winded
+	copy.polar_shield = polar_shield
 	return copy

@@ -102,6 +102,11 @@ func try_consume_extra_step() -> bool:
 
 # Banner de "gatilho" exibido quando a regra influenciou um movimento simples
 # ({"text": String, "color": Color}) ou uma promoção. Vazio = sem banner.
+# Leis com sistema de carga: devolvem [atual, máximo] para o contador no quadro
+# de Leis do duelo (RuleChargeBadge). Vazio = a Lei não usa cargas.
+func get_charge_state() -> Array:
+	return []
+
 func get_move_trigger_banner(_piece: BoardPiece, _from_pos: Vector2i, _to_pos: Vector2i, _was_capture: bool) -> Dictionary:
 	return {}
 

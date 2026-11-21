@@ -15,6 +15,11 @@ static func max_wager_for(gold: int) -> int:
 static func win_profit(wager: int) -> int:
 	return int(round(float(wager) * WIN_PROFIT_RATIO))
 const PREVIEW_SCALE: float = 0.95
+# Resultado do lance (apostada -> ganha / perdida): menor, porque a mesa de
+# apostas reabre embaixo dele e tudo precisa caber na tela.
+const RESULT_SCALE: float = 0.55
+const COIN_SPACE_H: float = 320.0
+const COIN_SPACE_RESULT_H: float = 284.0   # com carta/lei de resultado na tela
 const COIN_RADIUS: float = 100.0
 
 enum StakeType { GOLD, CARD, LAW }
@@ -51,6 +56,7 @@ var gold_value_labels: Array[Label] = []
 var gold_icon_boxes: Array[Control] = []
 
 var leave_btn: Button
+var call_back_btn: Button
 var step_panels: Array[PanelContainer] = []
 var step_labels: Array[Label] = []
 var coin_hint: CoinSlot
@@ -101,7 +107,7 @@ func _setup_ui() -> void:
 	outer_box.add_child(panel)
 
 	var content_box = VBoxContainer.new()
-	content_box.add_theme_constant_override("separation", 12)
+	content_box.add_theme_constant_override("separation", 8)
 	content_box.custom_minimum_size = Vector2(1080, 850)
 	panel.add_child(content_box)
 
@@ -172,7 +178,7 @@ func _setup_ui() -> void:
 	# fixo de tela), então ela sempre cai exatamente aqui, nunca por cima
 	# de texto.
 	coin_spacer = Control.new()
-	coin_spacer.custom_minimum_size = Vector2(10, 320)
+	coin_spacer.custom_minimum_size = Vector2(10, COIN_SPACE_H)
 	coin_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_box.add_child(coin_spacer)
 	coin_hint = CoinSlot.new()
@@ -317,6 +323,18 @@ func _setup_ui() -> void:
 	call_label.visible = false
 	content_box.add_child(call_label)
 
+	# Mudou de ideia? Volta para a etapa 1 sem perder nada (nada sai da bolsa/
+	# baralho antes da moeda cair).
+	call_back_btn = Button.new()
+	call_back_btn.text = "VOLTAR  -  apostar outra coisa"
+	call_back_btn.custom_minimum_size = Vector2(420, 56)
+	call_back_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	call_back_btn.add_theme_font_size_override("font_size", 22)
+	PixelUI.skin_button(call_back_btn, Color(0.4, 0.4, 0.45), "", "icone_voltar")
+	call_back_btn.pressed.connect(_back_to_stake)
+	call_back_btn.visible = false
+	content_box.add_child(call_back_btn)
+
 	leave_btn = Button.new()
 	leave_btn.text = "IR EMBORA"
 	leave_btn.custom_minimum_size = Vector2(340, 58)
@@ -356,16 +374,30 @@ func _process(delta: float) -> void:
 		header_ref.modulate = Color(k, k, k)
 	if casino_fx != null:
 		casino_fx.spinning = is_flipping
+	# A caixa central não encolhe sozinha quando o conteúdo diminui (ela guardava
+	# o tamanho maior e ficava deslocada/cortada): reajusta ao mínimo, centrada.
+	if outer_box_ref != null and not _shaking:
+		var want: Vector2 = outer_box_ref.get_combined_minimum_size()
+		if not outer_box_ref.size.is_equal_approx(want):
+			outer_box_ref.size = want
+			outer_box_ref.position = (get_viewport_rect().size - want) / 2.0
+
+var _shaking: bool = false
 
 func _shake_table() -> void:
 	if outer_box_ref == null:
 		return
+	var want: Vector2 = outer_box_ref.get_combined_minimum_size()
+	outer_box_ref.size = want
+	outer_box_ref.position = (get_viewport_rect().size - want) / 2.0
 	var base: Vector2 = outer_box_ref.position
 	var tw := create_tween()
 	for i in range(7):
 		var amp: float = 14.0 * (1.0 - float(i) / 7.0)
 		tw.tween_property(outer_box_ref, "position:x", base.x + (amp if i % 2 == 0 else -amp), 0.045)
 	tw.tween_property(outer_box_ref, "position:x", base.x, 0.05)
+	_shaking = true
+	tw.tween_callback(func(): _shaking = false)
 
 func _pop_status(won: bool) -> void:
 	status_label.pivot_offset = status_label.size * 0.5
@@ -516,7 +548,7 @@ func _show_staked_preview() -> void:
 			status_label.text = "Em jogo:"
 			preview_hbox.add_child(_labeled_law_visual("APOSTADA", current_staked_rule, Color.WHITE))
 
-func _labeled_card_visual(caption: String, card: ActionCard, tint: Color) -> Control:
+func _labeled_card_visual(caption: String, card: ActionCard, tint: Color, vscale: float = PREVIEW_SCALE) -> Control:
 	var box = VBoxContainer.new()
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	var label = Label.new()
@@ -525,7 +557,7 @@ func _labeled_card_visual(caption: String, card: ActionCard, tint: Color) -> Con
 	label.add_theme_font_size_override("font_size", 24)
 	label.add_theme_color_override("font_color", Color(0.75, 0.78, 0.85))
 	box.add_child(label)
-	var visual = ActionCardVisual.new(card, true, PREVIEW_SCALE)
+	var visual = ActionCardVisual.new(card, true, vscale)
 	visual.modulate = tint
 	visual.mouse_filter = Control.MOUSE_FILTER_STOP
 	visual.mouse_entered.connect(func():
@@ -540,7 +572,7 @@ func _labeled_card_visual(caption: String, card: ActionCard, tint: Color) -> Con
 	box.add_child(visual)
 	return box
 
-func _labeled_law_visual(caption: String, rule: RuleCard, tint: Color) -> Control:
+func _labeled_law_visual(caption: String, rule: RuleCard, tint: Color, vscale: float = PREVIEW_SCALE) -> Control:
 	var box = VBoxContainer.new()
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	var label = Label.new()
@@ -549,7 +581,7 @@ func _labeled_law_visual(caption: String, rule: RuleCard, tint: Color) -> Contro
 	label.add_theme_font_size_override("font_size", 24)
 	label.add_theme_color_override("font_color", Color(0.75, 0.78, 0.85))
 	box.add_child(label)
-	var visual = RuleCardVisual.new(rule, null, true, PREVIEW_SCALE)
+	var visual = RuleCardVisual.new(rule, null, true, vscale)
 	visual.modulate = tint
 	visual.mouse_filter = Control.MOUSE_FILTER_STOP
 	visual.mouse_entered.connect(func():
@@ -565,10 +597,12 @@ func _labeled_law_visual(caption: String, rule: RuleCard, tint: Color) -> Contro
 	return box
 
 func _go_to_call_phase() -> void:
+	coin_spacer.custom_minimum_size.y = COIN_SPACE_H
 	stake_box.visible = false
 	picker_box.visible = false
 	call_label.text = "Clique na peça do lado que vai cair!"
 	call_label.visible = true
+	call_back_btn.visible = not TutorialManager.is_active
 	coin_hint.clickable = true
 	_set_step(1)
 
@@ -580,6 +614,7 @@ func _on_call_selected(called_white: bool) -> void:
 	player_called_white = called_white
 	TutorialManager.report_event("bet_call")
 	coin_hint.clickable = false
+	call_back_btn.visible = false
 	call_label.text = "Voce chamou %s..." % PieceSkin.word(called_white)
 	leave_btn.disabled = true
 
@@ -596,12 +631,32 @@ func _on_call_selected(called_white: bool) -> void:
 	var coin_center = coin_spacer.global_position + coin_spacer.size / 2.0
 	coin_flip_view.play_toss(coin_center, COIN_RADIUS)
 
+func _back_to_stake() -> void:
+	if is_flipping:
+		return
+	current_staked_card = null
+	current_staked_rule = null
+	current_gold_wager = 0
+	current_stake_type = StakeType.GOLD
+	_clear_preview()
+	status_label.text = ""
+	coin_spacer.custom_minimum_size.y = COIN_SPACE_H
+	call_label.visible = false
+	call_back_btn.visible = false
+	coin_hint.clickable = false
+	stake_box.visible = true
+	picker_box.visible = false
+	_update_stake_buttons_state()
+	_set_step(0)
+
 func _get_better_rarity_card(min_rarity: int) -> ActionCard:
 	var all_cards = LootTables.get_player_action_cards()
 	var target_rarity = mini(min_rarity + 1, ActionCard.Rarity.LEGENDARY)
 	var pool = all_cards.filter(func(c): return c.rarity == target_rarity)
 	if pool.is_empty():
 		pool = all_cards.filter(func(c): return c.rarity == min_rarity)
+	if pool.is_empty():
+		pool = LootTables.get_unlocked_action_cards().filter(func(c): return c.rarity == min_rarity)
 	if pool.is_empty():
 		pool = LootTables.get_all_action_cards().filter(func(c): return c.rarity == min_rarity)
 	if pool.is_empty():
@@ -614,6 +669,8 @@ func _get_better_rarity_rule(min_rarity: int, exclude_ids: Array[String]) -> Rul
 	var pool = all_rules.filter(func(r): return r.rarity == target_rarity)
 	if pool.is_empty():
 		pool = all_rules.filter(func(r): return r.rarity == min_rarity)
+	if pool.is_empty():
+		pool = LootTables.get_unlocked_rules().filter(func(r): return not exclude_ids.has(r.id) and r.rarity == min_rarity)
 	if pool.is_empty():
 		pool = LootTables.get_all_rules().filter(func(r): return not exclude_ids.has(r.id) and r.rarity == min_rarity)
 	if pool.is_empty():
@@ -634,7 +691,7 @@ func _on_flip_completed(landed_white: bool) -> void:
 			StakeType.CARD:
 				var new_card = _get_better_rarity_card(current_staked_card.rarity)
 				status_label.text = "Acertou! Ganhou uma carta melhor:"
-				preview_hbox.add_child(_labeled_card_visual("APOSTADA", current_staked_card, Color.WHITE))
+				preview_hbox.add_child(_labeled_card_visual("APOSTADA", current_staked_card, Color.WHITE, RESULT_SCALE))
 				var arrow = Label.new()
 				arrow.text = "→"
 				arrow.add_theme_font_size_override("font_size", 46)
@@ -642,7 +699,7 @@ func _on_flip_completed(landed_white: bool) -> void:
 				preview_hbox.add_child(arrow)
 				if new_card != null:
 					if RunManager.add_card_to_deck(new_card):
-						preview_hbox.add_child(_labeled_card_visual("GANHA", new_card, Color(1.2, 1.15, 0.85)))
+						preview_hbox.add_child(_labeled_card_visual("GANHA", new_card, Color(1.2, 1.15, 0.85), RESULT_SCALE))
 					else:
 						status_label.text = "Acertou! Mas seu inventario de cartas ja esta cheio (20/20)."
 			StakeType.LAW:
@@ -651,7 +708,7 @@ func _on_flip_completed(landed_white: bool) -> void:
 					owned_ids.append(r.id)
 				var new_rule = _get_better_rarity_rule(current_staked_rule.rarity, owned_ids)
 				status_label.text = "Acertou! Ganhou uma lei melhor:"
-				preview_hbox.add_child(_labeled_law_visual("APOSTADA", current_staked_rule, Color.WHITE))
+				preview_hbox.add_child(_labeled_law_visual("APOSTADA", current_staked_rule, Color.WHITE, RESULT_SCALE))
 				var arrow2 = Label.new()
 				arrow2.text = "→"
 				arrow2.add_theme_font_size_override("font_size", 46)
@@ -659,7 +716,7 @@ func _on_flip_completed(landed_white: bool) -> void:
 				preview_hbox.add_child(arrow2)
 				if new_rule != null:
 					if RunManager.add_rule(new_rule):
-						preview_hbox.add_child(_labeled_law_visual("GANHA", new_rule, Color(1.2, 1.15, 0.85)))
+						preview_hbox.add_child(_labeled_law_visual("GANHA", new_rule, Color(1.2, 1.15, 0.85), RESULT_SCALE))
 					else:
 						# Limite de Leis: o jogador escolhe qual revogar.
 						status_label.text = "Acertou! Suas leis estao lotadas: escolha qual revogar."
@@ -671,13 +728,16 @@ func _on_flip_completed(landed_white: bool) -> void:
 				status_label.text = "Errou... perdeu %d de ouro." % current_gold_wager
 			StakeType.CARD:
 				status_label.text = "Errou... perdeu a carta apostada."
-				preview_hbox.add_child(_labeled_card_visual("PERDIDA", current_staked_card, Color(1.0, 0.4, 0.4, 0.7)))
+				preview_hbox.add_child(_labeled_card_visual("PERDIDA", current_staked_card, Color(1.0, 0.4, 0.4, 0.7), RESULT_SCALE))
 				RunManager.player_deck.erase(current_staked_card)
 			StakeType.LAW:
 				status_label.text = "Errou... perdeu a lei apostada."
-				preview_hbox.add_child(_labeled_law_visual("PERDIDA", current_staked_rule, Color(1.0, 0.4, 0.4, 0.7)))
+				preview_hbox.add_child(_labeled_law_visual("PERDIDA", current_staked_rule, Color(1.0, 0.4, 0.4, 0.7), RESULT_SCALE))
 				RunManager.remove_rule(current_staked_rule.id)
 
+	# Carta/lei de resultado na tela: encolhe o vão da moeda para tudo caber.
+	if current_stake_type != StakeType.GOLD:
+		coin_spacer.custom_minimum_size.y = COIN_SPACE_RESULT_H
 	_refresh_gold_label()
 	if casino_fx != null:
 		casino_fx.celebrate(coin_spacer.global_position + coin_spacer.size / 2.0, bet_won)
@@ -699,7 +759,7 @@ func _on_flip_completed(landed_white: bool) -> void:
 
 func _on_reward_law_replaced(_old: RuleCard, new_rule: RuleCard) -> void:
 	status_label.text = "Acertou! Ganhou uma lei melhor:"
-	preview_hbox.add_child(_labeled_law_visual("GANHA", new_rule, Color(1.2, 1.15, 0.85)))
+	preview_hbox.add_child(_labeled_law_visual("GANHA", new_rule, Color(1.2, 1.15, 0.85), RESULT_SCALE))
 
 func _on_reward_law_declined() -> void:
 	status_label.text = "Acertou! Mas voce recusou a lei de recompensa."

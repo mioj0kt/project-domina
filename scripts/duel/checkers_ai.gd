@@ -18,34 +18,39 @@ static func get_best_move(board: Board, depth: int = 4, ai_team: int = Board.BLA
 	if moves.size() == 0:
 		return {}
 
-	var bid: int = board.get_instance_id()
+	# A busca roda numa cópia do tabuleiro (thread): quem chama passa o id do real.
+	var bid: int = int(opts.get("board_id", board.get_instance_id()))
 	if bid != _last_board_id:
 		_last_board_id = bid
 		_history = []
 
+	var tol: float = opts.get("tolerance", 0.25)
 	var scored: Array = []
 	var best_score: float = -INF
 	for move in moves:
-		var sim_board = board.clone()
-		sim_board.make_move(move)
-
-		var score: float = minimax(sim_board, depth - 1, -INF, INF, false, ai_team)
+		var bonus: float = 0.0
 		# Árvore é um avanço grátis: desempata a favor de derrubá-la.
 		if move.get("optional", false):
-			score += 0.5
-		# Movimento extra de carta (Investida Heróica): aproveitar a distância toda.
+			bonus += 0.5
 		if not move.get("is_capture", false):
+			# Movimento extra de carta (Investida Heróica): aproveitar a distância toda.
 			var dist: int = maxi(absi(move["to"].x - move["from"].x), absi(move["to"].y - move["from"].y))
 			if dist >= 2:
-				score += 1.0
-		# Anti-espera: não vale voltar para uma casa que a IA acabou de deixar
-		# (ir e voltar). Só pesa em jogadas sem captura.
-		if not move.get("is_capture", false) and _is_repeat(move):
-			score -= 13.0
+				bonus += 1.0
+			# Anti-espera: não vale voltar para uma casa que a IA acabou de deixar
+			# (ir e voltar). Só pesa em jogadas sem captura.
+			if _is_repeat(move):
+				bonus -= 13.0
+		var sim_board = board.clone()
+		sim_board.make_move(move)
+		# Corte na raiz: jogada que não chega perto da melhor (dentro da folga +
+		# margem de "distração") não precisa de nota exata, só saber que é pior.
+		# O alfa-beta devolve um limite <= alfa e ela fica fora do sorteio.
+		var floor_score: float = best_score - maxf(tol, 12.0) - 0.01 - bonus
+		var score: float = minimax(sim_board, depth - 1, floor_score, INF, false, ai_team) + bonus
 		scored.append({"m": move, "s": score})
 		best_score = maxf(best_score, score)
 
-	var tol: float = opts.get("tolerance", 0.25)
 	if randf() < opts.get("blunder", 0.0):
 		tol = maxf(tol, 12.0)
 	var pool: Array = scored.filter(func(e): return e["s"] >= best_score - tol)

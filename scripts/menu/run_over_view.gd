@@ -286,6 +286,9 @@ func _rows() -> Array[Dictionary]:
 	rows.append({"label": "DUELOS FORTES  x%d" % s, "amount": s * MetaProgress.COROAS_PER_STRONG})
 	if bool(_summary["boss"]):
 		rows.append({"label": "CHEFE DERROTADO", "amount": MetaProgress.COROAS_BOSS_WIN})
+	var disc: Array = _summary.get("discoveries", [])
+	if not disc.is_empty():
+		rows.append({"label": "DESCOBERTAS  x%d" % disc.size(), "amount": int(_summary.get("discovery", 0))})
 	return rows
 
 func _wait(t: float) -> void:

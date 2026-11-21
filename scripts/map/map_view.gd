@@ -87,6 +87,8 @@ func _ready() -> void:
 			_assign_covers(RunManager.map_data)
 		if _current_biome() == "deserto":
 			_assign_storms(RunManager.map_data)
+		if _current_biome() == "cume":
+			_assign_cume_terrain(RunManager.map_data)
 		if not RunManager.map_data.is_empty() and not RunManager.map_data[0].is_empty():
 			RunManager.current_node = RunManager.map_data[0][0]
 
@@ -95,6 +97,7 @@ func _ready() -> void:
 	_instantiate_node_ui(RunManager.map_data)
 	_build_covers(RunManager.map_data)
 	_build_storms(RunManager.map_data)
+	_build_cume_terrain(RunManager.map_data)
 	_restore_visited_connections()
 
 	if RunManager.current_node != null:
@@ -105,6 +108,14 @@ func _ready() -> void:
 
 	if DebugFlags.SHORTCUTS:
 		_build_debug_hint()
+	if RunManager.biome_crossing_pending and RunManager.current_node != null:
+		# chefe derrotado: a peça atravessa o céu até a ilha do próximo bioma
+		_set_cam_y(_camera_target_y(RunManager.current_node.position.y))
+		player_pawn.visible = true
+		var crossing := BiomeCrossing.new()
+		add_child(crossing)
+		crossing.run(self)
+		return
 	if RunManager.run_intro_pending:
 		RunManager.run_intro_pending = false
 		_play_run_intro()
@@ -149,6 +160,11 @@ func _setup_map_ui() -> void:
 
 	hud_bar.refresh_cards_inventory_count()
 
+	# Dica de que o mapa rola (barra lateral, setinhas e, na 1ª vez, "arraste").
+	var hint := MapScrollHint.new()
+	hint.map_view = self
+	add_child(hint)
+
 func toggle_inventory() -> void:
 	if inventory_ui:
 		inventory_ui.toggle_visibility()
@@ -185,7 +201,10 @@ func _input(event: InputEvent) -> void:
 			var law_idx: int = event.keycode - KEY_1
 			var desert: bool = _current_biome() == "deserto"
 			var mine: bool = _current_biome() == "mina"
+			var cume: bool = _current_biome() == "cume"
 			var law_count: int = DuelBossDesert.DESERT_LAWS.size() if desert else (DuelBossMine.MINE_LAWS.size() if mine else DuelBoss.LAWS.size())
+			if cume:
+				law_count = DuelBossCume.CUME_LAWS.size()
 			if law_idx < law_count:
 				# No deserto: 1 Sol, 2 Tempestade, 3 Areia Movediça, 4 Ampulheta, 5 Sarcófagos, 6 Cactos.
 				# Na mina: 1 Lampião, 2 Ricochete, 3 Desabamento, 4 Trilhos, 5 Garimpo.
@@ -195,6 +214,10 @@ func _input(event: InputEvent) -> void:
 				elif mine:
 					RunManager.map_biome = "mina"
 					RunManager.mine_boss_law_id = DuelBossMine.MINE_LAWS[law_idx]
+				elif cume:
+					# No cume: 1 Geada, 2 Gelo, 3 Avalanche, 4 Cordada, 5 Ar Rarefeito, 6 Luz Polar.
+					RunManager.map_biome = "cume"
+					RunManager.cume_boss_law_id = DuelBossCume.CUME_LAWS[law_idx]
 				else:
 					RunManager.forest_boss_law_id = DuelBoss.LAWS[law_idx]
 				RunManager.current_node_type = MapNode.NodeType.Chefe
@@ -216,6 +239,8 @@ func _build_debug_hint() -> void:
 			laws = "1 Sol  2 Tempestade  3 Areia Movediça  4 Ampulheta  5 Sarcófagos  6 Cactos"
 		"mina":
 			laws = "1 Lampião  2 Ricochete  3 Desabamento  4 Trilhos  5 Garimpo"
+		"cume":
+			laws = "1 Geada  2 Gelo  3 Avalanche  4 Cordada  5 Ar Rarefeito  6 Luz Polar"
 		_:
 			laws = "1 Sapo  2 Coruja  3 Floresta  4 Cipós  5 Vaga-lumes  6 Raízes"
 	lbl.text = "DEBUG  CHEFE: " + laws + "   |   B Apostas   E Evento"
@@ -297,6 +322,9 @@ func _build_forest(layers: Array[Array]) -> void:
 	island_base = IslandBase.new()
 	island_base.name = "IslandBase"
 	island_base.biome = _current_biome()
+	if island_base.biome == "cume":
+		# franja de sincelos da moldura do cume: 5 px nativos (casa de 26 px) + 1 de encaixe
+		island_base.top_overlap_px = 6.0 * forest._tile / 26.0
 	add_child(island_base)
 	move_child(island_base, 0)
 	island_base.build(forest.world_rect, MAP_SPRITE_SCALE, camera)
@@ -328,6 +356,12 @@ func _show_biome_title() -> void:
 	if mine:
 		fill = Color("#d9c9ff")
 		edge = Color("#2a1a4a")
+	if _current_biome() == "cume":
+		fill = Color("#e4f6ff")
+		edge = Color("#1c3550")
+	if _current_biome() == "caldeira":
+		fill = Color("#ffd08a")
+		edge = Color("#5a1a10")
 	title.add_theme_color_override("font_color", fill)
 	title.add_theme_color_override("font_outline_color", edge)
 	title.add_theme_constant_override("outline_size", 22)
@@ -344,7 +378,9 @@ func _show_biome_title() -> void:
 	tw.tween_callback(layer.queue_free)
 
 func _current_biome() -> String:
-	var b: String = DebugFlags.MAP_BIOME_OVERRIDE if DebugFlags.MAP_BIOME_OVERRIDE != "" else RunManager.map_biome
+	# O override de debug só escolhe o bioma INICIAL (RunManager.start_new_run); depois
+	# a run segue a ordem normal (antes ele prendia o mapa no bioma forçado para sempre).
+	var b: String = RunManager.map_biome
 	return b if ForestBackground.THEMES.has(b) else "floresta"
 
 func _draw_lines(layers: Array[Array]) -> void:
@@ -592,6 +628,140 @@ func _update_storms() -> void:
 			continue
 		var nodes: Array = st.get_meta("nodes")
 		st.set_focus(RunManager.current_node in nodes or _travel_target in nodes)
+
+# ------------------------------------------- desfiladeiro e glaciar (Cume Congelado) ----
+const GLACIER_MAX: int = 2
+const GLACIER_CHANCE: float = 0.6
+const BRIDGE_BOARD := Vector2i(10, 6)     # ponte: tabuleiro estreito e comprido (linhas, colunas)
+var glaciers: Array = []
+
+# Sorteia o terreno do Cume: UMA fileira do meio do mapa vira o desfiladeiro (todo
+# nodo dela fica numa ponte de corda; os duelos são travados em cima da ponte, em
+# tabuleiro estreito) e até GLACIER_MAX glaciares de gelo fino cobrem 1 ou 2 duelos
+# vizinhos de outras fileiras.
+func _assign_cume_terrain(layers: Array[Array]) -> void:
+	var n: int = layers.size()
+	if n < 5:
+		return
+	# desfiladeiro: fileira do miolo com pelo menos um duelo (a mais perto do meio)
+	var bridge_li: int = -1
+	var order: Array = range(2, n - 2)
+	var mid: float = float(n - 1) / 2.0
+	order.sort_custom(func(a, b): return absf(float(a) - mid) + randf() * 1.5 < absf(float(b) - mid) + randf() * 1.5)
+	for li in order:
+		if layers[li].any(func(x: MapNode): return _is_duel(x)):
+			bridge_li = li
+			break
+	if bridge_li >= 0:
+		for node in layers[bridge_li]:
+			node.bridge = true
+			if _is_duel(node):
+				node.board_size = BRIDGE_BOARD
+				node.board_layout = Board.LAYOUT_CLASSIC
+	# glaciares
+	var made: int = 0
+	var last_li: int = -9
+	var lis: Array = range(1, n - 1)
+	lis.shuffle()
+	for li in lis:
+		if made >= GLACIER_MAX:
+			break
+		if absi(li - bridge_li) < 1 or absi(li - last_li) < 2 or randf() > GLACIER_CHANCE:
+			continue
+		var layer: Array = layers[li]
+		var idx: Array = []
+		for i in range(layer.size()):
+			if _is_duel(layer[i]):
+				idx.append(i)
+		if idx.is_empty():
+			continue
+		var i0: int = idx[randi() % idx.size()]
+		var group: Array = [layer[i0]]
+		for j in [i0 - 1, i0 + 1]:
+			if j >= 0 and j < layer.size() and _is_duel(layer[j]) and group.size() < 2 and randf() < 0.5:
+				group.append(layer[j])
+		for g in group:
+			g.glacier = true
+			g.glacier_id = made
+		last_li = li
+		made += 1
+
+func _build_cume_terrain(layers: Array[Array]) -> void:
+	glaciers.clear()
+	if forest == null:
+		return
+	var clear_rects: Array = []
+	var board_rect: Rect2 = forest._board_rect
+	# desfiladeiro
+	for layer in layers:
+		if layer.is_empty() or not layer[0].bridge:
+			continue
+		var y: float = layer[0].position.y
+		var ch := MapChasm.new()
+		add_child(ch)
+		move_child(ch, forest.get_index() + 1)
+		ch.setup(board_rect, y, layer.map(func(x: MapNode): return x.position.x), layer.map(func(x: MapNode): return _is_duel(x)), int(y) * 31 + 7)
+		clear_rects.append(Rect2(board_rect.position.x, y - MapChasm.HEIGHT * 0.5, board_rect.size.x, MapChasm.HEIGHT))
+	# glaciares
+	var groups: Dictionary = {}
+	for layer in layers:
+		for node in layer:
+			if node.glacier and node.glacier_id >= 0:
+				if not groups.has(node.glacier_id):
+					groups[node.glacier_id] = []
+				groups[node.glacier_id].append(node)
+	for gid in groups:
+		var members: Array = groups[gid]
+		var others: Array = []
+		for layer in layers:
+			for node in layer:
+				if not (node in members) and absf(node.position.y - members[0].position.y) < TILE_SIZE * 4.0:
+					others.append(node.position / TILE_SIZE)
+		var cells: Array = []
+		var c0: Vector2 = members[0].position / TILE_SIZE
+		for gy in range(int(c0.y) - 3, int(c0.y) + 4):
+			for gx in range(int(round(board_rect.position.x / TILE_SIZE)) - 1, int(round(board_rect.end.x / TILE_SIZE)) + 2):
+				var cell := Vector2i(gx, gy)
+				var center: Vector2 = Vector2(cell) * TILE_SIZE
+				if not board_rect.has_point(center):
+					continue
+				var inside := false
+				for m in members:
+					var d: Vector2 = Vector2(cell) - m.position / TILE_SIZE
+					var wob: float = float(absi(hash(Vector3i(gx, gy, gid))) % 100) / 100.0 * 0.5
+					if Vector2(d.x / 2.9, d.y / 2.2).length() + wob * 0.4 <= 1.0:
+						inside = true
+				if not inside:
+					continue
+				var blocked := false
+				for o in others:
+					if (Vector2(cell) - o).length() < 0.9:
+						blocked = true
+				if not blocked:
+					cells.append(cell)
+		var gl := MapGlacier.new()
+		add_child(gl)
+		move_child(gl, forest.get_index() + 1)
+		gl.forest = forest
+		gl.setup(cells, members.map(func(x: MapNode): return x.position))
+		gl.set_meta("nodes", members)
+		for i in range(members.size()):
+			gl.set_cracked(i, members[i] == RunManager.current_node or _is_node_completed(members[i]), true)
+		glaciers.append(gl)
+		for cell in cells:
+			clear_rects.append(Rect2(Vector2(cell) * TILE_SIZE - Vector2(TILE_SIZE, TILE_SIZE) * 0.5, Vector2(TILE_SIZE, TILE_SIZE)).grow(-4.0))
+	if not clear_rects.is_empty():
+		forest.clear_decor_in(clear_rects)
+
+# As rachaduras se espalham quando a peça chega num duelo do glaciar.
+func _update_glaciers() -> void:
+	for gl in glaciers:
+		if gl == null or not is_instance_valid(gl):
+			continue
+		var nodes: Array = gl.get_meta("nodes")
+		for i in range(nodes.size()):
+			if nodes[i] == pawn_rest_node and nodes[i] == RunManager.current_node:
+				gl.set_cracked(i, true)
 
 func _build_covers(layers: Array[Array]) -> void:
 	var groups: Dictionary = {}
@@ -843,6 +1013,8 @@ func _on_node_clicked(node: MapNode) -> void:
 	RunManager.current_board_layout = node.board_layout
 	RunManager.current_node_type = node.type
 	RunManager.current_node_storm = node.storm and (node.type == MapNode.NodeType.Duelo or node.type == MapNode.NodeType.DueloForte)
+	RunManager.current_node_glacier = node.glacier and _is_duel(node)
+	RunManager.current_node_bridge = node.bridge and _is_duel(node)
 	
 	match node.type:
 		MapNode.NodeType.Duelo, MapNode.NodeType.DueloForte, MapNode.NodeType.Chefe:
@@ -880,9 +1052,33 @@ func _camera_target_y(target_y: float) -> float:
 func _scroll_camera(dy: float) -> void:
 	if camera == null:
 		return
+	_manual_scroll_msec = Time.get_ticks_msec()
 	if _cam_tween != null and _cam_tween.is_valid():
 		_cam_tween.kill()
 	_set_cam_y(_camera_target_y(_cam_y + dy))
+
+var _manual_scroll_msec: int = -100000
+
+# Para a MapScrollHint: onde a câmera está, os limites dela e se o mapa rola.
+func get_scroll_info() -> Dictionary:
+	if camera == null or forest == null:
+		return {}
+	var half_h: float = get_viewport_rect().size.y / (2.0 * CAMERA_ZOOM)
+	var r: Rect2 = forest.world_rect
+	if island_base != null:
+		r.size.y += island_base.extra_height()
+	var lo: float = r.position.y + half_h
+	var hi: float = r.end.y - half_h
+	var info := {
+		"scrollable": r.size.y > half_h * 2.0 + 4.0,
+		"y": _cam_y, "min": lo, "max": hi, "half": half_h,
+		"world_top": r.position.y, "world_h": r.size.y,
+		"manual": Time.get_ticks_msec() - _manual_scroll_msec < 250,
+		"busy": is_traveling or _modal_open(),
+	}
+	if RunManager.current_node != null:
+		info["pawn_y"] = RunManager.current_node.position.y
+	return info
 
 func _set_cam_y(v: float) -> void:
 	_cam_y = v
@@ -940,6 +1136,7 @@ func _handle_scroll_input(event: InputEvent) -> bool:
 func _process(delta: float) -> void:
 	_update_covers()
 	_update_storms()
+	_update_glaciers()
 	# A peça fica POR CIMA da rocha até entrar pela boca; lá dentro, por baixo do teto.
 	if player_pawn != null and player_pawn.visible:
 		var under: bool = false

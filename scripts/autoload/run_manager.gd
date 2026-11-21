@@ -7,6 +7,9 @@ var current_node_type: int = 1
 # O duelo atual acontece dentro de uma tempestade de areia (Deserto). O efeito no duelo
 # ainda não foi definido: quem for implementar lê esta flag (ver main.gd, _apply_sandstorm).
 var current_node_storm: bool = false
+# Cume Congelado: o duelo é num nodo de glaciar (gelo fino) / em cima de uma ponte de corda.
+var current_node_glacier: bool = false
+var current_node_bridge: bool = false
 var _gold: int = 0
 # Com DebugFlags ligadas: ouro infinito (leitura fixa, escritas ignoradas).
 var gold: int:
@@ -36,12 +39,14 @@ func register_shop_purchase() -> void:
 var map_biome: String = "floresta"
 # true logo depois de entrar num bioma novo: o mapa mostra o título dele uma vez.
 var biome_intro_pending: bool = false
+# true depois de derrotar um chefe que não é o último: o mapa (ainda do bioma velho)
+# abre tocando a travessia até a ilha do próximo bioma (BiomeCrossing) e só então avança.
+var biome_crossing_pending: bool = false
 
 # Nomes e ordem dos biomas da run (a floresta vem primeiro; o último termina a run).
-const BIOME_ORDER: Array[String] = ["floresta", "deserto"]
-# "mina" já tem arte e tema, mas ainda NÃO está em BIOME_ORDER (falta o chefe).
-# Para ver o bioma: DebugFlags.MAP_BIOME_OVERRIDE = "mina".
-const BIOME_TITLES: Dictionary = {"floresta": "FLORESTA ANTIGA", "deserto": "DESERTO DAS TORRES", "mina": "MINA DOS CRISTAIS"}
+const BIOME_ORDER: Array[String] = ["floresta", "deserto", "mina", "cume", "caldeira"]
+# Para começar direto num bioma: DebugFlags.MAP_BIOME_OVERRIDE = "cume" (ou "mina"...).
+const BIOME_TITLES: Dictionary = {"floresta": "FLORESTA ANTIGA", "deserto": "DESERTO DAS TORRES", "mina": "MINA DOS CRISTAIS", "cume": "CUME CONGELADO", "caldeira": "A CALDEIRA"}
 
 func has_next_biome() -> bool:
 	return BIOME_ORDER.find(map_biome) >= 0 and BIOME_ORDER.find(map_biome) < BIOME_ORDER.size() - 1
@@ -53,6 +58,7 @@ func advance_to_next_biome() -> void:
 		return
 	map_biome = BIOME_ORDER[BIOME_ORDER.find(map_biome) + 1]
 	biome_intro_pending = true
+	biome_crossing_pending = false
 	map_data = []
 	current_node = null
 	visited_connections = []
@@ -60,6 +66,8 @@ func advance_to_next_biome() -> void:
 	current_board_layout = Board.LAYOUT_CLASSIC
 	current_node_type = 1
 	current_node_storm = false
+	current_node_glacier = false
+	current_node_bridge = false
 	clear_ambush()
 
 var map_data: Array[Array] = []
@@ -88,6 +96,21 @@ var forest_boss_law_id: String = ""
 var desert_boss_law_id: String = ""
 # Idem para o chefe da Mina dos Cristais.
 var mine_boss_law_id: String = ""
+var cume_boss_law_id: String = ""
+# Idem para o chefe da Caldeira (A Ferreira).
+var caldeira_boss_law_id: String = ""
+
+func get_caldeira_boss_law_id(options: Array) -> String:
+	if options.is_empty():
+		return ""
+	if caldeira_boss_law_id == "" or not options.has(caldeira_boss_law_id):
+		caldeira_boss_law_id = options[randi() % options.size()]
+	return caldeira_boss_law_id
+
+func get_cume_boss_law_id(options: Array) -> String:
+	if cume_boss_law_id == "" or not options.has(cume_boss_law_id):
+		cume_boss_law_id = options[randi() % options.size()]
+	return cume_boss_law_id
 
 func get_mine_boss_law_id(options: Array) -> String:
 	if mine_boss_law_id == "" or not options.has(mine_boss_law_id):
@@ -108,6 +131,11 @@ signal rules_updated()
 
 # Eventos (nó "?") já vistos nesta run — não se repetem (ver EventView).
 var seen_event_ids: Array = []
+
+# Acervo da run (escondido do jogador): o recorte das Leis/Cartas liberadas que
+# pode aparecer NESTA run. Sorteado na 1ª vez que algo é oferecido (LootTables).
+var acervo_rules: Array[String] = []
+var acervo_cards: Array[String] = []
 
 # Emboscada (desfecho de um Evento "?"): o próximo duelo é uma escaramuça
 # 6x6 forçada. kind: "" = nenhuma, "ambushed" = o jogador foi pego de surpresa
@@ -138,6 +166,7 @@ func can_add_card_to_deck() -> bool:
 func add_rule(rule: RuleCard) -> bool:
 	var added = rule_pipeline.add_rule(rule)
 	if added:
+		MetaProgress.mark_taken(true, rule.id)
 		Sfx.play("item")
 		rules_updated.emit()
 	return added
@@ -158,17 +187,24 @@ func start_new_run():
 	current_board_layout = Board.LAYOUT_CLASSIC
 	current_node_type = 1
 	current_node_storm = false
+	current_node_glacier = false
+	current_node_bridge = false
 	map_data = []
 	current_node = null
 	visited_connections = []
 	forest_boss_law_id = ""
 	desert_boss_law_id = ""
 	mine_boss_law_id = ""
+	cume_boss_law_id = ""
+	caldeira_boss_law_id = ""
 	# DebugFlags.MAP_BIOME_OVERRIDE força o bioma inicial (mapa, fundos, transições).
 	map_biome = DebugFlags.MAP_BIOME_OVERRIDE if BIOME_TITLES.has(DebugFlags.MAP_BIOME_OVERRIDE) else "floresta"
 	biome_intro_pending = true   # o 1º mapa também mostra o nome do bioma (FLORESTA)
+	biome_crossing_pending = false
 	clear_ambush()
 	seen_event_ids.clear()
+	acervo_rules.clear()
+	acervo_cards.clear()
 	rule_pipeline.clear_rules()
 	_init_default_deck()
 	MetaProgress.reset_run_stats()
@@ -230,5 +266,6 @@ func add_card_to_deck(card: ActionCard) -> bool:
 	if not can_add_card_to_deck():
 		return false
 	player_deck.append(card)
+	MetaProgress.mark_taken(false, card.id)
 	Sfx.play("item")
 	return true

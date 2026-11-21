@@ -236,7 +236,7 @@ func handle_cell_click(pos: Vector2i) -> void:
 			var from_center = host.board_offset + Vector2(from_pos.x * host.cell_size + host.cell_size / 2.0, from_pos.y * host.cell_size + host.cell_size / 2.0)
 			var to_center = host.board_offset + Vector2(pos.x * host.cell_size + host.cell_size / 2.0, pos.y * host.cell_size + host.cell_size / 2.0)
 
-			await host.piece_movement_view.play_move_jump(from_center, to_center, moving_piece, host.cell_size, was_capture)
+			await _animate_move(from_center, to_center, moving_piece, m, was_capture)
 			host.moving_piece_tile = Vector2i(-1, -1)
 
 			_show_rule_move_banner(moving_piece, from_pos, pos, was_capture, to_center)
@@ -255,8 +255,6 @@ func handle_cell_click(pos: Vector2i) -> void:
 			var promoted = board.make_move(m)
 			# Leis da Mina: vagoneta (a peça pode ter ido parar em outra casa) e pepitas.
 			pos = await _play_mine_move_events(pos, true)
-			if m.has("ricochet"):
-				_pop_ricochet(m["ricochet"])
 
 			# Só conta pro ouro do duelo se a peça realmente morreu (o Escudo
 			# pode ter impedido a captura).
@@ -494,7 +492,7 @@ func play_ai_turn() -> void:
 	var search_depth: int = profile["depth"]
 	if max(board.rows, board.cols) >= 10:
 		search_depth = maxi(2, search_depth - 1)
-	var ai_move = CheckersAI.get_best_move(board, search_depth, host.ai_team, Vector2i(-1, -1), profile)
+	var ai_move: Dictionary = await _search_ai_move(board, search_depth, host.ai_team, Vector2i(-1, -1), profile)
 	# Carta que prepara uma jogada (Recuar, Investida): executa essa jogada, se ainda for válida.
 	if not _ai_pending_move.is_empty():
 		for vm in board.get_all_valid_moves(host.ai_team):
@@ -513,7 +511,7 @@ func play_ai_turn() -> void:
 	if counter_rule != null and last_pos.x >= 0 and not host.is_game_over:
 		var extras: int = counter_rule.consume_charges()
 		for i in range(extras):
-			var extra_move = CheckersAI.get_best_move(board, search_depth, host.ai_team, last_pos, profile)
+			var extra_move: Dictionary = await _search_ai_move(board, search_depth, host.ai_team, last_pos, profile)
 			if extra_move.is_empty():
 				break
 			host.rule_banner_view.pop_rule_trigger(
@@ -526,6 +524,29 @@ func play_ai_turn() -> void:
 	host.is_ai_thinking = false
 
 	await _conclude_turn(host.ai_team)
+
+# Busca da jogada da IA FORA da thread principal: o minimax pode levar algumas
+# centenas de ms em tabuleiro cheio (ou com damas), e rodando aqui ele congelava
+# a tela a cada turno da IA. A busca roda numa cópia do tabuleiro (as regras só
+# são consultadas, nunca alteradas, na simulação) e o jogo segue desenhando
+# enquanto espera. A jogada volta casada com a lista de jogadas do tabuleiro real.
+func _search_ai_move(board: Board, depth: int, team: int, exclude_from: Vector2i, profile: Dictionary) -> Dictionary:
+	var snapshot: Board = board.clone()
+	var opts: Dictionary = profile.duplicate()
+	opts["board_id"] = board.get_instance_id()
+	var result: Array = [{}]
+	var task_id: int = WorkerThreadPool.add_task(func():
+		result[0] = CheckersAI.get_best_move(snapshot, depth, team, exclude_from, opts), true, "domina_ai_search")
+	while not WorkerThreadPool.is_task_completed(task_id):
+		await get_tree().process_frame
+	WorkerThreadPool.wait_for_task_completion(task_id)
+	var m: Dictionary = result[0]
+	if m.is_empty():
+		return {}
+	for vm in board.get_all_valid_moves(team):
+		if vm["from"] == m["from"] and vm["to"] == m["to"] and vm.get("is_capture", false) == m.get("is_capture", false):
+			return vm
+	return m
 
 # Executa UM movimento da IA (com a cadeia de capturas obrigatórias que se
 # seguir) e devolve a casa onde a peça terminou — (-1,-1) se não havia movimento.
@@ -549,7 +570,7 @@ func _ai_execute_move_chain(ai_move: Dictionary) -> Vector2i:
 		var from_center = host.board_offset + Vector2(from_pos.x * host.cell_size + host.cell_size / 2.0, from_pos.y * host.cell_size + host.cell_size / 2.0)
 		var to_center = host.board_offset + Vector2(target_pos.x * host.cell_size + host.cell_size / 2.0, target_pos.y * host.cell_size + host.cell_size / 2.0)
 
-		await host.piece_movement_view.play_move_jump(from_center, to_center, moving_piece, host.cell_size, was_capture)
+		await _animate_move(from_center, to_center, moving_piece, ai_move, was_capture)
 		host.moving_piece_tile = Vector2i(-1, -1)
 		# Leis da IA que agiram neste movimento também acendem (Ponte de Recuo,
 		# Movimento Reverso, Salto Camarada...). Antes só o jogador tinha banner.
@@ -568,8 +589,6 @@ func _ai_execute_move_chain(ai_move: Dictionary) -> Vector2i:
 		board.last_chance_piece = null
 		target_pos = await _play_mine_move_events(target_pos, false)
 		final_pos = target_pos
-		if ai_move.has("ricochet"):
-			_pop_ricochet(ai_move["ricochet"])
 
 		# Capturas da IA não rendem ouro (DuelBase.on_piece_captured é só do
 		# jogador); só marcam que o jogador perdeu uma peça (Retaliação) — e
@@ -623,7 +642,7 @@ func _maybe_play_ai_card() -> void:
 
 	var board = host.board
 	var context = {"main": host, "deck_mgr": ai_deck_mgr, "opp_deck_mgr": host.action_cards.card_deck_mgr if host.action_cards != null else null,
-		"steal_filter": LootTables.AI_ELIGIBLE_CARD_IDS}
+		"steal_filter": LootTables.AI_ELIGIBLE_CARD_IDS.filter(func(cid): return LootTables.card_fits_biome(cid, LootTables.current_biome()))}
 
 	for i in range(ai_deck_mgr.hand.size()):
 		var card: ActionCard = ai_deck_mgr.hand[i]
@@ -709,7 +728,7 @@ func _find_ai_card_target(card: ActionCard, board: Board, host: Node2D) -> Varia
 			if ai_deck_mgr.hand.size() >= CardDeckManager.MAX_HAND_SIZE or host.action_cards == null:
 				return null
 			for c in host.action_cards.card_deck_mgr.hand:
-				if LootTables.AI_ELIGIBLE_CARD_IDS.has(c.id):
+				if LootTables.AI_ELIGIBLE_CARD_IDS.has(c.id) and LootTables.card_fits_biome(c.id, LootTables.current_biome()):
 					return Vector2i.ZERO
 			return null
 		"silence":
@@ -1183,12 +1202,16 @@ func _process_boss_turn_events() -> void:
 	var host = _host
 	if host.current_duel != null and host.current_duel.sandstorm != null:
 		await _process_sandstorm_events(host.current_duel.sandstorm)
+	if host.current_duel != null and host.current_duel.bridge != null:
+		await _process_bridge_events(host.current_duel.bridge)
 	if not (host.current_duel is DuelBoss):
 		return
 
 	var boss_duel = host.current_duel as DuelBoss
 	if boss_duel is DuelBossMine:
 		(boss_duel as DuelBossMine).mover_team = host.current_turn
+	elif boss_duel is DuelBossCume:
+		(boss_duel as DuelBossCume).mover_team = host.current_turn
 	await _process_boss_law_events(boss_duel)
 	if boss_duel.should_trigger_devour:
 		boss_duel.should_trigger_devour = false
@@ -1206,6 +1229,23 @@ func _process_boss_turn_events() -> void:
 		boss_duel.should_spawn_new_flies = false
 		boss_duel.roll_next_hazard_tiles()
 		await host.frog_animation_view.spawn_new_flies(boss_duel.hazard_tiles)
+
+# Ponte de corda (Cume): a ponte balança e as peças das colunas marcadas deslizam
+# uma casa na diagonal, para dentro.
+func _process_bridge_events(br: BridgeMod) -> void:
+	var host = _host
+	for ev in br.advance():
+		if ev["type"] != "sway":
+			continue
+		var center = host.board_offset + Vector2(host.board.cols * host.cell_size / 2.0, host.board.rows * host.cell_size / 2.0)
+		host.rule_banner_view.pop_rule_trigger(center, "A PONTE BALANÇA!", Color(0.95, 0.8, 0.55), "bridge")
+		Sfx.play("lei")
+		Juice.shake(host, 7.0, 0.35)
+		var moves: Array = ev["moves"]
+		if moves.is_empty():
+			await get_tree().create_timer(0.5).timeout
+			continue
+		await CardFx.slide(host, moves, 0.5)
 
 # Tempestade de areia: a rajada passa pela fileira marcada e as peças ali deslizam uma
 # casa na diagonal (somem num redemoinho de areia e reaparecem na casa nova).
@@ -1318,6 +1358,60 @@ func _process_boss_law_events(boss_duel: DuelBoss) -> void:
 				host.board.rule_fired.emit("nuggets")
 				tw4.tween_interval(0.25)
 				await tw4.finished
+			"freeze":
+				host.rule_banner_view.pop_rule_trigger(center, "GEADA!", Color(0.7, 0.9, 1.0), "frost")
+				Sfx.play("bloqueio")
+				for fp in ev["tiles"]:
+					var fc = _cell_center(fp)
+					host.rule_banner_view.pop_rule_trigger(fc, "CONGELOU!", Color(0.78, 0.94, 1.0))
+					Juice.ring(host, fc, host.cell_size * 0.6, Color(0.75, 0.92, 1.0), 4.0, 0.3)
+					Juice.burst(host, fc, Color(0.85, 0.95, 1.0), 10, 180.0, 0.4, maxf(3.0, host.cell_size / 20.0), 120.0, 60.0)
+				await get_tree().create_timer(0.6).timeout
+			"thaw":
+				for tp in ev["tiles"]:
+					var tc = _cell_center(tp)
+					host.rule_banner_view.pop_rule_trigger(tc, "DEGELOU!", Color(0.6, 0.85, 1.0))
+					CumeBossFx.play_shatter(host, tc, host.cell_size)
+					Juice.burst(host, tc, Color(0.6, 0.85, 1.0), 8, 140.0, 0.35, maxf(2.0, host.cell_size / 24.0), 260.0, 90.0)
+				await get_tree().create_timer(0.35).timeout
+			"avalanche_warn":
+				var wn: int = int(ev.get("count", 1))
+				host.rule_banner_view.pop_rule_trigger(center, "A NEVE ESTÁ ESTALANDO!" if wn <= 1 else "%d ENCOSTAS ESTALANDO!" % wn, Color(0.8, 0.92, 1.0), "avalanche")
+				await get_tree().create_timer(0.6).timeout
+			"avalanche":
+				var an: int = int(ev.get("count", 1))
+				host.rule_banner_view.pop_rule_trigger(center, "AVALANCHE!" if an <= 1 else "AVALANCHE x%d!" % an, Color(0.85, 0.95, 1.0), "avalanche")
+				Sfx.play("lei")
+				var amoves: Array = ev["moves"]
+				for t in ev["tiles"]:
+					Juice.burst(host, _cell_center(t), Color(0.92, 0.97, 1.0), 6, 160.0, 0.5, maxf(3.0, host.cell_size / 16.0), 300.0, 90.0)
+				if not amoves.is_empty():
+					await CardFx.slide(host, amoves, 0.45)
+				for sp in ev["snow"]:
+					Juice.dust(host, _cell_center(sp), host.cell_size)
+				if not ev["snow"].is_empty():
+					Sfx.play("bloqueio")
+				await get_tree().create_timer(0.25).timeout
+			"rope_tie":
+				# Cordada: as cordas mudaram de dupla (sem faixa, só um estalo nas peças novas).
+				for rp in ev["tiles"]:
+					Juice.burst(host, _cell_center(rp), Color(0.85, 0.7, 0.45), 6, 120.0, 0.3, maxf(2.0, host.cell_size / 26.0), 200.0, 80.0)
+				await get_tree().create_timer(0.2).timeout
+			"rope_break":
+				var tiles: Array = ev["tiles"]
+				var mid: Vector2 = (_cell_center(tiles[0]) + _cell_center(tiles[1])) / 2.0
+				host.rule_banner_view.pop_rule_trigger(mid, "A CORDA ARREBENTOU!", Color(0.95, 0.8, 0.55), "rope")
+				Juice.burst(host, mid, Color(0.85, 0.7, 0.45), 8, 160.0, 0.4, maxf(2.0, host.cell_size / 24.0), 260.0, 90.0)
+				await get_tree().create_timer(0.5).timeout
+			"winded":
+				for wp in ev["tiles"]:
+					host.rule_banner_view.pop_rule_trigger(_cell_center(wp), "SEM FÔLEGO!", Color(0.8, 0.92, 1.0), "thin_air")
+				await get_tree().create_timer(0.5).timeout
+			"polar":
+				host.rule_banner_view.pop_rule_trigger(center, "A AURORA ACENDE!", Color(0.55, 1.0, 0.8), "polar")
+				for lp in ev["tiles"]:
+					Juice.ring(host, _cell_center(lp), host.cell_size * 0.55, Color(0.55, 1.0, 0.8), 4.0, 0.35)
+				await get_tree().create_timer(0.55).timeout
 			"trees":
 				host.rule_banner_view.pop_rule_trigger(center, "A FLORESTA SE FECHA!", Color(0.45, 0.9, 0.4), "closing_forest")
 				var tw = create_tween().set_parallel(true)
@@ -1345,6 +1439,29 @@ func _play_mine_move_events(pos: Vector2i, by_player: bool) -> Vector2i:
 	board.mine_events.clear()
 	for ev in evs:
 		match ev["type"]:
+			"ice_crack":
+				# Gelo Fino: a casa de onde a peça saiu trincou.
+				Juice.burst(host, _cell_center(ev["pos"]), Color(0.9, 0.97, 1.0), 5, 110.0, 0.25, maxf(2.0, host.cell_size / 28.0), 200.0, 70.0)
+			"ice_break":
+				# Gelo Fino: segunda saída, a casa afunda.
+				var bc = _cell_center(ev["pos"])
+				host.rule_banner_view.pop_rule_trigger(bc, "O GELO CEDEU!", Color(0.7, 0.9, 1.0), "thin_ice")
+				Sfx.play("bloqueio")
+				Juice.ring(host, bc, host.cell_size * 0.6, Color(0.75, 0.92, 1.0), 4.0, 0.3)
+				Juice.burst(host, bc, Color(0.85, 0.95, 1.0), 14, 220.0, 0.45, maxf(3.0, host.cell_size / 18.0), 320.0, 80.0)
+				Juice.burst(host, bc, Color(0.2, 0.35, 0.55), 8, 140.0, 0.4, maxf(3.0, host.cell_size / 20.0), 300.0, 80.0)
+				await get_tree().create_timer(0.3).timeout
+			"slide":
+				# Gelo Escorregadio: a peça desliza mais uma casa.
+				pos = ev["to"]
+				Sfx.play("salto")
+				host.rule_banner_view.pop_rule_trigger(_cell_center(ev["from"]), "ESCORREGOU!", Color(0.7, 0.9, 1.0), "ice")
+				await CardFx.slide(host, [[ev["from"], ev["to"]]], 0.22)
+			"rope":
+				# Cordada: a parceira é puxada para a casa da vítima.
+				host.rule_banner_view.pop_rule_trigger(_cell_center(ev["to"]), "PUXADA PELA CORDA!", Color(0.95, 0.8, 0.55), "rope")
+				Sfx.play("salto")
+				await CardFx.slide(host, [[ev["from"], ev["to"]]], 0.3)
 			"rail":
 				pos = ev["to"]
 				if host.mine_overlay != null:
@@ -1362,6 +1479,26 @@ func _play_mine_move_events(pos: Vector2i, by_player: bool) -> Vector2i:
 					await host.king_animation_view.play_coronation(cc, host.cell_size, board.grid[cp.y][cp.x])
 					host.animating_coronation_tile = Vector2i(-1, -1)
 	return pos
+
+# Salto da peça. No RICOCHETE ela não voa direto: pula por cima da vítima até o
+# cristal, bate nele (clarão + estilhaços + "RICOCHETE!") e quica para a casa
+# espelhada — assim dá para ver de onde veio o desvio.
+func _animate_move(from_center: Vector2, to_center: Vector2, piece: BoardPiece, m: Dictionary, was_capture: bool) -> void:
+	var host = _host
+	if not m.has("ricochet"):
+		await host.piece_movement_view.play_move_jump(from_center, to_center, piece, host.cell_size, was_capture)
+		return
+	var crystal: Vector2i = m["ricochet"]
+	var cc: Vector2 = host.board_offset + Vector2(crystal.x * host.cell_size + host.cell_size / 2.0, crystal.y * host.cell_size + host.cell_size / 2.0)
+	# para um pouco antes do cristal (a peça "bate" na face dele)
+	var hit: Vector2 = cc.lerp(from_center, 0.18)
+	await host.piece_movement_view.play_move_jump(from_center, hit, piece, host.cell_size, true)
+	Sfx.play("bloqueio")
+	Juice.ring(host, cc, host.cell_size * 0.75, Color(0.85, 0.75, 1.0), 5.0, 0.28)
+	Juice.burst(host, cc, Color(0.85, 0.8, 1.0), 12, 260.0, 0.45, maxf(3.0, host.cell_size / 18.0), 200.0, 180.0)
+	Juice.flash_square(host, cc, host.cell_size, Color(0.8, 0.7, 1.0, 0.6), 0.16)
+	_pop_ricochet(crystal)
+	await host.piece_movement_view.play_move_jump(hit, to_center, piece, host.cell_size, false)
 
 func _pop_ricochet(mirror: Vector2i) -> void:
 	var host = _host
@@ -1526,6 +1663,18 @@ func trigger_game_over(won: bool, rewards: Dictionary = {}, custom_title: String
 	# Meta-progressão: conta a vitória (as Coroas são pagas no fim da run).
 	if not TutorialManager.is_active and won:
 		MetaProgress.register_duel_win(RunManager.current_node_type)
+		# Bônus de descoberta: 1ª vitória com cada Lei ativa / Carta jogada.
+		var played: Array = []
+		if host.action_cards != null and host.action_cards.card_deck_mgr != null:
+			played = host.action_cards.card_deck_mgr.discard_pile
+		var player_rules: Array = RunManager.active_rules.filter(func(r): return r.scope != RuleCard.Scope.AI_ONLY)
+		var found: Array = MetaProgress.register_discoveries(player_rules, played)
+		# 1ª vitória sobre o Chefe deste bioma: libera Leis e Cartas (a cena mostra depois).
+		if RunManager.current_node_type == MapNode.NodeType.Chefe:
+			MetaProgress.pending_boss_unlock = MetaProgress.claim_boss_first_win(RunManager.map_biome)
+		if not found.is_empty():
+			rewards = rewards.duplicate()
+			rewards["discoveries"] = found
 	host.boss_say("win" if won else "lose")
 	# Fim do duelo: a trilha do duelo some em fade. Na vitória entra a calma do mapa
 	# (continua direto no mapa, sem reiniciar); na derrota fica em silêncio.
@@ -1607,3 +1756,7 @@ func on_sudden_death_ended(won: bool, _base_msg: String) -> void:
 		trigger_game_over(true, reward, "VITORIA NO DUELO!")
 	else:
 		trigger_game_over(false, {}, "", "A morte subita chegou ao fim e o inimigo somou mais pontos no tabuleiro.")
+
+func _cell_center(p: Vector2i) -> Vector2:
+	var host = _host
+	return host.board_offset + Vector2(p.x * host.cell_size + host.cell_size / 2.0, p.y * host.cell_size + host.cell_size / 2.0)

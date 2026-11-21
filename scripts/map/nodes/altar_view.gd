@@ -194,6 +194,7 @@ func _show_offers() -> void:
 		holder.add_theme_constant_override("separation", 10)
 		var vis := RuleCardVisual.new(rule, rule_tooltip, false, OFFER_SCALE)
 		holder.add_child(vis)
+		NewBadge.attach(vis, true, rule.id)
 		var pick := _small_button("RATIFICAR", Color(0.3, 0.9, 0.4), RuleCardVisual.CARD_SIZE * OFFER_SCALE)
 		pick.pressed.connect(_on_offer_picked.bind(rule))
 		holder.add_child(pick)

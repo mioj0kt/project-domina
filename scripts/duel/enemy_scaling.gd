@@ -10,17 +10,17 @@ extends RefCounted
 # Lei exclusiva do Duelo Forte, lei do chefe — vêm por cima).
 # Cartas = tamanho do baralho de Cartas de Ação da IA.
 
-const BIOMES: Array[String] = ["floresta", "deserto", "mina"]
+const BIOMES: Array[String] = ["floresta", "deserto", "mina", "cume", "caldeira"]
 const LATE_LAYER: int = 4        # camada a partir da qual conta como "fim do mapa"
 
 # [começo do mapa, fim do mapa] por bioma
-const STANDARD_RULES: Array = [[0, 0], [1, 1], [2, 2]]
-const STANDARD_CARDS: Array = [[2, 3], [3, 4], [4, 5]]
+const STANDARD_RULES: Array = [[0, 0], [1, 1], [2, 2], [2, 3], [3, 3]]
+const STANDARD_CARDS: Array = [[2, 3], [3, 4], [4, 5], [5, 5], [5, 6]]
 # Duelo Forte e Chefe: um valor por bioma
-const HARD_RULES: Array = [1, 2, 2]
-const HARD_CARDS: Array = [3, 4, 5]
-const BOSS_RULES: Array = [1, 2, 3]
-const BOSS_CARDS: Array = [3, 4, 5]
+const HARD_RULES: Array = [1, 2, 2, 3, 3]
+const HARD_CARDS: Array = [3, 4, 5, 5, 6]
+const BOSS_RULES: Array = [1, 2, 3, 3, 4]
+const BOSS_CARDS: Array = [3, 4, 5, 6, 6]
 
 static func biome_index() -> int:
 	return maxi(0, BIOMES.find(RunManager.map_biome))
@@ -55,7 +55,7 @@ static func boss_cards() -> int:
 static func card_depth(kind: String) -> int:
 	var b: int = biome_index()
 	if kind == "boss":
-		return 5 + b
+		return mini(5 + b, 7)
 	var d: int
 	match b:
 		0: d = mini(layer(), 4)

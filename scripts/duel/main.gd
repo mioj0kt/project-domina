@@ -133,11 +133,11 @@ func _ready() -> void:
 	# Trilha do duelo: só a floresta tem por enquanto (a do mapa some em fade nos outros).
 	if not TutorialManager.is_active and node_type == MapNode.NodeType.Chefe:
 		# cada chefe tem as suas seções de jazz (6 + tensão + 2 de morte súbita), encadeadas ao acaso
-		var boss_key := "boss_" + RunManager.map_biome
-		Music.play_duel(boss_key if Music.DUEL_SECTIONS.has(boss_key) else "boss_floresta")
+		var boss_key := Music.duel_key("boss_" + RunManager.map_biome)
+		Music.play_duel(boss_key if boss_key != "" else "boss_floresta")
 		Music.set_tension(0.45)
-	elif not TutorialManager.is_active and Music.DUEL_SECTIONS.has(RunManager.map_biome):
-		Music.play_duel(RunManager.map_biome)
+	elif not TutorialManager.is_active and Music.duel_key(RunManager.map_biome) != "":
+		Music.play_duel(Music.duel_key(RunManager.map_biome))
 	else:
 		Music.play("")
 	var active_size: Vector2i = RunManager.current_board_size
@@ -179,6 +179,10 @@ func _create_duel(node_type: int) -> DuelBase:
 				return DuelBossDesert.new()
 			if RunManager.map_biome == "mina":
 				return DuelBossMine.new()
+			if RunManager.map_biome == "cume":
+				return DuelBossCume.new()
+			if RunManager.map_biome == "caldeira":
+				return DuelBossCaldeira.new()
 			return DuelBoss.new()
 		MapNode.NodeType.DueloForte:
 			return DuelHard.new()
@@ -233,6 +237,10 @@ func _setup_board(size: Vector2i, node_type: int) -> void:
 		board.skin_id = BoardSkin.SKIN_DESERT
 	elif RunManager.map_biome == "mina":
 		board.skin_id = BoardSkin.SKIN_MINE
+	elif RunManager.map_biome == "cume":
+		board.skin_id = BoardSkin.SKIN_CUME
+	elif RunManager.map_biome == "caldeira":
+		board.skin_id = BoardSkin.SKIN_CALDEIRA
 	else:
 		board.skin_id = BoardSkin.SKIN_WOOD
 	board.set_theme_for_duel(node_type == MapNode.NodeType.DueloForte or node_type == MapNode.NodeType.Chefe)
@@ -777,6 +785,14 @@ func _on_game_over_action(won: bool) -> void:
 		_leave_duel()
 		return
 
+	# 1ª vitória sobre o Chefe deste bioma: mostra o que foi liberado antes de seguir.
+	if won and not MetaProgress.pending_boss_unlock.is_empty():
+		var unlock: Dictionary = MetaProgress.pending_boss_unlock
+		MetaProgress.pending_boss_unlock = {}
+		var modal := BossUnlockModal.new(unlock)
+		add_child(modal)
+		await modal.closed
+
 	# Fim de run (derrota ou Chefe derrotado): paga os Coroas e abre a tela de resumo.
 	if not won:
 		MetaProgress.settle_run(false)
@@ -786,8 +802,9 @@ func _on_game_over_action(won: bool) -> void:
 
 	if RunManager.current_node_type == MapNode.NodeType.Chefe and RunManager.has_next_biome():
 		# Chefe do bioma derrotado e ainda há outro mapa (floresta -> deserto): a run
-		# continua com tudo que ganhou; escolhe uma Lei de recompensa e segue pro novo mapa.
-		RunManager.advance_to_next_biome()
+		# continua com tudo que ganhou; escolhe uma Lei de recompensa e volta ao mapa, que
+		# toca a travessia até a ilha nova e só então troca de bioma (BiomeCrossing).
+		RunManager.biome_crossing_pending = true
 		rule_reward_modal.open_reward_draft()
 		return
 
@@ -799,7 +816,7 @@ func _on_game_over_action(won: bool) -> void:
 
 	# Tempestade de areia: duelo comum dá a escolha de LEI (como um duelo forte);
 	# duelo forte dá a Lei E depois a Carta.
-	var storm: bool = current_duel != null and current_duel.sandstorm != null
+	var storm: bool = current_duel != null and current_duel.is_hazard()
 	if RunManager.current_node_type == MapNode.NodeType.DueloForte:
 		_storm_card_after_law = storm
 		rule_reward_modal.open_reward_draft()

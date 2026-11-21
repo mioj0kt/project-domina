@@ -161,7 +161,7 @@ func _run_rewards_animation() -> void:
 	if reward_data.get("bonus", 0) > 0:
 		rows.append({"label": "SAQUE:", "amount": reward_data["bonus"]})
 	if reward_data.get("storm", 0) > 0:
-		rows.append({"label": "TEMPESTADE:", "amount": reward_data["storm"]})
+		rows.append({"label": String(reward_data.get("storm_label", "TEMPESTADE:")), "amount": reward_data["storm"]})
 
 	var total_gold_accum = 0
 
@@ -218,6 +218,7 @@ func _run_rewards_animation() -> void:
 	total_label.text = "TOTAL RECEBIDO: +%d OURO" % reward_data.get("total", total_gold_accum)
 	if int(reward_data.get("coroas", 0)) > 0:
 		total_label.text += "\n+%d COROAS (META)" % int(reward_data["coroas"])
+	_show_discoveries(reward_data.get("discoveries", []))
 	# fecha com um estouro de moedas no total
 	total_label.pivot_offset = total_label.size * 0.5
 	total_label.scale = Vector2(1.25, 1.25)
@@ -232,3 +233,37 @@ func _on_confirm_pressed() -> void:
 	if is_counting:
 		return
 	action_confirmed.emit(is_won_state)
+
+# Bônus de descoberta: uma faixa dourada por Lei/Carta vencida pela 1ª vez.
+# As Coroas entram no total da run (pagas no fim, como as outras).
+func _show_discoveries(found: Array) -> void:
+	if found.is_empty():
+		return
+	var head := Label.new()
+	head.text = "DESCOBERTA!"
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	head.add_theme_font_size_override("font_size", 24)
+	head.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	stats_container.add_child(head)
+	for f in found:
+		var row := HBoxContainer.new()
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override("separation", 10)
+		var l := Label.new()
+		l.text = "%s %s" % ["LEI" if bool(f.get("rule", true)) else "CARTA", String(f["name"]).to_upper()]
+		l.add_theme_font_size_override("font_size", 20)
+		l.add_theme_color_override("font_color", Color(0.94, 0.9, 0.81))
+		row.add_child(l)
+		row.add_child(PixelUI.make_hud_icon("icone_coroa", 24.0))
+		var v := Label.new()
+		v.text = "+%d" % int(f["coroas"])
+		v.add_theme_font_size_override("font_size", 20)
+		v.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+		row.add_child(v)
+		stats_container.add_child(row)
+		if not skip_requested:
+			row.modulate.a = 0.0
+			var tw := create_tween()
+			tw.tween_property(row, "modulate:a", 1.0, 0.2)
+			Sfx.play("moeda_conta", 0.0, 1.4)
+			await get_tree().create_timer(0.18).timeout

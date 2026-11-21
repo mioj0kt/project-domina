@@ -1,10 +1,8 @@
 class_name PieceCustomizeView
-extends CanvasLayer
+extends VBoxContainer
 
-## "MINHA PEÇA" (menu inicial): o jogador escolhe a cor das suas peças e a cor
+## Aba "MINHA PEÇA" do Grimório: o jogador escolhe a cor das suas peças e a cor
 ## da estrela da sua Dama. A peça do adversário não se escolhe.
-
-signal closed
 
 const C_GOLD := Color(0.85, 0.64, 0.25)
 const C_CREAM := Color(0.94, 0.9, 0.81)
@@ -16,30 +14,13 @@ var _color_btns: Array[Button] = []
 var _star_btns: Array[Button] = []
 
 func _ready() -> void:
-	layer = 150
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.72)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
-
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
-
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(860, 0)
-	panel.add_theme_stylebox_override("panel", PixelUI.make_dialogue_panel(C_GOLD, 26, 4))
-	center.add_child(panel)
-
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 18)
-	panel.add_child(v)
+	add_theme_constant_override("separation", 18)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var v := self
 
 	var title := Label.new()
 	title.text = "MINHA PEÇA"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 42)
+	title.add_theme_font_size_override("font_size", 26)
 	title.add_theme_color_override("font_color", C_GOLD)
 	v.add_child(title)
 
@@ -77,15 +58,6 @@ func _ready() -> void:
 		row2.add_child(b2)
 		_star_btns.append(b2)
 
-
-	var ok := Button.new()
-	ok.text = "PRONTO"
-	ok.custom_minimum_size = Vector2(300, 64)
-	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	ok.add_theme_font_size_override("font_size", 28)
-	PixelUI.skin_button(ok, Color(0.3, 0.9, 0.4))
-	ok.pressed.connect(close)
-	v.add_child(ok)
 
 	_refresh()
 
@@ -156,12 +128,3 @@ func _refresh() -> void:
 		var st2 := _box(i == PieceSkin.player_star)
 		for k in ["normal", "hover", "pressed", "focus"]:
 			_star_btns[i].add_theme_stylebox_override(k, st2)
-
-func close() -> void:
-	closed.emit()
-	queue_free()
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
-		get_viewport().set_input_as_handled()
-		close()

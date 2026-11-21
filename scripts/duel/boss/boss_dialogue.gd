@@ -140,6 +140,82 @@ const DATA := {
 			"law_cave_in": ["Desceu! Eu avisei, avisei.", "A mina tem fome de vez em quando."],
 		},
 	},
+	"cume": {
+		"name": "O ÚLTIMO MONTANHISTA",
+		"tint": Color(0.66, 0.88, 1.0),
+		"events": {
+			"start": [
+				"Chegou até aqui? Respira. Daqui pra cima o ar cobra.",
+				"Faz tanto tempo que eu subo que esqueci de onde vim.",
+				"O cume é logo ali. Sempre foi logo ali.",
+				"Não olha pra baixo. Lá embaixo não tem mais nada.",
+			],
+			"start_frost": ["Quem para aqui em cima vira estátua. Mexe esses pés.", "Sozinho no frio ninguém dura três turnos."],
+			"start_ice": ["Pisa no gelo e ele escolhe por você.", "O chão aqui não segura ninguém. Nem eu."],
+			"start_avalanche": ["Escuta a montanha. Ela tá juntando força.", "Quando a neve desce, ela não pede licença."],
+			"start_rope": ["Ninguém sobe sozinho. A corda segura os meus.", "Puxa um, vem o outro. Regra de montanha."],
+			"start_thin_air": ["Aqui em cima falta ar. Pra você, pelo menos.", "Chegar perto do topo cansa. Eu sei bem."],
+			"start_polar": ["A aurora protege quem é daqui.", "Olha pro céu. Ele tá do meu lado."],
+			"win": [
+				"Eu ainda estou subindo. Não tem como ter acabado.",
+				"O topo... era isso? Só vento?",
+				"Vai. Sobe você. Eu fico mais um pouco.",
+			],
+			"lose": [
+				"A montanha guarda quem cai.",
+				"Mais um que não aguentou o frio.",
+				"Desce. Lá embaixo é mais quente.",
+			],
+			"capture_boss": ["Escorregou. Acontece.", "O frio leva um de cada vez.", "Essa ficou na neve."],
+			"piece_lost": [
+				"Ei! Essa estava amarrada comigo!",
+				"Perdi uma. A montanha cobra de todo mundo.",
+				"Hmpf. Foi o vento. Só pode ter sido o vento.",
+			],
+			"promote_player": ["Coroa no frio pesa o dobro.", "Coroou? Lá em cima ninguém repara."],
+			"promote_boss": ["Uma coroa de gelo. Não derrete nunca.", "Chegou embaixo e voltou rainha. Bonito."],
+			"card_player": ["Papel no vento? Segura firme.", "Truque de gente que mora embaixo.", "Carta molhada de neve não vale nada."],
+			"law_freeze": ["Ficou parada demais. Agora é gelo.", "Congelou. Eu avisei pra se mexer."],
+			"law_thaw": ["Esquentou? Por pouco tempo.", "Junto todo mundo esquenta. Sorte sua."],
+			"law_avalanche_warn": ["Ouviu esse estalo? É a encosta.", "A neve tá escorregando lá em cima."],
+			"law_avalanche": ["Lá vem ela!", "Desceu tudo! Segura aí!"],
+			"law_rope_break": ["A corda arrebentou! Quem esticou demais?", "Corda velha. Tinha que acontecer."],
+			"law_rope_tie": ["Amarrei de novo. Pode vir.", "Corda nova. Quero ver você puxar.", "Quem cai, puxa o outro pra cima."],
+			"law_winded": ["Sem fôlego? Senta, respira.", "O ar aqui é meu."],
+			"law_polar": ["Olha a aurora!", "O céu acendeu de novo."],
+		},
+	},
+	"caldeira": {
+		"name": "A FERREIRA DA CALDEIRA",
+		"tint": Color(1.0, 0.62, 0.32),
+		"events": {
+			"start": [
+				"Entra, entra. Cuidado com o chão, ele ainda tá quente.",
+				"Toda coroa que existe passou por esta bigorna. Toda.",
+				"Você chegou na hora. A fornada tá quase no ponto.",
+				"Senta não. Aqui ninguém senta. Aqui se trabalha.",
+			],
+			"win": [
+				"Nada quebrou. Só estava esperando a próxima fornada.",
+				"Hm. Saiu torta. Volta pro fogo e sai melhor.",
+				"Pode levar. Mas fui eu que fiz, tá? Não esquece.",
+			],
+			"lose": [
+				"Peça mole não aguenta a forja.",
+				"Volta pro molde. Quem sabe sai coisa melhor.",
+				"Derreteu. Acontece com quem não é temperado.",
+			],
+			"capture_boss": ["Pro caldeirão essa.", "Vira metal de novo.", "Martelada certa, peça a menos."],
+			"piece_lost": [
+				"Ai! Essa tava quase pronta!",
+				"Arranhou o acabamento!",
+				"Tudo bem. Tenho molde pra mais umas mil.",
+			],
+			"promote_player": ["Coroa sem forja? Quem fez essa porcaria?", "Coroou sozinho? Deixa eu ver o acabamento."],
+			"promote_boss": ["Essa saiu do meu martelo. Olha o brilho.", "Coroa nova, direto da bigorna."],
+			"card_player": ["Papel perto do fogo? Corajoso.", "Truque bonito. Pena que queima.", "Isso aí não aguenta a temperatura daqui."],
+		},
+	},
 }
 
 static func boss_name(biome: String) -> String:

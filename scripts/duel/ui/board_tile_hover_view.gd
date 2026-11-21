@@ -13,6 +13,15 @@ extends Control
 var host: Node2D
 var tooltip: BoardTileTooltip
 var _last_tile: Vector2i = Vector2i(-999, -999)
+# O tooltip só abre depois do mouse parar um instante numa casa (passar o
+# mouse por cima do tabuleiro não fica piscando tooltip).
+const HOVER_DELAY: float = 0.35
+var _rest: float = 0.0
+var _shown_tile: Vector2i = Vector2i(-999, -999)
+# Gelo Fino intacto cobre o miolo inteiro do tabuleiro: a explicação dele só
+# aparece UMA vez por duelo. Depois só as casas trincadas mostram tooltip.
+var _thin_ice_explained: bool = false
+var _showing_thin_ice: bool = false
 
 func setup(p_host: Node2D) -> void:
 	host = p_host
@@ -34,19 +43,32 @@ func _process(_delta: float) -> void:
 
 	if row < 0 or row >= board.rows or col < 0 or col >= board.cols:
 		_last_tile = Vector2i(-999, -999)
+		_shown_tile = Vector2i(-999, -999)
 		tooltip.hide_tooltip()
 		return
 
 	var tile = Vector2i(col, row)
-	if tile == _last_tile:
+	if tile != _last_tile:
+		_last_tile = tile
+		_rest = 0.0
+		_shown_tile = Vector2i(-999, -999)
+		tooltip.hide_tooltip()
 		return
-	_last_tile = tile
+	if _shown_tile == tile:
+		return
+	_rest += _delta
+	if _rest < HOVER_DELAY:
+		return
+	_shown_tile = tile
 
+	_showing_thin_ice = false
 	var effects = _get_tile_effects(board, row, col)
 	if effects.is_empty():
 		tooltip.hide_tooltip()
 	else:
 		tooltip.show_effects(effects, mouse_pos, host.human_team, host.ai_team)
+		if _showing_thin_ice:
+			_thin_ice_explained = true
 
 func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 	var pos = Vector2i(col, row)
@@ -59,6 +81,20 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 			"desc": "Ninguém para nesta casa%s. Uma captura que pousaria aqui ricocheteia para a diagonal espelhada." % ("" if cturns > 500 else " por %d turno(s)" % cturns),
 			"affects": "both",
 			"title_color": Color(0.75, 0.65, 1.0)
+		})
+	elif board.scorched_tiles.has(pos) and board.water_tiles.has(pos):
+		effects.append({
+			"title": "GELO AFUNDADO",
+			"desc": "O gelo cedeu aqui: nenhuma peça passa ou pousa até o fim do duelo.",
+			"affects": "both",
+			"title_color": Color(0.7, 0.9, 1.0)
+		})
+	elif board.scorched_tiles.has(pos) and board.snow_tiles.has(pos):
+		effects.append({
+			"title": "MONTE DE NEVE",
+			"desc": "A avalanche deixou neve aqui: nenhuma peça passa ou pousa por %d rodada(s)." % int(board.scorched_tiles[pos]),
+			"affects": "both",
+			"title_color": Color(0.85, 0.95, 1.0)
 		})
 	elif board.scorched_tiles.has(pos) and board.sand_tiles.has(pos):
 		var sturns: int = board.scorched_tiles[pos]
@@ -76,6 +112,70 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 			"affects": "both",
 			"title_color": Color(1.0, 0.6, 0.2)
 		})
+
+	# Leis do Chefe do Cume.
+	if board.thin_ice and row >= 1 and row <= board.rows - 2 and not board.water_tiles.has(pos):
+		if board.cracked_tiles.has(pos):
+			effects.append({
+				"title": "GELO TRINCADO",
+				"desc": "Uma peça já saiu daqui. A PRÓXIMA peça que sair desta casa afunda o gelo e a casa fica bloqueada até o fim do duelo (%d de %d buracos)." % [board.water_tiles.size(), board.thin_ice_hole_cap()],
+				"affects": "both",
+				"title_color": Color(0.7, 0.9, 1.0)
+			})
+		elif not _thin_ice_explained:
+			_showing_thin_ice = true
+			effects.append({
+				"title": "GELO FINO",
+				"desc": "A primeira peça que sair desta casa deixa o gelo trincado; a segunda afunda a casa.",
+				"affects": "both",
+				"title_color": Color(0.7, 0.9, 1.0)
+			})
+	if board.ice_tiles.has(pos):
+		effects.append({
+			"title": "GELO",
+			"desc": "Quem PARA aqui com um movimento simples escorrega mais uma casa na mesma direção, se ela estiver livre (nunca até a fileira de coroação). Capturas não escorregam.",
+			"affects": "both",
+			"title_color": Color(0.7, 0.9, 1.0)
+		})
+	var cp: BoardPiece = board.grid[row][col]
+	if cp != Board.EMPTY and not cp.is_tree:
+		if cp.frozen:
+			effects.append({
+				"title": "CONGELADA",
+				"desc": "Não anda nem captura (mas pode ser capturada). Descongela quando uma peça aliada parar colada nela na diagonal.",
+				"affects": "both",
+				"title_color": Color(0.7, 0.9, 1.0)
+			})
+		elif cp.frost > 0:
+			effects.append({
+				"title": "GEADA %d/%d" % [cp.frost, DuelBossCume.FROST_LIMIT],
+				"desc": "Parada e sozinha: com %d turnos do dono assim, congela. Mexa a peça ou encoste uma aliada nela." % DuelBossCume.FROST_LIMIT,
+				"affects": "both",
+				"title_color": Color(0.7, 0.9, 1.0)
+			})
+		if cp.winded and cp.rooted_turns > 0:
+			effects.append({
+				"title": "SEM FÔLEGO",
+				"desc": "Chegou perto do cume: fica a próxima jogada parada, recuperando o ar.",
+				"affects": "both",
+				"title_color": Color(0.8, 0.92, 1.0)
+			})
+		if cp.polar_shield:
+			effects.append({
+				"title": "ESCUDO DA AURORA",
+				"desc": "A próxima captura contra esta peça falha (quem pulou pousa, ela fica). Some no próximo turno do chefe.",
+				"affects": "both",
+				"title_color": Color(0.55, 1.0, 0.8)
+			})
+		for pair in board.rope_pairs:
+			if pair.has(cp):
+				effects.append({
+					"title": "CORDADA",
+					"desc": "Amarrada a outra peça do chefe. Se uma for capturada, a outra é puxada para a casa dela (se estiver a até %d casas). O chefe troca as duplas a cada 4 turnos dele." % Board.ROPE_REACH,
+					"affects": "both",
+					"title_color": Color(0.95, 0.8, 0.55)
+				})
+				break
 
 	if board.fire_tiles.has(pos):
 		effects.append({

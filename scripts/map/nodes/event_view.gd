@@ -1566,7 +1566,11 @@ func _lose_gold(amount: int) -> int:
 func _random_card(min_rarity: int, max_rarity: int = ActionCard.Rarity.LEGENDARY) -> ActionCard:
 	var pool = LootTables.get_player_action_cards().filter(func(c): return c.rarity >= min_rarity and c.rarity <= max_rarity)
 	if pool.is_empty():
+		pool = LootTables.get_unlocked_action_cards().filter(func(c): return c.rarity >= min_rarity and c.rarity <= max_rarity)
+	if pool.is_empty():
 		pool = LootTables.get_all_action_cards().filter(func(c): return c.rarity >= min_rarity and c.rarity <= max_rarity)
+	if pool.is_empty():
+		pool = LootTables.get_unlocked_action_cards()
 	if pool.is_empty():
 		pool = LootTables.get_all_action_cards()
 	return LootTables.pick_weighted_actions(pool, 1)[0]
@@ -1599,6 +1603,8 @@ func _forge_card() -> String:
 	var target_rarity = old_card.rarity + 1
 	var pool = LootTables.get_player_action_cards().filter(func(c): return c.rarity == target_rarity and c.id != old_card.id)
 	if pool.is_empty():
+		pool = LootTables.get_unlocked_action_cards().filter(func(c): return c.rarity == target_rarity and c.id != old_card.id)
+	if pool.is_empty():
 		pool = LootTables.get_all_action_cards().filter(func(c): return c.rarity == target_rarity and c.id != old_card.id)
 	if pool.is_empty():
 		return "A forja esfria e não rende nada. Você recebe o ouro de volta."
@@ -1615,6 +1621,8 @@ func _hunter_swap(cost: int = HUNTER_SWAP_COST, who: String = "O caçador") -> S
 		return "%s não vê nenhuma carta pra trocar." % who
 	var old_card: ActionCard = RunManager.player_deck[randi() % RunManager.player_deck.size()]
 	var pool = LootTables.get_player_action_cards().filter(func(c: ActionCard): return c.rarity == old_card.rarity and c.id != old_card.id)
+	if pool.is_empty():
+		pool = LootTables.get_unlocked_action_cards().filter(func(c: ActionCard): return c.rarity == old_card.rarity and c.id != old_card.id)
 	if pool.is_empty():
 		pool = LootTables.get_all_action_cards().filter(func(c: ActionCard): return c.rarity == old_card.rarity and c.id != old_card.id)
 	if pool.is_empty():
@@ -1641,6 +1649,8 @@ func _monk_swap_law(who: String = "O monge") -> String:
 		owned_ids.append(r.id)
 	var pool = LootTables.get_player_rules().filter(func(r: RuleCard): return not owned_ids.has(r.id))
 	if pool.is_empty():
+		pool = LootTables.get_unlocked_rules().filter(func(r: RuleCard): return not owned_ids.has(r.id))
+	if pool.is_empty():
 		pool = LootTables.get_all_rules().filter(func(r: RuleCard): return not owned_ids.has(r.id))
 	pool.shuffle()
 	RunManager.remove_rule(old_rule.id)
@@ -1659,6 +1669,8 @@ func _give_random_law() -> String:
 	for r in RunManager.active_rules:
 		owned_ids.append(r.id)
 	var pool = LootTables.get_player_rules().filter(func(r: RuleCard): return not owned_ids.has(r.id))
+	if pool.is_empty():
+		pool = LootTables.get_unlocked_rules().filter(func(r: RuleCard): return not owned_ids.has(r.id))
 	if pool.is_empty():
 		pool = LootTables.get_all_rules().filter(func(r: RuleCard): return not owned_ids.has(r.id))
 	if pool.is_empty():
