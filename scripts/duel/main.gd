@@ -54,6 +54,8 @@ var skip_extra_title: Label
 var skip_extra_sub: Label
 var _skip_extra_was_shown: bool = false
 var _skip_extra_t: float = 0.0
+var skip_extra_glow: Control      # brilho pulsando em volta do botão (desenhado atrás dele)
+const SKIP_EXTRA_GOLD := Color(1.0, 0.74, 0.3)
 const SKIP_EXTRA_W: float = 330.0
 const SKIP_EXTRA_H: float = 84.0
 var show_enemy_threats: bool = false
@@ -438,14 +440,20 @@ func _setup_ui() -> void:
 	action_card_reward_modal.skipped.connect(_leave_duel)
 	ui_layer.add_child(action_card_reward_modal)
 
-	# Botão "IGNORAR ... EXTRA": aparece no canto de baixo do tabuleiro (lado do
-	# painel de Leis inimigas, sem cobrir moldura nem mão) enquanto o jogador tem
-	# uma jogada/turno de bônus, para poder abrir mão dela.
+	# Botão "IGNORAR ... EXTRA": aparece embaixo, do lado do jogador (à esquerda
+	# da mão de cartas, longe das pilhas e do descarte do inimigo) enquanto o
+	# jogador tem uma jogada/turno de bônus, para poder abrir mão dela. Dourado,
+	# com brilho pulsando e um selo "!".
+	skip_extra_glow = Control.new()
+	skip_extra_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	skip_extra_glow.visible = false
+	skip_extra_glow.draw.connect(_draw_skip_extra_glow)
+	ui_layer.add_child(skip_extra_glow)
 	skip_extra_btn = Button.new()
 	skip_extra_btn.custom_minimum_size = Vector2(SKIP_EXTRA_W, SKIP_EXTRA_H)
 	skip_extra_btn.focus_mode = Control.FOCUS_NONE
 	skip_extra_btn.visible = false
-	PixelUI.skin_button(skip_extra_btn, PixelUI.AZUL_QUADRO)
+	PixelUI.skin_button(skip_extra_btn, SKIP_EXTRA_GOLD)
 	skip_extra_btn.pressed.connect(func(): turn_controller.skip_extra())
 	var skip_box := VBoxContainer.new()
 	skip_box.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -455,8 +463,8 @@ func _setup_ui() -> void:
 	skip_extra_btn.add_child(skip_box)
 	skip_extra_title = Label.new()
 	skip_extra_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	skip_extra_title.add_theme_font_size_override("font_size", 26)
-	skip_extra_title.add_theme_color_override("font_color", Color(1.0, 0.92, 0.62))
+	skip_extra_title.add_theme_font_size_override("font_size", 28)
+	skip_extra_title.add_theme_color_override("font_color", Color(1.0, 0.95, 0.75))
 	skip_extra_title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
 	skip_extra_title.add_theme_constant_override("shadow_offset_x", 2)
 	skip_extra_title.add_theme_constant_override("shadow_offset_y", 2)
@@ -465,10 +473,16 @@ func _setup_ui() -> void:
 	skip_extra_sub = Label.new()
 	skip_extra_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	skip_extra_sub.add_theme_font_size_override("font_size", 18)
-	skip_extra_sub.add_theme_color_override("font_color", Color(0.86, 0.74, 0.52, 0.9))
+	skip_extra_sub.add_theme_color_override("font_color", Color(1.0, 0.86, 0.6))
+	skip_extra_sub.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+	skip_extra_sub.add_theme_constant_override("shadow_offset_x", 1)
+	skip_extra_sub.add_theme_constant_override("shadow_offset_y", 1)
 	skip_extra_sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	skip_box.add_child(skip_extra_sub)
+	# a pele padrão sai marrom; o self_modulate esquenta só a placa (o texto não muda)
+	skip_extra_btn.self_modulate = Color(1.45, 1.1, 0.55)
 	ui_layer.add_child(skip_extra_btn)
+	AlertBadge.attach(skip_extra_btn, Vector2(-6, -18))
 
 	# Tutorial, Duelo 1: tela enxuta — só o tabuleiro. Leis, ouro, cartas e o
 	# quadro do inimigo ainda não existem para o jogador (aparecem nas lições
@@ -960,6 +974,7 @@ func _update_skip_extra_button(delta: float = 0.0) -> void:
 	var should_show: bool = extra_skip_kind != "" and not is_game_over and not is_starting_match \
 		and current_turn == human_team and not _is_board_input_blocked()
 	skip_extra_btn.visible = should_show
+	skip_extra_glow.visible = should_show
 	if not should_show:
 		_skip_extra_was_shown = false
 		return
@@ -972,22 +987,62 @@ func _update_skip_extra_button(delta: float = 0.0) -> void:
 	skip_extra_title.text = "» " + String(tx[0])
 	skip_extra_sub.text = String(tx[1])
 	skip_extra_btn.size = Vector2(SKIP_EXTRA_W, SKIP_EXTRA_H)
-	# Canto de baixo do tabuleiro, à direita da moldura; nunca sobe a ponto de
-	# cobrir o painel de Leis inimigas (ele termina por volta de y = 800).
+	# Embaixo, do lado do jogador: colado à esquerda da mão de cartas (que cresce
+	# no hover, então a conta é refeita a cada quadro), sem passar por cima da
+	# pilha de compra do jogador. Sem cartas na mão, fica no meio, embaixo.
 	var vp: Vector2 = get_viewport_rect().size
-	var frame_right: float = board_offset.x + board.cols * cell_size + 56.0
-	var bx: float = minf(frame_right + 16.0, vp.x - SKIP_EXTRA_W - 24.0)
-	var by: float = maxf(board_offset.y + board.rows * cell_size - SKIP_EXTRA_H, 820.0)
+	var by: float = vp.y - SKIP_EXTRA_H - 24.0
+	var bx: float = vp.x * 0.5 - SKIP_EXTRA_W * 0.5
+	var hr: Rect2 = action_cards.card_hand_ui.get_hand_rect(0.0) if action_cards != null and action_cards.card_hand_ui != null else Rect2()
+	if hr.size.x > 0.0:
+		bx = hr.position.x - 18.0 - SKIP_EXTRA_W
+		var min_x: float = 24.0
+		if hud_bar != null and hud_bar.draw_pile_widget != null and hud_bar.draw_pile_widget.is_visible_in_tree():
+			min_x = hud_bar.draw_pile_widget.get_global_rect().end.x + 18.0
+		bx = maxf(bx, min_x)
 	if not _skip_extra_was_shown:
 		_skip_extra_was_shown = true
 		_skip_extra_t = 0.0
+		Sfx.play("salto")
 	_skip_extra_t += delta
-	# Entra deslizando da direita e depois pulsa de leve, chamando o olhar.
-	var slide: float = (1.0 - ease_out_cubic(clampf(_skip_extra_t / 0.25, 0.0, 1.0))) * 40.0
-	skip_extra_btn.position = Vector2(bx + slide, by)
+	# Entra subindo e depois fica pulsando (brilho em volta + título), chamando o olhar.
+	var slide: float = (1.0 - ease_out_cubic(clampf(_skip_extra_t / 0.3, 0.0, 1.0))) * 50.0
+	skip_extra_btn.position = Vector2(bx, by + slide).round()
 	skip_extra_btn.modulate.a = clampf(_skip_extra_t / 0.2, 0.0, 1.0)
-	var pulse: float = 0.5 + 0.5 * sin(_skip_extra_t * 3.2)
-	skip_extra_title.add_theme_color_override("font_color", Color(1.0, 0.92, 0.62).lerp(Color(1.0, 1.0, 0.85), pulse * 0.6))
+	var pulse: float = 0.5 + 0.5 * sin(_skip_extra_t * 4.0)
+	skip_extra_title.add_theme_color_override("font_color", Color(1.0, 0.97, 0.82).lerp(Color(1.0, 1.0, 1.0), pulse * 0.7))
+	skip_extra_glow.position = skip_extra_btn.position - Vector2(14, 14)
+	skip_extra_glow.size = skip_extra_btn.size + Vector2(28, 28)
+	skip_extra_glow.modulate.a = skip_extra_btn.modulate.a
+	skip_extra_glow.queue_redraw()
+
+# Brilho em pixel art em volta do botão de ignorar o extra: três aros dourados que
+# pulsam (o de fora some e reaparece), mais um clarão que corre pela borda.
+func _draw_skip_extra_glow() -> void:
+	var r := Rect2(Vector2.ZERO, skip_extra_glow.size)
+	var pulse: float = 0.5 + 0.5 * sin(_skip_extra_t * 4.0)
+	var u: float = 3.0
+	for i in range(3):
+		var g: float = float(i) * u * 1.5
+		var a: float = (0.8 - 0.22 * float(i)) * (0.4 + 0.6 * pulse)
+		_skip_glow_ring(r.grow(-g - (1.0 - pulse) * u), u, Color(1.0, 0.85, 0.35, a))
+	# clarão correndo pela borda (perímetro de fora)
+	var per: float = 2.0 * (r.size.x + r.size.y)
+	var p: float = fmod(_skip_extra_t * 420.0, per)
+	for k in range(6):
+		var q: float = fposmod(p - float(k) * u * 2.0, per)
+		var pt: Vector2
+		if q < r.size.x: pt = Vector2(q, 0)
+		elif q < r.size.x + r.size.y: pt = Vector2(r.size.x - u, q - r.size.x)
+		elif q < 2.0 * r.size.x + r.size.y: pt = Vector2(r.size.x - (q - r.size.x - r.size.y) - u, r.size.y - u)
+		else: pt = Vector2(0, r.size.y - (q - 2.0 * r.size.x - r.size.y) - u)
+		skip_extra_glow.draw_rect(Rect2(pt.round(), Vector2(u, u)), Color(1.0, 0.97, 0.8, 0.9 - 0.14 * float(k)))
+
+func _skip_glow_ring(r: Rect2, u: float, c: Color) -> void:
+	skip_extra_glow.draw_rect(Rect2(r.position + Vector2(u, 0), Vector2(r.size.x - 2.0 * u, u)), c)
+	skip_extra_glow.draw_rect(Rect2(r.position + Vector2(u, r.size.y - u), Vector2(r.size.x - 2.0 * u, u)), c)
+	skip_extra_glow.draw_rect(Rect2(r.position + Vector2(0, u), Vector2(u, r.size.y - 2.0 * u)), c)
+	skip_extra_glow.draw_rect(Rect2(r.position + Vector2(r.size.x - u, u), Vector2(u, r.size.y - 2.0 * u)), c)
 
 static func ease_out_cubic(t: float) -> float:
 	return 1.0 - pow(1.0 - t, 3.0)
