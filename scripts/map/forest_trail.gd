@@ -176,6 +176,16 @@ static func build_steps(from_g: Vector2i, to_g: Vector2i) -> Array[Vector2i]:
 		steps.append(Vector2i(0, -1))
 	return steps
 
+# Centros (mundo) das casas por onde a trilha passa, incluindo as dos dois nós.
+static func cell_points(from_pos: Vector2, to_pos: Vector2, sprite_scale: int) -> Array:
+	var tile_px = NATIVE_TILE * float(sprite_scale)
+	var g = Vector2i((from_pos / tile_px).round())
+	var pts: Array = [Vector2(g) * tile_px]
+	for st in build_steps(g, Vector2i((to_pos / tile_px).round())):
+		g += st
+		pts.append(Vector2(g) * tile_px)
+	return pts
+
 # from_pos / to_pos: centro (mundo) dos nós; tile_px: lado da casa em px.
 func setup(from_pos: Vector2, to_pos: Vector2, sprite_scale: int) -> void:
 	var tile_px = NATIVE_TILE * float(sprite_scale)

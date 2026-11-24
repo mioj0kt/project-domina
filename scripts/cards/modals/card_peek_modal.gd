@@ -15,6 +15,7 @@ var _done: bool = false
 var _targets: Array = []  # [{ctrl: Control, card: ActionCard}]
 
 func _init() -> void:
+	MenuPieceCursor.auto(self)   # peça do jogador acompanhando o mouse pelos botões
 	layer = 120
 	visible = false
 	_build_ui()

@@ -54,6 +54,9 @@ var frozen: bool = false
 var winded: bool = false
 # Luz Polar: escudo da aurora (a próxima captura contra ela falha).
 var polar_shield: bool = false
+# --- Chefe da Caldeira ---
+# Coroa Torta: Dama recém-coroada "sem acabamento": anda e captura só 1 casa até
+# a primeira captura (aí vira Dama completa).
 
 static func make_tree() -> BoardPiece:
 	var t = BoardPiece.new(Board.NEUTRAL, false)

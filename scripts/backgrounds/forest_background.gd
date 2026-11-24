@@ -379,7 +379,9 @@ const CALDEIRA_LANDMARKS: Array[String] = [
 	"marcos/forja_4_caldeirao_fundicao", "marcos/forja_5_disco_coroado", "marcos/forja_6_moldes_empilhados",
 	"marcos/forja_7_arco_fundicao", "marcos/forja_8_trilho_carvao",
 	"marcos/lava_1_lago_redondo", "marcos/lava_2_lago_ponte", "marcos/lava_3_cachoeira",
-	"marcos/lava_4_geiser", "marcos/lava_5_lago_coroa", "marcos/lava_6_rio_fenda",
+	"marcos/lava_4_geiser", "marcos/lava_5_lago_coroa",
+	# (lava_6_rio_fenda saiu: os rios de verdade agora são o autotile dos lagos, e a
+	# placa oval com a fenda ficava avulsa no meio do chão)
 	"marcos/lava_1_lago_redondo", "marcos/lava_3_cachoeira", "marcos/lava_4_geiser",
 ]
 # Marcos grandes (poucos por mapa, como as montanhas grandes do Cume).
@@ -512,6 +514,40 @@ const SWIRL_FRAMES: int = 4
 var _swirl_tex: Texture2D = null
 
 static var _tex_cache: Dictionary = {}
+
+# Obstáculos do mapa (Caldeira): áreas (mundo) onde o fundo não põe lagos nem marcos,
+# definidas pelo MapView ANTES de build(). E a lava da maré, trocada a cada passo.
+var reserved_rects: Array = []
+var _tide_tiles: Array = []
+
+# Casas de lava da maré (dual-grid, as mesmas peças dos lagos, animadas).
+func set_tide_cells(cells: Dictionary) -> void:
+	_tide_tiles.clear()
+	var verts: Dictionary = {}
+	for c in cells:
+		for dv in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
+			verts[c + dv] = true
+	for v in verts:
+		var no: int = 1 if cells.has(v + Vector2i(-1, -1)) else 0
+		var ne: int = 1 if cells.has(v + Vector2i(0, -1)) else 0
+		var so: int = 1 if cells.has(v + Vector2i(-1, 0)) else 0
+		var se: int = 1 if cells.has(v) else 0
+		var key: String = "%d%d%d%d" % [no, ne, so, se]
+		if key == "0000":
+			continue
+		var piece: String = "lago_" + key
+		if key == "1111":
+			var roll: int = absi(hash(v)) % 100
+			if roll < 12:
+				piece = "lago_1111_v2"
+			elif roll < 20:
+				piece = "lago_1111_v3"
+			elif roll < 26:
+				piece = "lago_1111_v4"
+		var tex: Texture2D = _tex(BOARD_DIR + LAKE_DIR + piece, _dir)
+		if tex != null:
+			_tide_tiles.append([tex, Rect2(Vector2((v.x - 1) * _tile, (v.y - 1) * _tile), Vector2(_tile, _tile))])
+	queue_redraw()
 
 # Sprites animados (Caldeira): um sprite <pasta>/X.png anima se existir
 # <pasta>/anim/X_f1.png, X_f2.png... (lagos, fontes, marcos de lava, chaminés).
@@ -738,6 +774,10 @@ func _lake_cell_ok(cell: Vector2i, min_col: int, max_col: int, min_row: int, max
 	var ctr := Vector2(cell.x * _tile, cell.y * _tile)
 	if _covers_walk_cell(Rect2(ctr - Vector2(_tile, _tile) * 0.62, Vector2(_tile, _tile) * 1.24)):
 		return false
+	var crect := Rect2(ctr - Vector2(_tile, _tile) * 0.5, Vector2(_tile, _tile))
+	for rr in reserved_rects:
+		if (rr as Rect2).grow(_tile * 0.5).intersects(crect):
+			return false
 	for np in node_points:
 		if ctr.distance_to(np[0]) < _tile * 1.6:
 			return false
@@ -1561,6 +1601,13 @@ func _place_mountains(rng: RandomNumberGenerator, node_points: Array, names: Arr
 		var rect := Rect2(_snap(ground - Vector2(sz.x / 2.0, sz.y * 0.92)), sz)
 		if not _board_rect.encloses(rect):
 			continue
+		var in_reserved := false
+		for rr in reserved_rects:
+			if (rr as Rect2).intersects(rect):
+				in_reserved = true
+				break
+		if in_reserved:
+			continue
 		# repetido só bem longe do mesmo marco (nada de dois iguais na mesma tela)
 		var too_close := false
 		for prev in used_names.get(nm, []):
@@ -1692,6 +1739,16 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	for lt in _lake_tiles:
 		draw_texture_rect(_anim_tex(lt[0]), lt[1], false)
+	# maré de lava (obstáculo do mapa da Caldeira): recortada na borda do tabuleiro,
+	# para a lava "entrar" por baixo da moldura
+	for tt in _tide_tiles:
+		var trect: Rect2 = tt[1]
+		var vis: Rect2 = trect.intersection(_board_rect)
+		if vis.size.x <= 0.0 or vis.size.y <= 0.0:
+			continue
+		var ttex: Texture2D = _anim_tex(tt[0])
+		var k: float = ttex.get_size().x / trect.size.x
+		draw_texture_rect_region(ttex, vis, Rect2((vis.position - trect.position) * k, vis.size * k))
 	for lo in _lake_overlays:
 		draw_texture_rect(lo[0], lo[1], false)
 

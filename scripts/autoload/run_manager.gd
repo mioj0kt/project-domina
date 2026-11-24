@@ -10,6 +10,16 @@ var current_node_storm: bool = false
 # Cume Congelado: o duelo é num nodo de glaciar (gelo fino) / em cima de uma ponte de corda.
 var current_node_glacier: bool = false
 var current_node_bridge: bool = false
+# Caldeira: duelo chamuscado (atingido pela erupção) / duelo na ilha de basalto (maré de lava).
+var current_node_scorched: bool = false
+var current_node_island: bool = false
+# Caldeira: plano dos obstáculos do mapa (sorteado junto com o mapa; ver MapView).
+#   eruptions: [{"li": camada onde a peça está quando as bombas caem, "edges": [chaves "a->b"],
+#                "nodes": [MapNode duelos chamuscados], "side": -1/+1}]
+#   tide: {"li": camada da maré, "dir": +1 entra pela esquerda / -1 pela direita,
+#          "order": [MapNode na ordem em que a lava engole], "safe": [MapNode que não afundam]}
+#   fired: camadas cuja erupção já foi animada; tide_shown: quantos nós a maré já mostrou engolidos.
+var caldeira_plan: Dictionary = {}
 var _gold: int = 0
 # Com DebugFlags ligadas: ouro infinito (leitura fixa, escritas ignoradas).
 var gold: int:
@@ -68,6 +78,9 @@ func advance_to_next_biome() -> void:
 	current_node_storm = false
 	current_node_glacier = false
 	current_node_bridge = false
+	current_node_scorched = false
+	current_node_island = false
+	caldeira_plan = {}
 	clear_ambush()
 
 var map_data: Array[Array] = []
@@ -189,6 +202,9 @@ func start_new_run():
 	current_node_storm = false
 	current_node_glacier = false
 	current_node_bridge = false
+	current_node_scorched = false
+	current_node_island = false
+	caldeira_plan = {}
 	map_data = []
 	current_node = null
 	visited_connections = []

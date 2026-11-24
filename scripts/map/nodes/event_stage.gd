@@ -50,6 +50,18 @@ const SPEAKERS: Dictionary = {
 	"ESCRIBA": ["O ESCRIBA", Color("#e6c06a"), Color(0.95, 0.78, 0.40)],
 	# mina
 	"MINEIRO": ["O MINEIRO", Color("#e3c25a"), Color(0.90, 0.78, 0.40)],
+	"COZINHEIRO": ["O COZINHEIRO", Color("#f2b8a0"), Color(1.0, 0.72, 0.62)],
+	# 4º campo (opcional): id do ator que fala ("" = voz sem ninguém em cena, sem retrato)
+	"VOZ DO POÇO": ["UMA VOZ NO POÇO", Color("#b9a8e0"), Color(0.66, 0.58, 0.90), ""],
+	# cume
+	"VELHA1": ["A VELHA DE TOUCA", Color("#a8d4f0"), Color(0.62, 0.82, 1.0), "npc"],
+	"VELHA2": ["A VELHA DE CACHOS", Color("#f0a8b8"), Color(1.0, 0.66, 0.74), "npc2"],
+	"EREMITA": ["O EREMITA", Color("#cfe3f0"), Color(0.75, 0.88, 1.0)],
+	"PELEIRO": ["O PELEIRO", Color("#e0b07a"), Color(0.95, 0.72, 0.45)],
+	"VOZ DE CIMA": ["UMA VOZ LÁ DE CIMA", Color("#d6dff0"), Color(0.76, 0.82, 0.94), ""],
+	# caldeira
+	"APRENDIZ": ["O APRENDIZ", Color("#f0b070"), Color(1.0, 0.70, 0.40)],
+	"VIDREIRA": ["A VIDREIRA", Color("#f6c48a"), Color(1.0, 0.78, 0.50)],
 }
 
 # Biomas do palco: casas do tabuleiro e cenário espalhado em volta da clareira.
@@ -57,12 +69,17 @@ const BIOMES: Dictionary = {
 	"floresta": {"skin": "wood", "shade": Color(0.03, 0.07, 0.04, 0.20)},
 	"deserto": {"skin": "desert", "shade": Color(0.10, 0.06, 0.02, 0.10)},
 	"mina": {"skin": "mine", "shade": Color(0.03, 0.02, 0.07, 0.36)},
+	"cume": {"skin": "cume", "shade": Color(0.55, 0.68, 0.90, 0.08)},
+	"caldeira": {"skin": "caldeira", "shade": Color(0.16, 0.03, 0.02, 0.26)},
 }
 const DESERT: String = "res://assets/sprites/biomas/deserto/tabuleiro/"
 const MINE: String = "res://assets/sprites/biomas/mina/"
+const CUME: String = "res://assets/sprites/biomas/cume/tabuleiro/"
+const CALDEIRA: String = "res://assets/sprites/biomas/caldeira/tabuleiro/"
 # Sprites com quadro `_2` que NÃO tocam em loop: o segundo quadro é trocado na hora certa
 # (olhos da esfinge acendendo, hieróglifos acendendo, cristal rachando, rodas do carrinho).
-const NO_LOOP: Array = ["sphinx", "obelisk", "vein_cristal", "sarcophagus"]
+const NO_LOOP: Array = ["sphinx", "obelisk", "vein_cristal", "sarcophagus",
+	"mapwall_parede", "elevador_gaiola", "exp_lampiao", "disco_gelo", "sino_arco", "molde_coroa"]
 
 # Roteiro de cada evento: quem está em cena (ator: [sprite, casa, é_peça, no_chão, escala]; no_chão = desenhado deitado no piso, centrado na casa) e as falas de abertura
 # ([quem, texto]; quem = "" é narração). "target" é o ator para onde a peça olha/vai.
@@ -234,6 +251,156 @@ const SCRIPTS: Dictionary = {
 		"target": "altar", "cam": Vector2(0, -80),
 		"lines": [["", "Um altar de cristal com uma face espelhada. Nela, uma versão sua mais velha, gasta, com a borda rachada."], ["", "Uma mão de cristal sai do espelho e se abre, pedindo uma carta. Em troca, promete uma Lei."]],
 	},
+	# ---------------------------------------------------------------- mina (novos)
+	"map_wall": {
+		"actors": {"wall": ["mapwall_parede", Vector2i(1, -2), false, false, 1.3], "paints": ["mapwall_tintas", Vector2i(3, 0), false, true],
+			"c1": ["cristal_espelho_1", Vector2i(-2, -2), false], "c2": ["cristal_espelho_2", Vector2i(4, -2), false]},
+		"target": "wall", "cam": Vector2(0, -80),
+		"lines": [["", "Uma parede lisa com o mundo inteiro pintado em tinta de cristal. Floresta, areia, mina, gelo e fogo, tudo colado um no outro."], ["", "Bem no meio, alguém passou a mão e borrou o que tinha ali. Do lado, potes de tinta ainda molhados."]],
+	},
+	"cave_canteen": {
+		"actors": {"pot": ["cantina_panela", Vector2i(3, -1), false, false, 1.2], "table": ["cantina_mesa", Vector2i(-2, -2), false, false, 1.2],
+			"sign": ["cantina_placa", Vector2i(-1, -3), false], "npc": ["cozinheiro", Vector2i(1, -1), true]},
+		"target": "npc",
+		"lines": [["COZINHEIRO", "Senta, senta! Hoje tem sopa de cristal. Ontem também. Amanhã também."], ["COZINHEIRO", "Eu cozinhava pra ele, sabia? Lá em cima. Agora cozinho pra quem passa."], ["COZINHEIRO", "O prato misturado é a especialidade da casa. Ele proibia. Eu acho o melhor."]],
+	},
+	"notice_board": {
+		"actors": {"board": ["quadro_avisos", Vector2i(1, -2), false, false, 1.3], "lamp": ["quadro_lampada", Vector2i(3, -2), false, false, 1.2],
+			"ore": ["minerios_juntos", Vector2i(0, -1), false, true]},
+		"target": "board", "cam": Vector2(0, -60),
+		"lines": [["", "Um quadro de cortiça com avisos: \"NÃO JUNTE MINÉRIO DE VEIOS DIFERENTES\". \"NÃO RASGUE ESTE QUADRO\". \"NÃO OLHE PARA A LÂMPADA\"."], ["", "Metade está riscada por cima. A lâmpada do lado pisca sozinha, sem ninguém tocar."]],
+	},
+	"crystal_bats": {
+		"actors": {"stal": ["estalactites", Vector2i(1, -3), false, false, 1.4], "chips": ["lascas_chao", Vector2i(1, -1), false, true, 1.2],
+			"b1": ["morcego_1", Vector2i(0, -2), false], "b2": ["morcego_1", Vector2i(1, -2), false], "b3": ["morcego_1", Vector2i(2, -2), false],
+			"b4": ["morcego_1", Vector2i(3, -3), false]},
+		"target": "b2", "cam": Vector2(0, -100),
+		"lines": [["", "Um bando de morcegos pendurado no teto, de asas de cristal. Elas tilintam baixinho cada vez que eles respiram."], ["", "Embaixo deles, o chão é só lasca brilhante. Qualquer luz acordaria todo mundo."]],
+	},
+	"mine_lift": {
+		"actors": {"well": ["poco_boca", Vector2i(1, -2), false, false, 1.3], "cage": ["elevador_gaiola", Vector2i(1, -2), false, false, 1.2],
+			"bell": ["elevador_sino", Vector2i(3, -1), false, false, 1.2], "crank": ["manivela", Vector2i(-1, -2), false, false, 1.2]},
+		"target": "cage", "cam": Vector2(0, -100),
+		"lines": [["", "Uma gaiola de madeira pendurada em cima de um poço que não tem fundo. Do lado, uma manivela e um sino."], ["VOZ DO POÇO", "Quem está subindo?"], ["", "Ninguém está subindo. A voz espera um pouco e pergunta de novo, mais baixo."]],
+	},
+	# ---------------------------------------------------------------- cume congelado
+	"expedition_camp": {
+		"actors": {"tent": ["exp_barraca", Vector2i(1, -2), false, false, 1.3], "book": ["exp_caderno", Vector2i(0, -1), false, true],
+			"lamp": ["exp_lampiao", Vector2i(-1, -2), false, false, 1.2], "pack": ["exp_mochila", Vector2i(3, -1), false]},
+		"target": "tent", "cam": Vector2(0, -60),
+		"lines": [["", "Uma barraca meio enterrada na neve, com a lona dura de gelo. Ninguém responde lá dentro."], ["", "Do lado de fora, um caderno aberto, um lampião apagado e uma mochila ainda fechada."]],
+	},
+	"frozen_disc": {
+		"actors": {"ice": ["disco_gelo", Vector2i(1, -2), false, false, 1.3], "puddle": ["poca_gelo", Vector2i(1, -1), false, true, 1.2],
+			"shard": ["gelo/gelo_6_meio_derretido_clara", Vector2i(3, -1), false]},
+		"target": "ice", "cam": Vector2(0, -60),
+		"lines": [["", "Um bloco de gelo do tamanho de uma porta. Dentro dele, um disco liso, sem rosto, parado do jeito que congelou."], ["", "Parece que estava subindo. Parece que desistiu bem aqui."]],
+	},
+	"safety_rope": {
+		"actors": {"post": ["corda_poste", Vector2i(1, -1), false, false, 1.2], "sil": ["silhueta_alto", Vector2i(1, -6), false]},
+		"target": "post", "cam": Vector2(0, -120),
+		"lines": [["", "Uma corda congelada amarrada num poste. Ela sobe a encosta e some na neve, lá no alto."], ["VOZ DE CIMA", "Quem está puxando? Se for subir, avisa antes!"], ["", "A voz vem de muito longe. Mais longe do que uma corda alcança."]],
+	},
+	"hot_spring": {
+		"actors": {"pond": ["termas_lagoa", Vector2i(1, -2), false, true, 1.7], "towels": ["termas_toalhas", Vector2i(3, 0), false, true],
+			"kettle": ["chaleira", Vector2i(-1, -1), false, false, 1.2], "npc": ["velha_1", Vector2i(0, -2), true], "npc2": ["velha_2", Vector2i(2, -2), true]},
+		"target": "npc",
+		"lines": [["VELHA1", "Olha, mais um subindo. Que bonitinho."], ["VELHA2", "Esse também vai lá pro topo? Todos vão. Nenhum desce."], ["VELHA1", "Entra, querido, a água esquenta até a borda. Ou joga uma moeda no vapor, que dá sorte."]],
+	},
+	"big_footprints": {
+		"actors": {"cave": ["gruta_gelo", Vector2i(1, -3), false, false, 1.3], "p1": ["pegada_gigante", Vector2i(2, 0), false, true],
+			"p2": ["pegada_gigante", Vector2i(1, -1), false, true], "p3": ["pegada_gigante", Vector2i(2, -2), false, true], "ball": ["bola_neve", Vector2i(-2, -2), false]},
+		"target": "cave", "cam": Vector2(0, -80),
+		"lines": [["", "Pegadas do tamanho de uma casa do tabuleiro, fundas na neve, ainda frescas."], ["", "Elas levam direto pra uma gruta de gelo. Ninguém sabe de quê."]],
+	},
+	"ice_hermit": {
+		"actors": {"igloo": ["iglu", Vector2i(2, -2), false, false, 1.3], "blocks": ["blocos_gelo", Vector2i(4, 0), false],
+			"npc": ["eremita", Vector2i(0, -1), true]},
+		"target": "npc",
+		"lines": [["EREMITA", "Senta. O chá esfria rápido aqui em cima. As Leis esfriam mais devagar."], ["EREMITA", "Eu escrevo com a caligrafia do frio. O que eu escrevo, fica."], ["EREMITA", "Umas moedas e eu reescrevo uma das suas. Ou me ajuda com o gelo, que o iglu não sobe sozinho."]],
+	},
+	"cable_car": {
+		"actors": {"station": ["teleferico_estacao", Vector2i(-2, -2), false, false, 1.3], "cabin": ["teleferico_cabine", Vector2i(2, -2), false, false, 1.2]},
+		"target": "cabin", "cam": Vector2(0, -110),
+		"lines": [["", "Uma cabine enferrujada pendurada num cabo, em cima do abismo. Ela balança sozinha, rangendo."], ["", "A casinha da estação está aberta. A gaveta de passagens também."]],
+	},
+	"mountain_bell": {
+		"actors": {"arch": ["sino_arco", Vector2i(1, -2), false, false, 1.3], "snow1": ["props/prop_09_monte_neve", Vector2i(-1, -1), false],
+			"snow2": ["props/prop_10_monte_neve_vento", Vector2i(3, -1), false]},
+		"target": "arch", "cam": Vector2(0, -100),
+		"lines": [["", "Um sino de bronze pendurado num arco de pedra coberto de gelo."], ["", "Dizem que ele chama a neve. A neve, em volta dele, está quieta demais."]],
+	},
+	"fur_trader": {
+		"actors": {"sled": ["treno", Vector2i(3, -2), false, false, 1.2], "furs": ["peles_expostas", Vector2i(2, 0), false, true],
+			"npc": ["peleiro", Vector2i(1, -1), true]},
+		"target": "npc",
+		"lines": [["PELEIRO", "Ô de casa! Quer dizer... ô de neve!"], ["PELEIRO", "Compro, vendo, troco. Só não vendo frio, que isso aqui tem de graça."]],
+	},
+	"ice_fishing": {
+		"actors": {"hole": ["buraco_gelo", Vector2i(1, -1), false, true, 1.2], "rod": ["vara_pesca", Vector2i(2, -2), false, false, 1.2],
+			"bucket": ["balde_peixes", Vector2i(3, -1), false, false, 1.2], "fish": ["peixe_peca", Vector2i(1, -1), false]},
+		"target": "hole",
+		"lines": [["", "Um buraco redondo no lago congelado, com uma vara fincada do lado e um balde de peixes esquecido."], ["", "A linha está esticada. Alguma coisa lá embaixo está puxando."]],
+	},
+	# ---------------------------------------------------------------- caldeira
+	"lost_forge": {
+		"actors": {"furnace": ["forja_fornalha", Vector2i(2, -3), false, false, 1.3], "anvil": ["forja_bigorna", Vector2i(1, -1), false, false, 1.2],
+			"bellows": ["forja_fole", Vector2i(-1, -2), false, false, 1.2]},
+		"target": "anvil", "cam": Vector2(0, -80),
+		"lines": [["", "Uma bigorna com uma coroa pela metade em cima, ainda vermelha. A fornalha atrás continua acesa."], ["", "O martelo está no chão. Quem estava trabalhando saiu correndo e não voltou."]],
+	},
+	"apprentice": {
+		"actors": {"bench": ["aprendiz_banca", Vector2i(3, -1), false, false, 1.2], "bucket": ["aprendiz_balde", Vector2i(-1, -2), false, false, 1.2],
+			"npc": ["aprendiz", Vector2i(1, -1), true]},
+		"target": "npc",
+		"lines": [["APRENDIZ", "N-não olha pra bancada! Quer dizer... oi."], ["APRENDIZ", "A mestra me mandou fazer coroas. Saíram todas tortas. Todas."], ["APRENDIZ", "Vendo baratinho, se quiser. Ou me ajuda a sumir com elas. Só não conta pra ela."]],
+	},
+	"lava_stones": {
+		"actors": {"s1": ["pedra_boiando", Vector2i(0, -1), false, true, 1.6], "s2": ["pedra_boiando", Vector2i(1, -2), false, true, 1.6],
+			"chest": ["bau_obsidiana", Vector2i(2, -3), false, false, 1.5]},
+		"target": "chest", "cam": Vector2(0, -90), "lava": [-2, -1],
+		"lines": [["", "Um rio de lava atravessa a galeria. Umas pedras chatas boiam nele, subindo e descendo devagar."], ["", "Do outro lado, um baú de obsidiana com a tampa entreaberta. Dá pra ver o brilho lá dentro."]],
+	},
+	"salamander_nest": {
+		"actors": {"nest": ["ninho_ovos", Vector2i(1, -1), false, false, 1.2], "sal1": ["salamandra", Vector2i(0, -2), false],
+			"sal2": ["salamandra", Vector2i(2, -2), false], "sal3": ["salamandra", Vector2i(3, 0), false], "coal": ["carvao", Vector2i(-1, -2), false]},
+		"target": "nest",
+		"lines": [["", "Salamandras de fogo dormindo enroladas em volta de um ninho."], ["", "Os ovos brilham por dentro, como brasa. Uma delas ronca soltando fumaça."]],
+	},
+	"crown_mold": {
+		"actors": {"mold": ["molde_coroa", Vector2i(1, -1), false, false, 1.2], "chute": ["calha_ouro", Vector2i(3, -2), false, false, 1.2]},
+		"target": "mold", "cam": Vector2(0, -60),
+		"lines": [["", "Um bloco de pedra cavado em forma de coroa, vazio."], ["", "Do lado, uma calha despeja ouro derretido sem parar. Ninguém para encher o molde."]],
+	},
+	"geyser": {
+		"actors": {"mouth": ["geiser_boca", Vector2i(1, -2), false, true, 1.3], "jet": ["geiser_jato", Vector2i(1, -2), false, false, 1.3]},
+		"target": "mouth", "coins": true, "cam": Vector2(0, -100),
+		"lines": [["", "Uma boca de pedra no chão, borbulhando. De tempos em tempos, ela estoura num jato de vapor e lava."], ["", "Na beirada, moedas presas na crosta. Dá pra contar o intervalo entre um jato e outro."]],
+	},
+	"glassblower": {
+		"actors": {"furnace": ["vidreira_forno", Vector2i(-1, -2), false, false, 1.2], "shelf": ["vidreira_prateleira", Vector2i(3, -2), false, false, 1.2],
+			"npc": ["vidreira", Vector2i(1, -1), true]},
+		"target": "npc",
+		"lines": [["VIDREIRA", "Cuidado onde pisa. Aqui tudo é vidro. Menos o chão, que é lava."], ["VIDREIRA", "Eu sopro vidro de lava. Cada carta ganha uma moldura que não quebra nunca."], ["VIDREIRA", "Compra uma? Ou me vende uma das suas, que eu emolduro e revendo mais caro. Sou honesta."]],
+	},
+	"melted_statue": {
+		"actors": {"statue": ["estatua_derretida", Vector2i(1, -2), false, false, 1.3], "crown": ["estatua_coroa", Vector2i(2, -1), false, true],
+			"ash": ["cinza_monte", Vector2i(3, -1), false, true]},
+		"target": "statue", "cam": Vector2(0, -110),
+		"lines": [["", "A estátua de uma peça coroada. A metade de baixo escorreu como cera e endureceu no chão."], ["", "Na base, uma inscrição meio derretida. A coroa, de ouro de verdade, continua inteira."]],
+	},
+	"smelter": {
+		"actors": {"pot": ["caldeirao_grande", Vector2i(1, -2), false, false, 1.3], "ladle": ["concha_fundicao", Vector2i(3, -1), false, true],
+			"ingots": ["lingotes", Vector2i(-1, -1), false]},
+		"target": "pot", "cam": Vector2(0, -80),
+		"lines": [["", "Um caldeirão enorme de metal derretido, borbulhando em cima de um buraco de lava."], ["", "Tudo que cai ali sai do outro lado como lingote. Tudo mesmo."]],
+	},
+	"ash_altar": {
+		"actors": {"altar": ["altar_cinzas", Vector2i(1, -2), false, false, 1.3], "ash": ["cinza_monte", Vector2i(3, -1), false, true],
+			"ash2": ["cinza_monte", Vector2i(-1, -1), false, true]},
+		"target": "altar", "cam": Vector2(0, -80),
+		"lines": [["", "Um altar de obsidiana coberto de cinza, com marcas de mãos de quem já passou por aqui."], ["", "No meio, uma fresta de lava respira devagar, como se esperasse alguma coisa."]],
+	},
 }
 
 # Frase curta que acompanha a ação de cada escolha (evento.escolha). Sem entrada = sem frase.
@@ -287,6 +454,59 @@ const BEATS: Dictionary = {
 	"prospectors.setup": "Você apaga a lanterna e espera no escuro.",
 	"mirror_altar.offer": "Você empurra uma carta até a mão de cristal...",
 	"mirror_altar.gaze": "Você só olha. Ela olha de volta.",
+	"map_wall.paint": "Você mergulha a borda na tinta e pinta por cima do borrão...",
+	"map_wall.copy": "Você copia o mapa no verso de uma carta velha.",
+	"map_wall.tear": "Você puxa o pedaço borrado com toda a força...",
+	"cave_canteen.mixed": "\"Um misturado saindo!\"",
+	"cave_canteen.soup": "\"Uma normal, pra já.\"",
+	"cave_canteen.ask": "Você espera ele parar de mexer a panela.",
+	"notice_board.obey": "Você lê tudo direitinho e não encosta em nada.",
+	"notice_board.mix": "Você empurra um minério pra perto do outro...",
+	"notice_board.tear": "Você arranca os avisos da cortiça...",
+	"crystal_bats.chip": "Você junta as lascas devagarinho...",
+	"crystal_bats.light": "Você acende a lanterna...",
+	"mine_lift.descend": "Você pula pra dentro da gaiola. A corda range...",
+	"mine_lift.bell": "Você toca o sino. O som cai poço abaixo.",
+	"expedition_camp.lamp": "Você encosta no lampião...",
+	"expedition_camp.pack": "Você puxa a mochila de dentro da neve...",
+	"expedition_camp.read": "Você vira as páginas até a última.",
+	"frozen_disc.melt": "Você se encosta no gelo e espera ele ceder...",
+	"frozen_disc.touch": "Você encosta no gelo, só um pouco.",
+	"frozen_disc.hit": "Você pula com tudo em cima do bloco...",
+	"safety_rope.promise": "Você puxa a corda duas vezes: \"eu aviso\".",
+	"safety_rope.deny": "Você solta a corda. Ela fica parada.",
+	"safety_rope.pull": "Você puxa a corda com força...",
+	"hot_spring.soak": "Você entra devagar na água quente...",
+	"hot_spring.wish": "Você joga uma moeda no vapor...",
+	"big_footprints.follow": "Você segue as pegadas até a boca da gruta...",
+	"big_footprints.measure": "Você entra numa pegada. Sobra espaço.",
+	"ice_hermit.swap": "O eremita molha a pena no gelo e escreve.",
+	"ice_hermit.help": "Você empurra os blocos de gelo até o iglu.",
+	"cable_car.ride": "Você pula pra dentro da cabine. Ela balança...",
+	"cable_car.loot": "Você revira a gaveta da estação.",
+	"mountain_bell.ring": "Você pula com tudo na corda do sino...",
+	"mountain_bell.tap": "Você encosta no sino, de leve.",
+	"ice_fishing.fish": "Você puxa a linha. Ela puxa de volta...",
+	"ice_fishing.bucket": "Você vira o balde.",
+	"lost_forge.forge": "Você empurra uma carta pra bigorna. O martelo desce sozinho...",
+	"lost_forge.help": "Você pula no fole, uma vez, duas, cem...",
+	"apprentice.help": "Vocês jogam as coroas tortas no fundo do balde.",
+	"apprentice.report": "Você grita chamando a mestra.",
+	"lava_stones.jump": "Você pula na primeira pedra. Ela afunda um pouco...",
+	"lava_stones.around": "Você vai pela margem, longe do rio.",
+	"salamander_nest.egg": "Você estica a borda até o ovo mais perto...",
+	"salamander_nest.coal": "Você empurra o carvão até o ninho.",
+	"crown_mold.fill": "Você vira a calha. O ouro escorre pro molde...",
+	"crown_mold.swap": "Você mergulha uma carta no ouro...",
+	"geyser.grab": "Você conta os jatos e corre...",
+	"geyser.plug": "Você empurra uma pedra pra boca do gêiser...",
+	"melted_statue.read": "Você limpa a inscrição e lê, letra por letra.",
+	"melted_statue.polish": "Você esfrega a fuligem do rosto dela.",
+	"melted_statue.crown": "Você pula e puxa a coroa...",
+	"smelter.melt": "Você deixa uma carta cair no metal...",
+	"smelter.stir": "Você pega a concha e mexe.",
+	"ash_altar.offer": "Você empurra uma carta pra dentro da fresta...",
+	"ash_altar.sweep": "Você varre a cinza com a borda.",
 }
 
 var title: String = ""
@@ -306,6 +526,9 @@ var _ambient_t: float = 0.0
 var biome: String = "floresta"
 var _event_id: String = ""
 var _storm: bool = false               # tempestade de areia passando pela cena
+var _choice: String = ""               # última escolha (alguns desfechos dependem dela)
+var _lava_rows: Array = []             # fileiras de lava atravessando a cena (pedras no rio)
+var _jet_t: float = 2.0                # gêiser: tempo até o próximo jato
 var _tex: Dictionary = {}
 
 var ui: CanvasLayer
@@ -351,6 +574,11 @@ func _add_actor(id: String, tex: Texture2D, cell: Vector2i, piece: bool, flat: b
 # Sprite de cena com quadros extras: `<nome>_fala.png` (boca aberta enquanto fala) e
 # `<nome>_2.png` (segundo quadro em loop: fogo, poção, água).
 func _add_scene_actor(id: String, sprite: String, cell: Vector2i, piece: bool, flat: bool = false) -> void:
+	if sprite.contains("/"):
+		# peça de cenário do tabuleiro do bioma (ex.: "props/prop_09_monte_neve")
+		_add_actor(id, _tx((CALDEIRA if biome == "caldeira" else CUME) + sprite + ".png"), cell, piece, flat)
+		actors[id]["sprite"] = sprite
+		return
 	_add_actor(id, _tx(ART + sprite + ".png"), cell, piece, flat)
 	var talk := _tx(ART + sprite + "_fala.png")
 	if talk != null:
@@ -425,6 +653,8 @@ func _build_scenery(keep_free: Rect2i = Rect2i()) -> void:
 	var bushes: Array = []
 	var small: Array = []
 	var tree_k: float = 0.34
+	var bush_k: float = 0.5
+	var small_k: float = 0.6
 	match biome:
 		"deserto":
 			var mono: Array = []
@@ -447,6 +677,39 @@ func _build_scenery(keep_free: Rect2i = Rect2i()) -> void:
 			bushes = _load_list(MINE, ["gruta/rocha_solta_4", "gruta/rocha_solta_3", "tabuleiro/cristais/cristal_3_gelo_pequeno_clara", "tabuleiro/cristais/cristal_5_esmeralda_escura"])
 			small = _load_list(MINE, ["gruta/rocha_solta_1", "gruta/rocha_solta_2", "gruta/rocha_solta_3"])
 			tree_k = 0.22
+		"cume":
+			var pin: Array = []
+			for n in ["pinheiros/pinheiro_1_alto_fino", "pinheiros/pinheiro_2_largo_baixo", "pinheiros/pinheiro_3_torto_vento", "pinheiros/pinheiro_4_jovem",
+					"pinheiros/pinheiro_5_seco_gelo", "pinheiros/pinheiro_6_dupla", "totens/totem_1_alta_reta", "totens/totem_2_torta_vento", "totens/totem_4_bandeira"]:
+				pin.append(n + "_clara")
+				pin.append(n + "_escura")
+			trees = _load_list(CUME, pin)
+			bushes = _load_list(CUME, ["gelo/gelo_1_cubo_rachado_clara", "gelo/gelo_2_tres_pontas_escura", "gelo/gelo_3_ponta_alta_clara", "gelo/gelo_5_estalagmite_torta_escura",
+				"gelo/gelo_6_meio_derretido_clara", "props/prop_07_rocha_grande_neve", "props/prop_08_duas_rochas", "props/prop_09_monte_neve", "props/prop_11_pedra_veio_gelo",
+				"totens/totem_3_caida_clara"])
+			small = _load_list(CUME, ["miudezas/02_floco_3x3", "miudezas/03_floco_5x5", "miudezas/05_caco_gelo_3x3", "miudezas/06_caco_gelo_4x3", "miudezas/07_neve_soprada_10x6",
+				"miudezas/08_neve_soprada_8x5", "miudezas/09_neve_soprada_6x4", "miudezas/12_montinho_neve", "miudezas/13_montinho_gelo", "miudezas/14_capim_congelado",
+				"miudezas/11_pegada", "props/prop_10_monte_neve_vento", "props/prop_12_lasca_gelo_deitada"])
+			tree_k = 0.16
+			bush_k = 0.16
+			small_k = 0.28
+		"caldeira":
+			var bas: Array = []
+			for n in ["basalto/basalto_1_tres_colunas", "basalto/basalto_2_alta_fina", "basalto/basalto_5_fresta_lava", "basalto/basalto_6_cinza_topo",
+					"chamines/chamine_2_alta_rachada", "chamines/chamine_3_dupla"]:
+				bas.append(n + "_clara")
+				bas.append(n + "_escura")
+			trees = _load_list(CALDEIRA, bas)
+			bushes = _load_list(CALDEIRA, ["basalto/basalto_3_grupo_baixo_clara", "basalto/basalto_4_partida_caida_escura", "chamines/chamine_1_pequena_redonda_clara",
+				"chamines/chamine_4_apagada_escura", "props/prop_7_obsidiana", "props/prop_11_rocha_veio_lava", "props2/prop_1_braseiro_escura", "props2/prop_4_monte_carvao",
+				"props2/prop_13_fumarola_baixa", "props/prop_3_coroas_rejeitadas"])
+			small = _load_list(CALDEIRA, ["miudezas/02_brasa_3x3", "miudezas/03_brasa_4x3", "miudezas/05_brasa_apagando_3x3", "miudezas/08_floco_cinza_4x3",
+				"miudezas/09_cinza_soprada_10x6", "miudezas/10_cinza_soprada_8x5", "miudezas/13_escoria_4x3", "miudezas/14_lasca_obsidiana_5x3", "miudezas/33_carvao_4x3",
+				"miudezas/36_rachadinha_8x4", "miudezas/37_rachadinha_10x5", "miudezas/38_poca_lava_6x4", "miudezas/19_pepita_ouro_3x2", "props/prop_12_cinza_brasa",
+				"props/prop_8_pedra_pomes", "props/prop_10_escorrida_lava"])
+			tree_k = 0.16
+			bush_k = 0.2
+			small_k = 0.34
 		_:
 			for i in range(1, 15):
 				var t := _tx(FOREST + "arvores/arvore_copa_%d.png" % i)
@@ -467,9 +730,9 @@ func _build_scenery(keep_free: Rect2i = Rect2i()) -> void:
 			var r: float = rng.randf()
 			if d > 4.2 and not trees.is_empty() and r < tree_k + 0.03 * (d - 4.2):
 				_props.append([trees[rng.randi() % trees.size()], p + Vector2(0, CELL * 0.4), rng.randf() < 0.5])
-			elif d > 3.0 and not bushes.is_empty() and r < 0.5:
+			elif d > 3.0 and not bushes.is_empty() and r < bush_k:
 				_props.append([bushes[rng.randi() % bushes.size()], p + Vector2(0, CELL * 0.25), rng.randf() < 0.5])
-			elif d > 1.8 and not small.is_empty() and r < 0.6:
+			elif d > 1.8 and not small.is_empty() and r < small_k:
 				_clutter.append([small[rng.randi() % small.size()], p])
 	_props.sort_custom(func(a, b): return a[1].y < b[1].y)
 
@@ -570,8 +833,10 @@ func _process(delta: float) -> void:
 		portrait.texture = _actor_tex(actors[_talker])
 	if _interior and not skip:
 		_library_ambient(delta)
-	elif not skip and (_storm or biome == "mina"):
+	elif not skip and (_storm or biome in ["mina", "cume", "caldeira"]):
 		_biome_ambient(delta)
+	if not skip and actors.has("jet"):
+		_geyser_tick(delta)
 	for id in actors:
 		var a: Dictionary = actors[id]
 		if float(a["emote_t"]) > 0.0:
@@ -597,6 +862,8 @@ func _draw() -> void:
 		BoardSkin.draw_tiles(self, off, ROWS, COLS, CELL, Color.WHITE, Color.WHITE, String(bd["skin"]))
 		for pt in _path_tiles:
 			draw_texture_rect(pt[1], Rect2(_w2s(cell_pos(pt[0]) - Vector2(CELL, CELL) / 2.0), Vector2(CELL, CELL)), false)
+		if not _lava_rows.is_empty():
+			_draw_lava_rows()
 		# sombra do bioma sobre o tabuleiro (mata, sol, escuro da mina)
 		draw_rect(Rect2(Vector2.ZERO, vp), bd["shade"])
 		if _storm:
@@ -825,7 +1092,8 @@ func sparkles(at: Vector2, col: Color, n: int) -> void:
 func _set_text(who: String, text: String) -> void:
 	box.visible = true
 	var sp: Array = SPEAKERS.get(who, [])
-	_talker = "npc" if not sp.is_empty() and actors.has("npc") else ""
+	var sid: String = _speaker_actor(who)
+	_talker = sid if not sp.is_empty() and actors.has(sid) else ""
 	if sp.is_empty():
 		# narração: caixa neutra, com o retrato do que está em cena
 		name_plate.add_theme_color_override("font_color", Color(0.78, 0.84, 0.95))
@@ -841,8 +1109,8 @@ func _set_text(who: String, text: String) -> void:
 		name_plate.text = sp[0]
 		name_plate.add_theme_color_override("font_color", sp[1])
 		box.add_theme_stylebox_override("panel", TutorialGuideView._char_panel(sp[2], 22))
-		portrait.texture = actors["npc"]["tex"] if actors.has("npc") else null
-		portrait.visible = true
+		portrait.texture = actors[sid]["tex"] if actors.has(sid) else null
+		portrait.visible = actors.has(sid)
 	text_label.remove_theme_color_override("font_color")
 	text_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.97))
 	text_label.custom_minimum_size.y = 104.0
@@ -943,8 +1211,8 @@ func play_intro(event: Dictionary) -> void:
 	await _wait(0.35)
 	for line in sc["lines"]:
 		var who: String = line[0]
-		if who != "" and actors.has("npc"):
-			bump("npc", 12.0)
+		if who != "" and actors.has(_speaker_actor(who)):
+			bump(_speaker_actor(who), 12.0)
 		await say(who, line[1])
 
 # A ação da escolha. `luck`: a escolha depende de sorte (tem suspense antes do desfecho).
@@ -1307,6 +1575,9 @@ func _pages_burst(at: Vector2, n: int) -> void:
 # Detalhes de cada cena que não cabem na tabela SCRIPTS.
 func _setup_special(sc: Dictionary) -> void:
 	_storm = bool(sc.get("storm", false))
+	_lava_rows = sc.get("lava", [])
+	if not _lava_rows.is_empty():
+		_clear_rows(int(_lava_rows.min()), int(_lava_rows.max()))
 	if sc.get("rails", false):
 		# trilho atravessando a cena na fileira do carrinho
 		_path_tiles.clear()
@@ -1335,6 +1606,62 @@ func _setup_special(sc: Dictionary) -> void:
 			actors["wave"]["alpha"] = 0.7
 		"nomad":
 			actors["coin"]["z"] = 34.0          # a moeda girando no ar, ao lado dele
+		# ------------------------------------------------ mina (novos)
+		"crystal_bats":
+			# pendurados no teto: tudo levantado do chão
+			actors["stal"]["z"] = 96.0
+			var zs: Dictionary = {"b1": 70.0, "b2": 84.0, "b3": 64.0, "b4": 96.0}
+			for id in zs:
+				actors[id]["z"] = zs[id]
+				actors[id]["fp"] = 0.5 + 0.07 * float(String(id).right(1).to_int())
+		"mine_lift":
+			actors["cage"]["pos"] = (actors["well"]["pos"] as Vector2) + Vector2(0, 2)   # na frente da boca do poço
+			actors["cage"]["z"] = 62.0
+		# ------------------------------------------------ cume
+		"frozen_disc":
+			actors["puddle"]["alpha"] = 0.0      # só aparece se o gelo derreter
+		"hot_spring":
+			# as duas de molho dentro da água (o sprite da lagoa tem o vapor em cima)
+			var pc: Vector2 = actors["pond"]["pos"]
+			actors["npc"]["pos"] = pc + Vector2(-CELL * 0.95, CELL * 0.15)
+			actors["npc2"]["pos"] = pc + Vector2(CELL * 0.95, CELL * 0.25)
+		"safety_rope":
+			# a corda deitada na neve, subindo a encosta a partir do poste
+			var rope := _tx(ART + "corda_subindo.png")
+			var base: Vector2 = actors["post"]["pos"]
+			var seg_h: float = rope.get_size().y * PXS
+			for i in range(2):
+				var rid: String = "rope%d" % i
+				_add_actor(rid, rope, Vector2i.ZERO, false, true)
+				actors[rid]["pos"] = (base + Vector2(0, -CELL * 0.35 - seg_h * (0.5 + float(i)))).round()
+				actors[rid]["alpha"] = [0.95, 0.7][i]
+			actors["sil"]["pos"] = (base + Vector2(0, -CELL * 0.35 - seg_h * 2.0 - CELL * 0.2)).round()
+			actors["sil"]["alpha"] = 0.0
+		"cable_car":
+			# a cabine pendurada no cabo, que atravessa a cena lá no alto
+			var cab: Dictionary = actors["cabin"]
+			cab["z"] = 70.0
+			var ct: Texture2D = cab["tex"]
+			var cable := _tx(ART + "cabo.png")
+			var line_z: float = 70.0 + ct.get_size().y * PXS * 1.2 - 3.0 * PXS * 1.2
+			var w: float = cable.get_size().x * PXS * 1.25
+			for i in range(12):
+				var kid: String = "cable%d" % i
+				_add_actor(kid, cable, Vector2i(2, -2), false)
+				actors[kid]["scale"] = 1.25
+				actors[kid]["pos"] = (cab["pos"] as Vector2) + Vector2(-w * 4.0 + w * float(i), -1.0)
+				actors[kid]["z"] = line_z - cable.get_size().y * PXS * 1.25 * 0.5
+		"ice_fishing":
+			actors["fish"]["alpha"] = 0.0        # só pula pra fora na emboscada
+		# ------------------------------------------------ caldeira
+		"geyser":
+			var mouth: Dictionary = actors["mouth"]
+			actors["jet"]["pos"] = (mouth["pos"] as Vector2) - Vector2(0, CELL * 0.36 + 6.0)
+			actors["jet"]["alpha"] = 0.0
+			actors["jet"]["fp"] = 0.12
+			_jet_t = 1.6
+		"melted_statue":
+			actors["crown"]["alpha"] = 0.0       # a coroa está na cabeça dela (no sprite)
 
 func _swap(id: String, sprite: String) -> void:
 	if actors.has(id):
@@ -1342,8 +1669,92 @@ func _swap(id: String, sprite: String) -> void:
 		if t != null:
 			actors[id]["tex"] = t
 
+# Ator que fala por um nome de SPEAKERS (4º campo; padrão "npc").
+func _speaker_actor(who: String) -> String:
+	var sp: Array = SPEAKERS.get(who, [])
+	return String(sp[3]) if sp.size() > 3 else "npc"
+
+# Tira cenário de cima de fileiras que viram outra coisa (rio de lava).
+func _clear_rows(r0: int, r1: int) -> void:
+	var top: float = (float(r0) - 0.6) * CELL
+	var bot: float = (float(r1) + 0.6) * CELL
+	_props = _props.filter(func(p): return p[1].y < top or p[1].y > bot + CELL * 0.45)
+	_clutter = _clutter.filter(func(c): return c[1].y < top or c[1].y > bot)
+
+# Rio de lava animado atravessando a cena, com crosta escura nas margens.
+func _draw_lava_rows() -> void:
+	var fi: int = 1 + int(_t * 5.0) % 4
+	var r0: int = int(_lava_rows.min())
+	var r1: int = int(_lava_rows.max())
+	for r in range(r0, r1 + 1):
+		for x in range(-15, 16):
+			var v: String = ["", "_v2", "_v3", "_v4"][absi(x * 7 + r * 3) % 4]
+			var t := _tx(CALDEIRA + "lagos/anim/lago_1111%s_f%d.png" % [v, fi])
+			if t == null:
+				t = _tx(CALDEIRA + "lagos/lago_1111.png")
+			if t != null:
+				draw_texture_rect(t, Rect2(_w2s(cell_pos(Vector2i(x, r)) - Vector2(CELL, CELL) / 2.0), Vector2(CELL, CELL)), false)
+	var x0: float = _w2s(cell_pos(Vector2i(-15, 0)) - Vector2(CELL, 0) / 2.0).x
+	var w: float = CELL * 31.0
+	var ytop: float = _w2s(Vector2(0, (float(r0) - 0.5) * CELL)).y
+	var ybot: float = _w2s(Vector2(0, (float(r1) + 0.5) * CELL)).y
+	var crust := Color(0.10, 0.05, 0.05)
+	var glow := Color(1.0, 0.55, 0.15, 0.55)
+	draw_rect(Rect2(x0, ytop - PXS * 2.0, w, PXS * 3.0), crust)
+	draw_rect(Rect2(x0, ytop + PXS, w, PXS), glow)
+	draw_rect(Rect2(x0, ybot - PXS, w, PXS * 3.0), crust)
+	draw_rect(Rect2(x0, ybot - PXS * 2.0, w, PXS), glow)
+
+# Gêiser: estoura de tempos em tempos (o jato aparece, solta respingos e some).
+func _geyser_tick(delta: float) -> void:
+	var jet: Dictionary = actors["jet"]
+	_jet_t -= delta
+	if float(jet["alpha"]) > 0.0:
+		if randf() < 0.5:
+			var top: Vector2 = (jet["pos"] as Vector2) + Vector2(randf_range(-14, 14), CELL * 0.36 - randf_range(60, 160))
+			_parts.append({"pos": top, "vel": Vector2(randf_range(-90, 90), randf_range(-160, -40)), "life": 0.9, "max": 0.9, "tex": null,
+				"col": [Color(1.0, 0.62, 0.18), Color(1.0, 0.85, 0.4), Color(0.9, 0.9, 0.92, 0.8)][randi() % 3], "size": PXS, "grav": 380.0})
+		if _jet_t <= 0.0:
+			jet["alpha"] = 0.0
+			_jet_t = randf_range(2.6, 4.2)
+	elif _jet_t <= 0.0:
+		_geyser_burst()
+
+func _geyser_burst() -> void:
+	if not actors.has("jet"):
+		return
+	actors["jet"]["alpha"] = 1.0
+	_jet_t = 1.3
+	Sfx.play("lava_mare", -10.0, 1.3)
+	_dust((actors["mouth"]["pos"] as Vector2), 8)
+
+# Morcegos de cristal: o bando acorda e sai voando pra fora da cena.
+func _bats_fly() -> void:
+	var fly: Array = [_tx(ART + "morcego_voando.png"), _tx(ART + "morcego_voando_2.png")]
+	for id in ["b1", "b2", "b3", "b4"]:
+		if not actors.has(id):
+			continue
+		var a: Dictionary = actors[id]
+		a["frames"] = fly
+		a["fp"] = 0.1
+		if skip:
+			a["alpha"] = 0.0
+			continue
+		var from: Vector2 = a["pos"]
+		var to: Vector2 = from + Vector2(randf_range(-520, 520), randf_range(-420, -260))
+		var z0: float = float(a["z"])
+		var tw := create_tween()
+		tw.tween_interval(randf_range(0.0, 0.3))
+		tw.tween_method(func(k: float):
+			a["pos"] = from.lerp(to, k)
+			a["z"] = z0 + k * 160.0 + sin(k * TAU * 2.0) * 14.0
+			a["alpha"] = 1.0 - maxf(0.0, k - 0.6) / 0.4, 0.0, 1.0, 1.3)
+	sparkles((actors["b2"]["pos"] as Vector2) + Vector2(0, -150) if actors.has("b2") else Vector2.ZERO, Color(0.75, 0.62, 1.0), 26)
+	Sfx.play("item", -6.0, 1.5)
+
 # Na hora da escolha (antes do suspense).
 func _on_choice(event_id: String, choice_id: String) -> void:
+	_choice = choice_id
 	match event_id + "." + choice_id:
 		"crystal_vein.pry":
 			_swap("vein", "vein_cristal_2")
@@ -1362,6 +1773,33 @@ func _on_choice(event_id: String, choice_id: String) -> void:
 		"echo_chamber.shout", "echo_chamber.whisper":
 			if actors.has("wave"):
 				actors["wave"]["scale"] = 3.0
+		"notice_board.tear":
+			if actors.has("lamp"):
+				actors["lamp"].erase("frames")   # a lâmpada para de piscar e acende de vez
+				_swap("lamp", "quadro_lampada_2")
+		"crystal_bats.light":
+			flash(Color(0.85, 0.92, 1.0), 0.3, 0.5)
+			sparkles((actors["player"]["pos"] as Vector2) + Vector2(0, -40), Color(1.0, 0.95, 0.7), 14)
+		"mine_lift.descend":
+			_swap("cage", "elevador_gaiola_2")
+		"expedition_camp.lamp":
+			_swap("lamp", "exp_lampiao_2")
+			sparkles(actors["lamp"]["pos"] as Vector2, Color(1.0, 0.85, 0.4), 14)
+		"frozen_disc.hit":
+			_swap("ice", "disco_gelo_2")
+		"mountain_bell.ring", "mountain_bell.tap":
+			_swap("arch", "sino_arco_2")
+		"lost_forge.forge":
+			sparkles(actors["anvil"]["pos"] as Vector2, Color(1.0, 0.6, 0.2), 20)
+		"crown_mold.fill":
+			_swap("mold", "molde_coroa_2")
+			sparkles(actors["mold"]["pos"] as Vector2, Color(1.0, 0.85, 0.3), 18)
+		"geyser.grab", "geyser.plug":
+			_jet_t = minf(_jet_t, 0.5)
+		"smelter.melt":
+			sparkles(actors["pot"]["pos"] as Vector2, Color(1.0, 0.55, 0.15), 18)
+		"ash_altar.offer":
+			flash(Color(1.0, 0.45, 0.15), 0.25, 0.6)
 
 # No desfecho (antes da animação padrão de ganho/perda).
 func _on_result(event_id: String, kind: String, gold_delta: int, gained: bool, ambush: bool) -> void:
@@ -1397,6 +1835,83 @@ func _on_result(event_id: String, kind: String, gold_delta: int, gained: bool, a
 		"echo_chamber":
 			if actors.has("wave"):
 				actors["wave"]["scale"] = 2.0
+		# ------------------------------------------------ mina (novos)
+		"map_wall":
+			if _choice == "paint":
+				_swap("wall", "mapwall_parede_2")   # o borrão some e o mapa fica inteiro
+				sparkles(actors["wall"]["pos"] as Vector2, Color(0.7, 0.95, 1.0), 26)
+			elif _choice == "tear":
+				shake("wall", 10.0, 0.6)
+				_dust((actors["wall"]["pos"] as Vector2) + Vector2(0, CELL * 0.3), 20)
+		"crystal_bats":
+			if _choice == "light":
+				_bats_fly()
+		"mine_lift":
+			if kind == "bad":
+				shake("cage", 12.0, 0.6)
+			elif kind == "good":
+				sparkles(actors["cage"]["pos"] as Vector2, Color(0.75, 0.55, 1.0), 26)
+		# ------------------------------------------------ cume
+		"frozen_disc":
+			if _choice == "melt":
+				_swap("ice", "disco_gelo_2")
+				if actors.has("puddle") and not skip:
+					var pd: Dictionary = actors["puddle"]
+					create_tween().tween_method(func(k: float): pd["alpha"] = k, 0.0, 1.0, 0.8)
+			elif _choice == "hit":
+				sparkles(actors["ice"]["pos"] as Vector2, Color(0.8, 0.92, 1.0), 26)
+				_dust(actors["ice"]["pos"] as Vector2, 14)
+		"safety_rope":
+			if _choice == "pull" and actors.has("sil") and not skip:
+				var sl: Dictionary = actors["sil"]
+				create_tween().tween_method(func(k: float): sl["alpha"] = k * 0.85, 0.0, 1.0, 1.2)
+		"mountain_bell":
+			if _choice == "tap":
+				_swap("arch", "sino_arco")
+			elif ambush:
+				flash(Color(0.9, 0.95, 1.0), 0.5, 0.9)
+				for i in range(30):
+					_parts.append({"pos": (actors["arch"]["pos"] as Vector2) + Vector2(randf_range(-500, 500), randf_range(-420, -260)),
+						"vel": Vector2(randf_range(-60, 60), randf_range(220, 420)), "life": 1.4, "max": 1.4, "tex": null,
+						"col": Color(0.95, 0.97, 1.0, 0.9), "size": PXS * float(1 + randi() % 3), "grav": 120.0})
+		"cable_car":
+			if kind == "bad":
+				shake("cabin", 14.0, 0.7)
+		"ice_fishing":
+			if ambush and actors.has("fish") and not skip:
+				var f: Dictionary = actors["fish"]
+				f["alpha"] = 1.0
+				var tw := create_tween()
+				tw.tween_method(func(k: float): f["z"] = sin(k * PI) * 110.0, 0.0, 1.0, 0.5)
+		# ------------------------------------------------ caldeira
+		"lost_forge":
+			if _choice == "help" and actors.has("furnace"):
+				shake("furnace", 3.0, 0.4)
+				_dust((actors["furnace"]["pos"] as Vector2) + Vector2(0, -CELL * 0.8), 10)
+		"salamander_nest":
+			if ambush or kind == "danger":
+				for id in ["sal1", "sal2", "sal3"]:
+					if actors.has(id):
+						actors[id].erase("frames")
+						_swap(id, "salamandra_acordada")
+						shake(id, 4.0, 0.4)
+		"geyser":
+			if _choice == "plug" and kind == "good" and actors.has("jet"):
+				actors["jet"]["alpha"] = 0.0
+				actors.erase("jet")              # o gêiser engasga e para de vez
+			elif kind == "bad" or ambush:
+				_geyser_burst()
+		"lava_stones":
+			if kind == "bad" and actors.has("s2") and not skip:
+				var st: Dictionary = actors["s2"]
+				create_tween().tween_method(func(k: float): st["alpha"] = 1.0 - k, 0.0, 1.0, 0.7)
+		"melted_statue":
+			if _choice == "crown" and actors.has("crown") and not skip:
+				var cr: Dictionary = actors["crown"]
+				var from: Vector2 = (actors["statue"]["pos"] as Vector2) + Vector2(0, -CELL * 1.6)
+				var to: Vector2 = cr["pos"]
+				cr["alpha"] = 1.0
+				create_tween().tween_method(func(k: float): cr["pos"] = from.lerp(to, k) + Vector2(0, -sin(k * PI) * 60.0), 0.0, 1.0, 0.5)
 
 # Tempestade passando (rajadas de areia) e brilhinhos dos cristais na mina.
 func _biome_ambient(delta: float) -> void:
@@ -1412,6 +1927,16 @@ func _biome_ambient(delta: float) -> void:
 			var col: Color = [Color(0.93, 0.80, 0.58, 0.9), Color(0.85, 0.66, 0.42, 0.85), Color(0.98, 0.9, 0.72, 0.8)][randi() % 3]
 			_parts.append({"pos": origin + Vector2(-20.0, y), "vel": Vector2(randf_range(1100, 1700), randf_range(80, 220)), "life": 1.6, "max": 1.6,
 				"tex": null, "col": col, "size": PXS * float(1 + randi() % 2), "w": PXS * float(4 + randi() % 8), "grav": 0.0})
+	elif biome == "cume":
+		# neve caindo devagar
+		_ambient_t = 0.06
+		_parts.append({"pos": origin + Vector2(randf_range(0.0, vp.x), randf_range(-20.0, vp.y * 0.3)), "vel": Vector2(randf_range(-40, 10), randf_range(50, 100)),
+			"life": 7.0, "max": 7.0, "tex": null, "col": Color(0.96, 0.98, 1.0, randf_range(0.55, 0.9)), "size": PXS * float(1 + randi() % 2), "grav": 0.0})
+	elif biome == "caldeira":
+		# brasas subindo do chão
+		_ambient_t = randf_range(0.06, 0.14)
+		_parts.append({"pos": origin + Vector2(randf_range(80.0, vp.x - 80.0), randf_range(vp.y * 0.35, vp.y - 120.0)), "vel": Vector2(randf_range(-25, 25), randf_range(-90, -35)),
+			"life": 2.6, "max": 2.6, "tex": null, "col": [Color(1.0, 0.55, 0.15), Color(1.0, 0.78, 0.3), Color(0.95, 0.35, 0.1)][randi() % 3], "size": PXS, "grav": -8.0})
 	else:
 		_ambient_t = randf_range(0.15, 0.35)
 		var p: Vector2 = origin + Vector2(randf_range(100.0, vp.x - 100.0), randf_range(80.0, vp.y - 200.0))

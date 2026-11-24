@@ -4,9 +4,10 @@ extends RefCounted
 # Chave geral dos atalhos de debug. Ponha false antes de exportar a build:
 #   B  (mapa)        -> abre a casa de apostas direto
 #   E  (mapa)        -> abre um evento "?" direto
-#   1-6 (mapa)       -> abre um duelo de CHEFE com a lei escolhida
-#                       (1 Sapo, 2 Coruja, 3 Floresta, 4 Cipós, 5 Vaga-lumes, 6 Raízes)
-#   botão TRANS (canto inferior direito, qualquer tela) -> painel com um botão por
+#   botão CHEFES (canto inferior direito, qualquer tela) -> um botão por Lei de cada
+#                       chefe (abas por bioma); clicar abre o duelo de Chefe com ela
+#   botão EVENTOS (idem) -> todos os eventos por bioma; clicar abre o evento
+#   botão TRANS (idem) -> painel com um botão por
 #                       estilo de transição, paleta e Chefe
 #   F6 / F7 (qualquer tela) -> TESTA as transições de cena: F6 próxima, F7 anterior
 #                       (mostra o nome do estilo); F8 alterna a paleta de Chefe;
@@ -16,7 +17,7 @@ extends RefCounted
 # Continua exigindo build de debug onde já exigia (OS.is_debug_build()).
 #   COM SHORTCUTS = true (e build de debug): COROAS e OURO INFINITOS. Os gastos não
 #   descontam e o save real de Coroas não é alterado.
-const SHORTCUTS: bool = true
+const SHORTCUTS: bool = false
 const INFINITE_VALUE: int = 999999
 
 static func infinite_resources() -> bool:
@@ -27,4 +28,4 @@ static func infinite_resources() -> bool:
 # e "caldeira" a Caldeira como bioma INICIAL de qualquer run NOVA (dali a run segue a
 # ordem normal de RunManager.BIOME_ORDER) (mapa, fundos dos
 # duelos/loja/aposta e cores das transições). Deixe "" na build final.
-const MAP_BIOME_OVERRIDE: String = "caldeira"
+const MAP_BIOME_OVERRIDE: String = ""

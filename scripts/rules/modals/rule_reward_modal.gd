@@ -21,6 +21,7 @@ var _subtitle_label: Label
 var _skip_btn: Button
 
 func _init() -> void:
+	MenuPieceCursor.auto(self)   # peça do jogador acompanhando o mouse pelos botões
 	layer = 120
 	visible = false
 	_build_ui()
@@ -134,6 +135,7 @@ func open_reward_draft() -> void:
 
 		var card_visual = RuleCardVisual.new(rule, tooltip, false, REWARD_SCALE)
 		wrapper.add_child(card_visual)
+		NewBadge.attach(card_visual, true, rule.id)
 
 		var pick_btn = Button.new()
 		pick_btn.text = "RATIFICAR"

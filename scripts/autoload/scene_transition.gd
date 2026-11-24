@@ -129,6 +129,7 @@ func _build_debug_panel() -> void:
 	root.add_child(box)
 	_dbg_panel = PanelContainer.new()
 	_dbg_panel.visible = false
+	_dbg_panel.size_flags_horizontal = Control.SIZE_SHRINK_END
 	box.add_child(_dbg_panel)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 6)
@@ -161,14 +162,56 @@ func _build_debug_panel() -> void:
 		_dbg_boss = not _dbg_boss
 		_refresh_debug_buttons())
 	col.add_child(_dbg_boss_btn)
+	# Painéis de debug: EVENTOS (lista por bioma; clicar abre o evento) e CHEFES (um
+	# botão por Lei de cada chefe; clicar abre o duelo de Chefe). Criados só no 1º
+	# clique, para não puxar EventView/duelo enquanto os autoloads ainda sobem.
+	var ev_holder := VBoxContainer.new()
+	ev_holder.size_flags_horizontal = Control.SIZE_SHRINK_END
+	box.add_child(ev_holder)
+	var boss_holder := VBoxContainer.new()
+	boss_holder.size_flags_horizontal = Control.SIZE_SHRINK_END
+	box.add_child(boss_holder)
+	var hide_pickers := func(except: Node) -> void:
+		for h in [ev_holder, boss_holder]:
+			if h != except and h.get_child_count() > 0:
+				h.get_child(0).visible = false
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_SHRINK_END
+	row.add_theme_constant_override("separation", 8)
+	box.add_child(row)
+	var boss_toggle := Button.new()
+	boss_toggle.text = "CHEFES"
+	boss_toggle.custom_minimum_size = Vector2(120, 40)
+	boss_toggle.add_theme_font_size_override("font_size", 22)
+	boss_toggle.focus_mode = Control.FOCUS_NONE
+	boss_toggle.pressed.connect(func():
+		_dbg_panel.visible = false
+		hide_pickers.call(boss_holder)
+		if boss_holder.get_child_count() == 0:
+			boss_holder.add_child(load("res://scripts/debug/debug_boss_picker.gd").new())
+		boss_holder.get_child(0).toggle())
+	row.add_child(boss_toggle)
+	var ev_toggle := Button.new()
+	ev_toggle.text = "EVENTOS"
+	ev_toggle.custom_minimum_size = Vector2(130, 40)
+	ev_toggle.add_theme_font_size_override("font_size", 22)
+	ev_toggle.focus_mode = Control.FOCUS_NONE
+	ev_toggle.pressed.connect(func():
+		_dbg_panel.visible = false
+		hide_pickers.call(ev_holder)
+		if ev_holder.get_child_count() == 0:
+			ev_holder.add_child(load("res://scripts/debug/debug_event_picker.gd").new())
+		ev_holder.get_child(0).toggle())
+	row.add_child(ev_toggle)
 	var toggle := Button.new()
 	toggle.text = "TRANS"
 	toggle.custom_minimum_size = Vector2(110, 40)
-	toggle.size_flags_horizontal = Control.SIZE_SHRINK_END
 	toggle.add_theme_font_size_override("font_size", 22)
 	toggle.focus_mode = Control.FOCUS_NONE
-	toggle.pressed.connect(func(): _dbg_panel.visible = not _dbg_panel.visible)
-	box.add_child(toggle)
+	toggle.pressed.connect(func():
+		hide_pickers.call(null)
+		_dbg_panel.visible = not _dbg_panel.visible)
+	row.add_child(toggle)
 	_refresh_debug_buttons()
 
 func _refresh_debug_buttons() -> void:

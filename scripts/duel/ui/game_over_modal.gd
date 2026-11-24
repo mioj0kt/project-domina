@@ -17,6 +17,7 @@ var reward_data: Dictionary = {}
 var victory_fx: VictoryFx
 
 func _ready() -> void:
+	MenuPieceCursor.auto(self)   # peça do jogador acompanhando o mouse pelos botões
 	layer = 100
 	visible = false
 	_build_ui()
@@ -162,6 +163,8 @@ func _run_rewards_animation() -> void:
 		rows.append({"label": "SAQUE:", "amount": reward_data["bonus"]})
 	if reward_data.get("storm", 0) > 0:
 		rows.append({"label": String(reward_data.get("storm_label", "TEMPESTADE:")), "amount": reward_data["storm"]})
+	if reward_data.get("finish", 0) > 0:
+		rows.append({"label": String(reward_data.get("finish_label", "BÔNUS:")), "amount": reward_data["finish"]})
 
 	var total_gold_accum = 0
 
@@ -172,7 +175,7 @@ func _run_rewards_animation() -> void:
 
 		var lbl = Label.new()
 		lbl.text = item["label"]
-		lbl.custom_minimum_size = Vector2(180, 0)
+		lbl.custom_minimum_size = Vector2(240, 0)
 		lbl.add_theme_font_size_override("font_size", 20)
 		lbl.add_theme_color_override("font_color", Color(0.85, 0.88, 0.92))
 		row_box.add_child(lbl)

@@ -16,11 +16,12 @@ const FOLDERS := {
 	"duelo": ["mover", "captura", "coroar", "bloqueio", "lei", "morte_subita", "vitoria", "derrota", "nascer", "vento_nascer", "brotar", "contagem", "contagem_dama", "placar"],
 	"cartas": ["carta", "carta_pegar", "carta_jogar", "carta_virar", "item"],
 	"moedas": ["moeda_girar", "moeda_girar_longa", "moeda_pousa", "acerto", "erro", "moeda", "moeda_conta", "compra"],
-	"chefes": ["boss_encolhe", "boss_intro_deserto", "boss_intro_floresta", "irmao_impacto", "irmao_pressentimento"],
-	"vozes": ["voz_guia", "voz_irmao", "voz_musgo", "voz_farao"],
+	"chefes": ["boss_encolhe", "boss_intro_deserto", "boss_intro_floresta", "boss_intro_mina", "boss_intro_cume", "boss_intro_caldeira", "irmao_impacto", "irmao_pressentimento"],
+	"vozes": ["voz_guia", "voz_irmao", "voz_musgo", "voz_farao", "voz_garimpeiro", "voz_montanhista", "voz_ferreira"],
 	"cassino": ["cassino_girar", "cassino_pousa", "cassino_acerto", "cassino_erro", "roleta_giro", "roleta_tick", "roleta_fim"],
 	"grimorio": ["maquina_carga", "maquina_revela", "maquina_vortex", "maquina_crack", "maquina_boom", "coroa_conta", "coroa_final"],
 	"interface": ["clique", "hover", "negado", "transicao_in", "transicao_out", "salto"],
+	"caldeira": ["vulcao_ronco", "vulcao_erupcao", "bomba_voo", "bomba_impacto", "lava_mare", "lava_afunda", "lava_ilha", "martelo_bigorna"],
 }
 const GROUPS := {
 	# Duelo
@@ -36,6 +37,9 @@ const GROUPS := {
 	"irmao_impacto": {"count": 1, "db": -4.0, "pitch": 0.0},
 	"boss_intro_floresta": {"count": 1, "db": -6.0, "pitch": 0.0},
 	"boss_intro_deserto": {"count": 1, "db": -6.0, "pitch": 0.0},
+	"boss_intro_mina": {"count": 1, "db": -7.0, "pitch": 0.0},
+	"boss_intro_cume": {"count": 1, "db": -4.0, "pitch": 0.0},
+	"boss_intro_caldeira": {"count": 1, "db": -7.0, "pitch": 0.0},
 	"boss_encolhe": {"count": 1, "db": -9.0, "pitch": 0.0},
 	"acerto": {"count": 1, "db": -8.0, "pitch": 0.0},          # moeda favorável
 	"erro": {"count": 1, "db": -8.0, "pitch": 0.0},            # moeda desfavorável
@@ -66,6 +70,9 @@ const GROUPS := {
 	"voz_irmao": {"count": 3, "db": -13.0, "pitch": 0.12},
 	"voz_musgo": {"count": 3, "db": -13.0, "pitch": 0.14},
 	"voz_farao": {"count": 3, "db": -13.0, "pitch": 0.12},
+	"voz_garimpeiro": {"count": 3, "db": -12.0, "pitch": 0.08},
+	"voz_montanhista": {"count": 3, "db": -12.0, "pitch": 0.05},
+	"voz_ferreira": {"count": 3, "db": -14.0, "pitch": 0.06},
 	"moeda_pousa": {"count": 2, "db": -10.0, "pitch": 0.03},   # moeda caindo na mesa e parando
 	"coroa_conta": {"count": 1, "db": -10.0, "pitch": 0.0},    # contador de Coroas (fim de run)
 	"coroa_final": {"count": 1, "db": -8.0, "pitch": 0.0},
@@ -85,9 +92,18 @@ const GROUPS := {
 	"moeda": {"count": 3, "db": -8.0, "pitch": 0.05},          # ganhou ouro
 	"compra": {"count": 2, "db": -8.0, "pitch": 0.03},         # comprou algo
 	"negado": {"count": 2, "db": -10.0, "pitch": 0.02},        # ação recusada
+	# Obstáculos do mapa da Caldeira
+	"vulcao_ronco": {"count": 1, "db": -7.0, "pitch": 0.04},   # vulcão esquentando (erupção marcada)
+	"vulcao_erupcao": {"count": 1, "db": -4.0, "pitch": 0.03},
+	"bomba_voo": {"count": 2, "db": -13.0, "pitch": 0.08},     # bola de fogo cruzando o céu
+	"bomba_impacto": {"count": 3, "db": -3.0, "pitch": 0.06},
+	"lava_mare": {"count": 1, "db": -8.0, "pitch": 0.05},      # a maré avança
+	"martelo_bigorna": {"count": 2, "db": -5.0, "pitch": 0.04}, # martelada na bigorna (chefe da Caldeira)
+	"lava_afunda": {"count": 1, "db": -7.0, "pitch": 0.05},    # nodo afundando
+	"lava_ilha": {"count": 1, "db": -10.0, "pitch": 0.06},     # nodo virou ilha
 }
 # Intervalo mínimo (s) entre dois toques do mesmo grupo, p/ não empilhar.
-const MIN_GAP := {"coroa_conta": 0.025, "voz_guia": 0.045, "voz_irmao": 0.045, "voz_musgo": 0.05, "voz_farao": 0.05, "moeda_conta": 0.025, "item": 0.15, "carta_virar": 0.04, "roleta_tick": 0.03, "salto": 0.05, "hover": 0.05, "clique": 0.05, "moeda": 0.06, "moeda_girar": 0.5, "cassino_girar": 0.5}
+const MIN_GAP := {"coroa_conta": 0.025, "voz_guia": 0.045, "voz_irmao": 0.045, "voz_musgo": 0.05, "voz_farao": 0.05, "voz_garimpeiro": 0.07, "voz_montanhista": 0.07, "voz_ferreira": 0.04, "moeda_conta": 0.025, "item": 0.15, "carta_virar": 0.04, "roleta_tick": 0.03, "salto": 0.05, "hover": 0.05, "clique": 0.05, "moeda": 0.06, "moeda_girar": 0.5, "cassino_girar": 0.5, "bomba_voo": 0.08, "bomba_impacto": 0.07}
 const POOL_SIZE := 14
 
 var _streams: Dictionary = {}

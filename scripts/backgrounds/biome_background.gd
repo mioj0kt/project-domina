@@ -72,6 +72,9 @@ const BIOMES: Dictionary = {
 		"leaves": [Color("f0662a"), Color("c63a22"), Color("ffe08a")], "n_leaves": 0,
 		"spores": Color("f0662a"), "n_spores": 60,
 		"snow": Color("9a9095"), "n_snow": 60,
+		# Forja ao fundo: vulcões no horizonte que entram em erupção de tempos em
+		# tempos e bigornas sendo marteladas nos cantos de baixo (faíscas a cada golpe).
+		"forge": true,
 		"trans_a": Color("1c1013"), "trans_b": Color("3a1d1d"), "trans_boss": Color("2a1418"), "trans_edge": Color("f0662a"),
 	},
 	"tutorial": {
@@ -110,6 +113,13 @@ var _aurora: Array = []   # [Texture2D, y (fração), velocidade, fase]
 var _scroll_vel: Vector2 = SCROLL_SPEED
 var _wind_phase: float = 0.0   # tempo "acelerado" pelas rajadas
 var _gust: float = 0.0         # 0..1, força da rajada atual
+# Caldeira (forja ao fundo)
+var _volcs: Array = []         # {x (fração), h (fração da tela), w (fração), next: tempo da próxima erupção, t0: início da última}
+var _anvils: Array = []        # {x (fração), period, phase, beats, beat_phase, flip, last}
+var _beat: float = -1.0        # tempo da música (Music.beat_time) neste quadro; -1 = sem andamento
+var _parts: Array = []         # faíscas/bombas/fumaça: {p, v, t0, life, c, s, g (gravidade), kind}
+var _forge_fx: Node2D = null   # a forja fica POR CIMA da vinheta (senão some nos cantos escuros)
+var _meteors: Array = []       # bolas de fogo grandes que cruzam a tela vindo na direção da câmera
 
 func _init() -> void:
 	layer = -100
@@ -169,6 +179,11 @@ func _ready() -> void:
 	_vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_vignette)
+	if bool(_cfg.get("forge", false)):
+		_forge_fx = Node2D.new()
+		_forge_fx.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_forge_fx.draw.connect(func(): _forge_draw(get_viewport().get_visible_rect().size, _unit(get_viewport().get_visible_rect().size)))
+		add_child(_forge_fx)
 	if int(_cfg.get("n_snow", 0)) > 0:
 		_snow_fx = Node2D.new()
 		_snow_fx.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -203,6 +218,8 @@ func _ready() -> void:
 			var ap: String = "res://assets/sprites/mapa/ceu/cume/aurora_%d.png" % (k + 1)
 			if ResourceLoader.exists(ap):
 				_aurora.append([load(ap), 0.04 + 0.08 * float(k), rng.randf_range(6.0, 12.0) * (1.0 if k % 2 == 0 else -1.0), rng.randf() * TAU])
+	if bool(_cfg.get("forge", false)):
+		_forge_init(rng)
 	for i in range(int(_cfg["n_spores"])):
 		_spores.append({"x": rng.randf(), "y": rng.randf(), "ph": rng.randf() * TAU,
 			"rise": rng.randf_range(5.0, 14.0), "u": 2 + (i % 2)})
@@ -237,6 +254,8 @@ func _process(delta: float) -> void:
 			tb["x"] = float(tb["x"]) + delta * float(tb["spd"]) * (1.0 + 5.0 * _gust)
 			if float(tb["x"]) > vw + 220.0:
 				_respawn_tumble(tb, false)
+	if not _volcs.is_empty():
+		_forge_update(delta)
 	_canvas.queue_redraw()
 
 const PATTERNS: Array[String] = ["losango", "xadrez", "escamas", "estrelas", "diagonal", "trama", "ondas", "tijolos", "chevron"]
@@ -363,6 +382,8 @@ func _draw_all() -> void:
 			_canvas.draw_texture_rect(_tile_tex, Rect2(Vector2(i * tile, j * tile) - Vector2(tile, tile) + off, Vector2(tile, tile)), false)
 	if _cfg.has("cave"):
 		draw_cave_spikes(_canvas, vp, u, _cfg["cave"], _t)
+	if _forge_fx != null:
+		_forge_fx.queue_redraw()
 	# Cume: aurora no alto, bem discreta (o duelo fica por cima).
 	var asc: float = maxf(2.0, floorf(vp.x / 320.0 * 0.95))
 	for ab in _aurora:
@@ -534,3 +555,359 @@ func _draw_snow() -> void:
 			var fx: float = fposmod(float(f["x"]) * vp.x + _wind_phase * float(f["fall"]) * 1.4 + sin(_t + float(f["ph"])) * 8.0, vp.x + 30.0) - 15.0
 			var fa: float = 0.6 + 0.1 * float(shape) + 0.12 * sin(float(f["ph"]))
 			ForestBackground.draw_flake(_snow_fx, Vector2(floorf(fx), floorf(fy)), fu, shape, Color(sc.r, sc.g, sc.b, clampf(fa, 0.2, 0.95)))
+
+
+# ------------------------------------------------------------------ Caldeira: forja
+const _FORGE_ROCK := Color("2a1517")      # silhueta dos vulcões de trás
+const _FORGE_ROCK2 := Color("3a1c1c")     # vulcões da frente
+const _FORGE_RIM := Color("a0402a")       # fio de lava na encosta
+const _ANVIL_BODY := Color("3e2628")
+const _ANVIL_LIT := Color("b0603e")
+const _HOT := [Color("ffe08a"), Color("ffa53a"), Color("f0662a")]
+# Bigorna (chifre para a esquerda) e toco embaixo, em pixels do fundo.
+const _ANVIL_MASK: Array = [
+	"..OOOOOOOOOOOOOO",
+	"OOOOOOOOOOOOOOOO",
+	"..OOOOOOOOOOOOOO",
+	"......OOOOOOO...",
+	".......OOOOO....",
+	".......OOOOO....",
+	"......OOOOOOO...",
+	".....OOOOOOOOO..",
+	"....TTTTTTTTTTT.",
+	"....TTTTTTTTTTT.",
+	"....TTTTTTTTTTT.",
+]
+
+func _forge_init(rng: RandomNumberGenerator) -> void:
+	for v in [[0.06, 0.20, 0.30], [0.27, 0.13, 0.22], [0.52, 0.17, 0.26], [0.76, 0.12, 0.20], [0.95, 0.22, 0.30]]:
+		_volcs.append({"x": v[0], "h": v[1], "w": v[2], "next": 1.5 + 2.6 * float(_volcs.size()) + rng.randf_range(0.0, 1.5), "t0": -99.0})
+	# Os dois ferreiros batem no ritmo da música, um de cada vez: o da esquerda nos tempos
+	# 1 e 3 do compasso, o da direita nos tempos 2 e 4. Sem andamento conhecido, cada
+	# um segue o próprio relógio (period/phase em segundos).
+	_anvils.append({"x": 0.11, "period": 1.35, "phase": 0.0, "beats": 2.0, "beat_phase": 0.0, "flip": false, "last": -1})
+	_anvils.append({"x": 0.89, "period": 1.6, "phase": 0.7, "beats": 2.0, "beat_phase": 1.0, "flip": true, "last": -1})
+
+## Ciclo do martelo: a parte inteira conta as batidas, a fração é a fase (0 = bateu agora).
+func _anvil_cycle(a: Dictionary) -> float:
+	if _beat >= 0.0:
+		return (_beat + float(a["beat_phase"])) / float(a["beats"])
+	return (_t + float(a["phase"])) / float(a["period"])
+
+# Ângulo do martelo (0 = encostado na bigorna; negativo = levantado) e se acabou de bater.
+func _hammer_angle(a: Dictionary, back: float = 0.0) -> float:
+	return _hammer_angle_k(fposmod(_anvil_cycle(a) - back, 1.0))
+
+func _hammer_angle_k(k: float) -> float:
+	if k < 0.07:      # bateu: fica um instante em cima da peça (com um quique pequeno)
+		return -0.10 * sin(k / 0.07 * PI)
+	if k < 0.34:      # volta a subir, desacelerando
+		var r: float = (k - 0.07) / 0.27
+		return -1.45 * (1.0 - pow(1.0 - r, 2.0))
+	if k < 0.84:      # segura lá em cima, tomando impulso
+		return -1.45 - 0.12 * sin((k - 0.34) / 0.50 * PI)
+	return -lerpf(1.45, 0.0, pow((k - 0.84) / 0.16, 2.2))   # desce rápido e acerta no tempo
+
+func _forge_update(delta: float) -> void:
+	var vp: Vector2 = get_viewport().get_visible_rect().size
+	var u: float = _unit(vp)
+	var pu: float = u * 2.0
+	var ks: float = vp.y / 1080.0
+	for i in range(_volcs.size()):
+		var v: Dictionary = _volcs[i]
+		if _t >= float(v["next"]):
+			v["t0"] = _t
+			v["next"] = _t + randf_range(6.0, 11.0)
+			# rios de lava que vão descer pelas encostas (posição relativa na largura da encosta)
+			var flows: Array = []
+			for k in range(randi_range(2, 4)):
+				flows.append({"k": randf_range(-0.65, 0.65), "wob": randf_range(0.0, 6.28), "speed": randf_range(0.045, 0.08)})
+			v["flows"] = flows
+			var top := Vector2(float(v["x"]) * vp.x, vp.y * (1.0 - float(v["h"])))
+			# bombas de lava grandes (caem nas encostas e espirram) + brasas miúdas
+			for k in range(randi_range(7, 11)):
+				var a: float = randf_range(-PI * 0.82, -PI * 0.18)
+				var spd: float = randf_range(160.0, 320.0) * ks
+				_parts.append({"p": top, "v": Vector2(cos(a), sin(a)) * spd, "t0": _t + randf_range(0.25, 0.6), "life": 4.0,
+					"c": _HOT[1], "s": u * randf_range(2.0, 3.0), "g": 260.0 * ks, "kind": 2,
+					"land": vp.y * (1.0 - randf_range(0.01, 0.12)), "trail": []})
+			for k in range(randi_range(14, 22)):
+				var a2: float = randf_range(-PI * 0.9, -PI * 0.1)
+				var spd3: float = randf_range(80.0, 260.0) * ks
+				_parts.append({"p": top, "v": Vector2(cos(a2), sin(a2)) * spd3, "t0": _t + randf_range(0.2, 0.7), "life": randf_range(0.9, 1.8),
+					"c": _HOT[randi() % 3], "s": u, "g": 200.0 * ks, "kind": 0})
+			for k in range(8):
+				_parts.append({"p": top + Vector2(randf_range(-12, 12), 0), "v": Vector2(randf_range(-10, 10), -randf_range(24, 46)) * ks, "t0": _t + 0.25 + k * 0.14,
+					"life": randf_range(3.0, 4.5), "c": Color("4a3a40"), "s": u * 3.0, "g": 0.0, "kind": 1})
+			# às vezes uma bola de fogo vem na direção da tela, por cima de tudo do fundo
+			if randf() < 0.55:
+				var side: float = -1.0 if top.x > vp.x * 0.5 else 1.0
+				_meteors.append({"from": top, "to": Vector2(top.x + side * randf_range(0.35, 0.6) * vp.x, vp.y + 80.0), "peak": randf_range(0.55, 0.8) * vp.y,
+					"t0": _t + 0.35, "dur": randf_range(1.6, 2.2), "s": u * 1.4})
+	_beat = Music.beat_time()
+	for a in _anvils:
+		var hit: int = int(floor(_anvil_cycle(a)))
+		if hit != int(a["last"]):
+			a["last"] = hit
+			var sp: Vector2 = _anvil_strike_point(a, vp, pu)
+			# o golpe do tempo 1 (ferreiro da esquerda, batida par) solta mais faísca
+			var strong: bool = _beat >= 0.0 and not bool(a["flip"]) and hit % 2 == 0
+			a["strong"] = strong
+			for k in range(26 if strong else 14):
+				var ang: float = randf_range(-PI * 0.95, -PI * 0.05)
+				var spd2: float = randf_range(60.0, 220.0) * ks
+				_parts.append({"p": sp, "v": Vector2(cos(ang), sin(ang)) * spd2, "t0": _t, "life": randf_range(0.35, 0.8),
+					"c": _HOT[randi() % 3], "s": u, "g": 420.0 * ks, "kind": 0})
+	# física das partículas (integra; as bombas espirram quando caem)
+	var splashes: Array = []
+	for p in _parts:
+		if _t < float(p["t0"]):
+			continue
+		var vv: Vector2 = p["v"]
+		vv.y += float(p["g"]) * delta
+		p["v"] = vv
+		var pp: Vector2 = Vector2(p["p"]) + vv * delta
+		p["p"] = pp
+		if int(p["kind"]) == 2:
+			var trail_pts: Array = p["trail"]
+			trail_pts.push_front(pp)
+			if trail_pts.size() > 6:
+				trail_pts.pop_back()
+			if vv.y > 0.0 and pp.y >= float(p["land"]):
+				p["life"] = 0.0
+				splashes.append(pp)
+	for sp2 in splashes:
+		for k in range(10):
+			var ang2: float = randf_range(-PI * 0.95, -PI * 0.05)
+			_parts.append({"p": sp2, "v": Vector2(cos(ang2), sin(ang2)) * randf_range(40.0, 130.0) * ks, "t0": _t, "life": randf_range(0.3, 0.6),
+				"c": _HOT[randi() % 3], "s": u, "g": 380.0 * ks, "kind": 0})
+		_parts.append({"p": sp2, "v": Vector2.ZERO, "t0": _t, "life": 2.5, "c": _HOT[2], "s": u * 2.0, "g": 0.0, "kind": 3})   # poça esfriando
+	_parts = _parts.filter(func(p): return _t - float(p["t0"]) < float(p["life"]))
+	_meteors = _meteors.filter(func(m): return _t - float(m["t0"]) < float(m["dur"]))
+
+func _meteor_pos(m: Dictionary, k: float) -> Vector2:
+	var a: Vector2 = m["from"]
+	var b: Vector2 = m["to"]
+	var p: Vector2 = a.lerp(b, k)
+	var top_y: float = minf(a.y, b.y) - float(m["peak"])
+	return Vector2(p.x, p.y + (top_y - minf(a.y, b.y)) * 4.0 * k * (1.0 - k))
+
+func _anvil_origin(a: Dictionary, vp: Vector2, pu: float) -> Vector2:
+	# canto de cima à esquerda da máscara da bigorna, pousada na borda de baixo da tela
+	var w: float = 16.0 * pu
+	var h: float = float(_ANVIL_MASK.size()) * pu
+	return Vector2(floorf(float(a["x"]) * vp.x - w * 0.5), floorf(vp.y - h - pu * 2.0))
+
+func _anvil_strike_point(a: Dictionary, vp: Vector2, pu: float) -> Vector2:
+	var o: Vector2 = _anvil_origin(a, vp, pu)
+	return o + Vector2((5.0 if not bool(a["flip"]) else 10.0) * pu + pu * 3.0, 0.0)
+
+func _forge_draw(vp: Vector2, u: float) -> void:
+	var c: CanvasItem = _forge_fx
+	var step: float = u * 2.0
+	# brilho de lava no horizonte (mais forte logo depois de uma erupção)
+	var boom: float = 0.0
+	for v in _volcs:
+		var dt: float = _t - float(v["t0"])
+		if dt >= 0.0 and dt < 2.0:
+			boom = maxf(boom, (1.0 - dt / 2.0))
+	for k in range(6):
+		var a: float = (0.05 + 0.10 * boom) * (1.0 - float(k) / 6.0)
+		c.draw_rect(Rect2(0, vp.y * (0.70 + 0.05 * k), vp.x, vp.y * 0.05 + 1.0), Color(0.94, 0.35, 0.12, a))
+	# vulcões: escadinha de pixels, os mais altos atrás
+	for vol_layer in range(2):
+		for v in _volcs:
+			var tall: bool = float(v["h"]) >= 0.17
+			if (vol_layer == 0) != tall:
+				continue
+			var cx: float = float(v["x"]) * vp.x
+			var h: float = float(v["h"]) * vp.y
+			var hw: float = float(v["w"]) * vp.x * 0.5
+			var rows: int = int(h / step)
+			var col: Color = _FORGE_ROCK if vol_layer == 0 else _FORGE_ROCK2
+			var dt2: float = _t - float(v["t0"])
+			var glow: float = clampf(1.0 - absf(dt2 - 0.3) / 1.6, 0.0, 1.0) if dt2 >= 0.0 else 0.0
+			for r in range(rows):
+				var frac: float = float(r) / float(rows)            # 0 = topo
+				var w2: float = roundf((hw * (0.12 + 0.88 * frac)) / step) * step
+				var y: float = vp.y - h + float(r) * step
+				c.draw_rect(Rect2(floorf(cx - w2), floorf(y), w2 * 2.0, step), col)
+				c.draw_rect(Rect2(floorf(cx + w2 * 0.25), floorf(y), w2 * 0.75, step), col.darkened(0.22))   # lado da sombra
+				if r < rows * 0.5 and (r + int(cx)) % 3 == 0:     # fio de lava escorrendo na encosta
+					var lx: float = floorf(cx - w2 * 0.45 + float((r * 7) % 5) * step * 0.5)
+					c.draw_rect(Rect2(lx, floorf(y), step * 0.5, step), Color(_FORGE_RIM, 0.5 + 0.5 * glow))
+			# rios de lava descendo a encosta depois da erupção (cabeça amarela, corpo laranja,
+			# esfriando para vermelho e sumindo na rocha)
+			if dt2 >= 0.0 and dt2 < 10.0:
+				for fl in v.get("flows", []):
+					var reach: int = mini(rows, int(dt2 / float(fl["speed"])))
+					for r in range(1, reach):
+						var frac2: float = float(r) / float(rows)
+						var w3: float = hw * (0.12 + 0.88 * frac2)
+						var fx: float = cx + w3 * float(fl["k"]) + sin(float(r) * 0.18 + float(fl["wob"])) * step * 0.6
+						var fy: float = vp.y - h + float(r) * step
+						var age: float = dt2 - float(r) * float(fl["speed"])
+						var fcol: Color
+						if age < 0.25:
+							fcol = _HOT[0]
+						elif age < 1.2:
+							fcol = _HOT[1]
+						elif age < 3.5:
+							fcol = _HOT[2]
+						else:
+							fcol = Color("c63a22").lerp(col, clampf((age - 3.5) / 5.0, 0.0, 1.0))
+						var fw: float = step if age < 1.2 else step * 0.5
+						var fxx: float = floorf((fx - fw * 0.5) / (step * 0.5)) * step * 0.5
+						c.draw_rect(Rect2(fxx, floorf(fy), fw, step), fcol)
+						if age < 3.5:   # beirada escura do rio (crosta)
+							c.draw_rect(Rect2(fxx + fw, floorf(fy), step * 0.5, step), Color("1d0d0e", 0.55))
+			# cratera acesa (pulsando; explode na erupção)
+			var ty: float = vp.y - h
+			var cw: float = roundf(hw * 0.12 / step) * step
+			var pulse: float = 0.35 + 0.15 * sin(_t * 1.7 + cx) + 0.5 * glow
+			c.draw_rect(Rect2(floorf(cx - cw), floorf(ty - step * 0.5), cw * 2.0, step), Color(_HOT[1], pulse))
+			if glow > 0.0:
+				# jato de lava: blocos tremendo, núcleo claro e beiradas laranja/vermelhas, afinando no alto
+				var jh: int = int(3.0 + 9.0 * glow)
+				for j in range(jh):
+					var jw: float = roundf(cw * (1.1 - 0.7 * float(j) / float(jh)) / (step * 0.5)) * step * 0.5
+					var wob: float = roundf(sin(_t * 23.0 + float(j) * 1.7) * 1.0) * step * 0.5
+					var jy: float = floorf(ty - step * float(j + 1))
+					var ja: float = glow * (1.0 - 0.5 * float(j) / float(jh))
+					c.draw_rect(Rect2(floorf(cx - jw + wob), jy, jw * 2.0, step), Color(_HOT[2], ja))
+					c.draw_rect(Rect2(floorf(cx - jw * 0.5 + wob), jy, jw, step), Color(_HOT[0] if j % 3 else _HOT[1], ja))
+				# clarão em losango em volta da cratera
+				for d in range(1, 5):
+					var ga: float = 0.22 * glow * (1.0 - float(d) / 5.0)
+					c.draw_rect(Rect2(floorf(cx - cw - step * d), floorf(ty - step * 0.5 - step * d * 0.5), (cw + step * d) * 2.0, step * (1.0 + d)), Color(_HOT[1], ga))
+	# partículas: 0 brasa/faísca, 1 fumaça, 2 bomba de lava (com rastro), 3 poça esfriando
+	for p in _parts:
+		var dt3: float = _t - float(p["t0"])
+		if dt3 < 0.0:
+			continue
+		var life: float = maxf(0.001, float(p["life"]))
+		var pos: Vector2 = p["p"]
+		var fade: float = 1.0 - dt3 / life
+		var kind: int = int(p["kind"])
+		var col2: Color = p["c"]
+		var sz: float = float(p["s"])
+		match kind:
+			1:
+				sz *= 1.0 + 1.5 * dt3 / life
+				c.draw_rect(Rect2(floorf(pos.x), floorf(pos.y), roundf(sz), roundf(sz)), Color(col2, 0.35 * fade))
+			2:
+				var tr2: Array = p["trail"]
+				for ti in range(tr2.size()):
+					var tq: Vector2 = tr2[ti]
+					var ts: float = maxf(u, roundf(sz * (1.0 - float(ti) / 7.0)))
+					var tc: Color = _HOT[2] if ti > 2 else _HOT[1]
+					c.draw_rect(Rect2(floorf(tq.x - ts * 0.5), floorf(tq.y - ts * 0.5), ts, ts), Color(tc, 0.75 * (1.0 - float(ti) / 6.0)))
+				var bs: float = roundf(sz)
+				c.draw_rect(Rect2(floorf(pos.x - bs * 0.5), floorf(pos.y - bs * 0.5), bs, bs), Color("3a1c1c"))
+				c.draw_rect(Rect2(floorf(pos.x - bs * 0.5) + u * 0.5, floorf(pos.y - bs * 0.5) + u * 0.5, maxf(u, bs - u), maxf(u, bs - u)), _HOT[1])
+				c.draw_rect(Rect2(floorf(pos.x - u * 0.5), floorf(pos.y - u * 0.5), u, u), _HOT[0])
+			3:
+				var pc: Color = _HOT[2].lerp(Color("5a2420"), clampf(dt3 / life, 0.0, 1.0))
+				c.draw_rect(Rect2(floorf(pos.x - sz), floorf(pos.y), sz * 2.0, u), Color(pc, fade))
+			_:
+				c.draw_rect(Rect2(floorf(pos.x), floorf(pos.y), roundf(sz), roundf(sz)), Color(col2, minf(1.0, fade * 1.5)))
+	# bolas de fogo vindo na direção da tela (crescem e passam por cima do fundo)
+	for m in _meteors:
+		var k3: float = (_t - float(m["t0"])) / float(m["dur"])
+		if k3 < 0.0 or k3 > 1.0:
+			continue
+		for ti2 in range(10, -1, -1):
+			var kk: float = maxf(0.0, k3 - float(ti2) * 0.018)
+			var mp: Vector2 = _meteor_pos(m, kk)
+			var ms: float = roundf(float(m["s"]) * (1.0 + 2.2 * kk) * (1.0 - float(ti2) / 12.0))
+			var mc: Color = _HOT[0] if ti2 == 0 else (_HOT[1] if ti2 < 4 else _HOT[2])
+			var ma: float = 1.0 if ti2 == 0 else 0.8 * (1.0 - float(ti2) / 11.0)
+			c.draw_rect(Rect2(floorf(mp.x - ms * 0.5), floorf(mp.y - ms * 0.5), ms, ms), Color(mc, ma))
+		var hp: Vector2 = _meteor_pos(m, k3)
+		var hs: float = roundf(float(m["s"]) * (1.0 + 2.2 * k3))
+		c.draw_rect(Rect2(floorf(hp.x - hs * 0.5), floorf(hp.y - hs * 0.5), hs, roundf(hs * 0.35)), Color("3a1c1c", 0.9))   # crosta em cima
+	# bigornas com martelo
+	var pu: float = u * 2.0
+	for a in _anvils:
+		_draw_anvil(c, a, vp, pu)
+
+func _draw_anvil(c: CanvasItem, a: Dictionary, vp: Vector2, pu: float) -> void:
+	var o: Vector2 = _anvil_origin(a, vp, pu)
+	var flip: bool = bool(a["flip"])
+	for y in range(_ANVIL_MASK.size()):
+		var row: String = _ANVIL_MASK[y]
+		for x in range(row.length()):
+			var ch: String = row[x]
+			if ch == ".":
+				continue
+			var xx: int = (row.length() - 1 - x) if flip else x
+			var col: Color = _ANVIL_BODY
+			if ch == "T":
+				col = Color("2a1416") if x % 3 else Color("341a1a")
+			elif y == 0:
+				col = _ANVIL_LIT
+			c.draw_rect(Rect2(o + Vector2(xx, y) * pu, Vector2(pu, pu)), col)
+	# peça em brasa em cima da bigorna (acende no golpe e vai esfriando)
+	var sp: Vector2 = _anvil_strike_point(a, vp, pu)
+	var k: float = fposmod(_anvil_cycle(a), 1.0)
+	var heat: float = 1.0 - k * 0.6
+	for i in range(-2, 3):
+		c.draw_rect(Rect2(sp + Vector2(float(i) * pu - pu * 0.5, -pu), Vector2(pu, pu)), Color(_HOT[1 if absi(i) < 2 else 2], 0.55 + 0.45 * heat))
+	if k < 0.08:
+		var fl: float = 1.0 - k / 0.08
+		var big: float = 1.6 if bool(a.get("strong", false)) else 1.0
+		c.draw_rect(Rect2(sp + Vector2(-pu * 4.0 * big, -pu * 3.0 * big), Vector2(pu * 8.0 * big, pu * 3.0 * big)), Color(_HOT[0], 0.5 * fl))
+	# marreta em T: cabo reto e cabeça atravessada na ponta (perpendicular ao cabo)
+	var dir: float = -1.0 if flip else 1.0
+	var pivot: Vector2 = sp + Vector2(dir * HAMMER_REACH * pu, -4.0 * pu)   # as mãos do ferreiro
+	var base: float = PI if not flip else 0.0                              # do pivô para a cabeça
+	var k2: float = fposmod(_anvil_cycle(a), 1.0)
+	if k2 > 0.84:    # rastro na descida
+		_draw_hammer(c, o, pivot, base + _hammer_angle(a, 0.035) * -dir, pu, 0.28)
+		_draw_hammer(c, o, pivot, base + _hammer_angle(a, 0.018) * -dir, pu, 0.45)
+	_draw_hammer(c, o, pivot, base + _hammer_angle(a) * -dir, pu, 1.0)
+
+const HAMMER_REACH := 14.0   # pivô -> centro da cabeça, em pixels da arte
+const _HAMMER_STEEL := [Color("2c1e22"), Color("54434a"), Color("7d6a70"), Color("a8949a")]
+const _HAMMER_WOOD := [Color("4a2a1c"), Color("7a4a30"), Color("9a6440")]
+
+# Desenha a marreta rasterizada célula a célula: para cada célula da grade de pixels em
+# volta do pivô, gira de volta para o "espaço da marreta" e testa se cai no cabo ou na
+# cabeça. Assim o cabo não fica furado e a cabeça continua um bloco cheio em qualquer ângulo.
+func _draw_hammer(c: CanvasItem, grid_o: Vector2, pivot: Vector2, ang: float, pu: float, alpha: float) -> void:
+	var D: float = HAMMER_REACH
+	var r: float = D + 4.0
+	var i0: int = int(floor((pivot.x - grid_o.x) / pu - r))
+	var j0: int = int(floor((pivot.y - grid_o.y) / pu - r))
+	var n: int = int(ceil(r * 2.0)) + 1
+	var cs: float = cos(-ang)
+	var sn: float = sin(-ang)
+	# meia-largura do cabo que dá uma linha de 1 pixel sem furos e sem dobrar (estilo Bresenham)
+	var half: float = 0.5 * (absf(cs) + absf(sn)) + 0.02
+	for j in range(j0, j0 + n):
+		for i in range(i0, i0 + n):
+			var cell: Vector2 = grid_o + Vector2(i, j) * pu
+			var d: Vector2 = (cell + Vector2(pu, pu) * 0.5 - pivot) / pu
+			var lu: float = d.x * cs - d.y * sn     # ao longo do cabo (0 = mãos, D = cabeça)
+			var lv: float = d.x * sn + d.y * cs     # atravessado
+			var col: Color
+			if lu >= D - 2.0 and lu <= D + 2.0 and absf(lv) <= 3.5:
+				# cabeça: faces de bater mais escuras, quina de cima com brilho
+				if absf(lv) > 2.8:
+					col = _HAMMER_STEEL[0]
+				elif lu > D + 1.2:
+					col = _HAMMER_STEEL[1]
+				elif lu < D - 1.2:
+					col = _HAMMER_STEEL[3] if absf(lv) < 2.0 else _HAMMER_STEEL[2]
+				else:
+					col = _HAMMER_STEEL[2]
+			elif lu >= -1.5 and lu < D - 2.0 and absf(lv) <= half:
+				if lu < 2.0:
+					col = _HAMMER_WOOD[0]                                 # empunhadura enrolada
+				elif lu > D - 3.6:
+					col = _HAMMER_STEEL[1]                                # cunha de ferro
+				else:
+					col = _HAMMER_WOOD[2] if lv < -0.1 else _HAMMER_WOOD[1]
+			else:
+				continue
+			c.draw_rect(Rect2(cell, Vector2(pu, pu)), Color(col, alpha))

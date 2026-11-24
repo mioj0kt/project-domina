@@ -11,6 +11,7 @@ var root_ctrl: Control
 var card_tooltip: ActionCardTooltip
 
 func _init() -> void:
+	MenuPieceCursor.auto(self)   # peça do jogador acompanhando o mouse pelos botões
 	layer = 120
 	visible = false
 	_build_ui()
@@ -126,6 +127,7 @@ func _create_reward_card_widget(card: ActionCard) -> Control:
 	var card_visual = ActionCardVisual.new(card, true, REWARD_SCALE)
 	card_visual.mouse_filter = Control.MOUSE_FILTER_STOP
 	visual_frame.add_child(card_visual)
+	NewBadge.attach(visual_frame, false, card.id)
 
 	card_visual.mouse_entered.connect(func():
 		if card_tooltip:

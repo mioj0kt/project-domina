@@ -6,6 +6,7 @@ extends Control
 # MetaProgress.settle_run). Clique em qualquer lugar pula a animação.
 
 const MAIN_MENU_PATH: String = "res://scenes/main_menu.tscn"
+const MAP_SCENE_PATH: String = "res://scenes/map_view.tscn"
 const META_SCENE_PATH: String = "res://scenes/meta_view.tscn"
 const MAX_ICONS_PER_ROW: int = 20
 
@@ -19,6 +20,7 @@ var _total_label: Label
 var _bank_label: Label
 var _msg_label: Label
 var _menu_btn: Button
+var _retry_btn: Button
 var _meta_btn: Button
 var _total_row: Control
 var _tour: MetaTour
@@ -28,6 +30,7 @@ var _fx: VictoryFx
 var _center_box: Control
 
 func _ready() -> void:
+	MenuPieceCursor.auto(self)   # peça do jogador acompanhando o mouse pelos botões
 	Music.play("menu")
 	_summary = MetaProgress.last_summary.duplicate()
 	if _summary.is_empty():
@@ -176,14 +179,29 @@ func _build_ui() -> void:
 	btns.alignment = BoxContainer.ALIGNMENT_CENTER
 	btns.add_theme_constant_override("separation", 20)
 	v.add_child(btns)
-	_menu_btn = _make_btn("VOLTAR AO MENU", Color(0.8, 0.3, 0.35))
-	_menu_btn.pressed.connect(func(): SceneTransition.go(MAIN_MENU_PATH))
-	btns.add_child(_menu_btn)
+	_retry_btn = _make_btn("RECOMEÇAR RUN", Color(0.3, 0.85, 0.45))
+	_retry_btn.pressed.connect(_restart_run)
+	btns.add_child(_retry_btn)
 	_meta_btn = _make_btn("IR AO GRIMÓRIO", Color(0.85, 0.64, 0.25))
 	_meta_btn.pressed.connect(func(): SceneTransition.go(META_SCENE_PATH))
 	btns.add_child(_meta_btn)
+	_menu_btn = _make_btn("VOLTAR AO MENU", Color(0.8, 0.3, 0.35))
+	_menu_btn.pressed.connect(func(): SceneTransition.go(MAIN_MENU_PATH))
+	btns.add_child(_menu_btn)
+	for b in [_retry_btn, _meta_btn, _menu_btn]:
+		b.custom_minimum_size.x = 300.0   # os três cabem na largura do painel
+	_retry_btn.disabled = true
 	_menu_btn.disabled = true
 	_meta_btn.disabled = true
+
+# Começa uma run nova direto (mesmo caminho do JOGAR do menu: zera a run e já
+# leva as peças compradas na bolsa do Grimório).
+func _restart_run() -> void:
+	if SceneTransition.busy:
+		return
+	RunManager.start_new_run()
+	MetaProgress.consume_bag_into_run()
+	SceneTransition.go(MAP_SCENE_PATH)
 
 # Resumo da run: quadradinhos de estatística + as Leis e Cartas que o jogador levou.
 func _build_run_summary(parent: VBoxContainer) -> void:
@@ -367,6 +385,11 @@ func _run_tally() -> void:
 			Sfx.play("coroa_final")
 		_fx.pop_at(_total_label.global_position + _total_label.size * 0.5, 12 if bool(_summary["won"]) else 8)
 	_done = true
+	# Coroas suficientes para um giro do Oráculo: aviso "!" no botão do Grimório
+	if MetaProgress.grimorio_unlocked and MetaProgress.machine_remaining() > 0 \
+			and MetaProgress.coroas >= MetaProgress.machine_price():
+		AlertBadge.attach(_meta_btn)
+	_retry_btn.disabled = false
 	_menu_btn.disabled = false
 	_meta_btn.disabled = false
 	# 1ª tela de fim de run: mini guia das Coroas.

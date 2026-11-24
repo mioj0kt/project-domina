@@ -170,7 +170,8 @@ func check_custom_victory() -> Dictionary:
 			"ended": true,
 			"won": true,
 			"title": "CHEFAO ENCURRALADO!",
-			"details": ""
+			"details": "",
+			"kind": "blockade"
 		}
 
 	if ai_pieces_remaining == 0:
@@ -178,7 +179,8 @@ func check_custom_victory() -> Dictionary:
 			"ended": true,
 			"won": true,
 			"title": "CHEFAO DERROTADO!",
-			"details": ""
+			"details": "",
+			"kind": "elimination"
 		}
 
 	return {"ended": false, "won": false, "title": "", "details": ""}

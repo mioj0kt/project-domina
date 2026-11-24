@@ -67,6 +67,7 @@ func add_option(text: String, action: Callable, disabled: bool = false) -> Butto
 	rows += 1
 	custom_minimum_size = Vector2(COLS * CELL + _frame * 2.0, rows * CELL + _frame * 2.0)
 	var b := Button.new()
+	b.set_meta("no_piece", true)   # o tabuleiro já tem a peça dele (MenuPieceCursor ignora)
 	b.text = text
 	b.disabled = disabled
 	b.flat = true
@@ -113,6 +114,21 @@ func _process(delta: float) -> void:
 ## Altura (px) da rocha pendurada embaixo do tabuleiro.
 func base_height() -> float:
 	return 96.0 * PIX
+
+
+## Aviso "!" pulando na ponta da placa da linha r (ex.: Grimório com Coroas para gastar).
+var _alerts: Dictionary = {}
+
+func set_alert(r: int, on: bool = true) -> void:
+	if on and not _alerts.has(r):
+		var b := AlertBadge.new()
+		add_child(b)
+		var s := _slab_rect(r)
+		b.position = Vector2(s.end.x - b.size.x - PIX * 6.0, s.position.y + (s.size.y - b.size.y) * 0.5 - PIX).round()
+		_alerts[r] = b
+	elif not on and _alerts.has(r):
+		_alerts[r].queue_free()
+		_alerts.erase(r)
 
 
 ## Marca a opção da linha r com um selo dourado "NOVO" na ponta da placa.

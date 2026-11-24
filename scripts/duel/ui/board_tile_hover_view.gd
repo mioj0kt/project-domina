@@ -89,6 +89,34 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 			"affects": "both",
 			"title_color": Color(0.7, 0.9, 1.0)
 		})
+	elif board.scorched_tiles.has(pos) and board.flow_tiles.has(pos):
+		effects.append({
+			"title": "LAVA ESCORRENDO",
+			"desc": "A língua de lava da Ferreira passou aqui: nenhuma peça passa ou pousa. Daqui a pouco ela esfria em basalto.",
+			"affects": "both",
+			"title_color": Color(1.0, 0.55, 0.25)
+		})
+	elif board.scorched_tiles.has(pos) and board.crust_tiles.has(pos):
+		effects.append({
+			"title": "BASALTO",
+			"desc": "Lava esfriando: nenhuma peça passa ou pousa por mais um tempo.",
+			"affects": "both",
+			"title_color": Color(0.85, 0.6, 0.5)
+		})
+	elif board.scorched_tiles.has(pos) and board.lava_tiles.has(pos):
+		effects.append({
+			"title": "LAVA",
+			"desc": "A ilha de basalto acaba aqui: nenhuma peça passa ou pousa até o fim do duelo.",
+			"affects": "both",
+			"title_color": Color(1.0, 0.55, 0.25)
+		})
+	elif board.scorched_tiles.has(pos) and board.ember_tiles.has(pos):
+		effects.append({
+			"title": "CASA EM BRASA",
+			"desc": ("O caldeirão espirrou lava aqui" if host.current_duel is DuelBossCaldeira else "Uma bomba da erupção caiu aqui") + ": nenhuma peça passa ou pousa por %d rodada(s), até a brasa esfriar." % int(board.scorched_tiles[pos]),
+			"affects": "both",
+			"title_color": Color(1.0, 0.62, 0.32)
+		})
 	elif board.scorched_tiles.has(pos) and board.snow_tiles.has(pos):
 		effects.append({
 			"title": "MONTE DE NEVE",
@@ -137,8 +165,57 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 			"affects": "both",
 			"title_color": Color(0.7, 0.9, 1.0)
 		})
+	# Leis do Chefe da Caldeira.
+	if board.anvil_tiles.has(pos):
+		var cool: int = int(board.anvil_tiles[pos])
+		effects.append({
+			"title": "BIGORNA" if cool == 0 else "BIGORNA ESFRIANDO",
+			"desc": "Peça (sua ou do chefe) que começar a vez do dono aqui é martelada e vira Dama." if cool == 0 \
+				else "Acabou de martelar: esquenta de novo em %d rodada(s)." % int(ceil(cool / 2.0)),
+			"affects": "both",
+			"title_color": Color(1.0, 0.75, 0.35)
+		})
+	if host.current_duel is DuelBossCaldeira:
+		var cd: DuelBossCaldeira = host.current_duel
+		if cd.flow_next_tiles().has(pos):
+			effects.append({
+				"title": "A LAVA CHEGA AQUI",
+				"desc": "A lava chega nesta casa no fim do próximo turno do chefe e destrói o que estiver nela. Saia da frente!",
+				"affects": "both",
+				"title_color": Color(1.0, 0.45, 0.25)
+			})
+		elif cd.flow_warn_col == col:
+			effects.append({
+				"title": "COLUNA DA ESCORRIDA",
+				"desc": "A lava vai brotar no meio desta coluna e escorrer para cima e para baixo, uma casa por turno do chefe.",
+				"affects": "both",
+				"title_color": Color(1.0, 0.55, 0.25)
+			})
+		if cd.cauldron_targets.has(pos):
+			effects.append({
+				"title": "RESPINGO DO CALDEIRÃO",
+				"desc": "No fim da rodada o caldeirão transborda aqui: o que estiver na casa é destruído e ela vira brasa por %d rodadas." % DuelBossCaldeira.CAULDRON_EMBER_ROUNDS,
+				"affects": "both",
+				"title_color": Color(1.0, 0.5, 0.2)
+			})
+		if cd.hammer_pos == pos:
+			effects.append({
+				"title": "MARCADA PELA MARTELADA",
+				"desc": "O martelo segue esta peça e cai em %d rodada(s). Se ela estiver sem nenhuma aliada colada na diagonal na hora: Dama perde a coroa (e o chefe ganha uma), peça comum é esmagada. Fugir não adianta: encoste uma aliada." % cd._rounds_to(DuelBossCaldeira.HAMMER_INTERVAL_PLIES),
+				"affects": "both",
+				"title_color": Color(1.0, 0.45, 0.35)
+			})
 	var cp: BoardPiece = board.grid[row][col]
 	if cp != Board.EMPTY and not cp.is_tree:
+		var cdp = host.current_duel
+		if cdp is DuelBossCaldeira and cdp.law_id == DuelBossCaldeira.LAW_CROWN_PRICE and board.crown_price_team != 0 \
+				and board.crown_price_victim(board.crown_price_team) == pos:
+			effects.append({
+				"title": "PREÇO DA COROA",
+				"desc": "Sua peça mais atrasada. Na próxima vez que uma peça sua virar Dama, esta derrete na forja da Ferreira.",
+				"affects": "both",
+				"title_color": Color(1.0, 0.6, 0.3)
+			})
 		if cp.frozen:
 			effects.append({
 				"title": "CONGELADA",

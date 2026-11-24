@@ -371,7 +371,9 @@ func _setup_modules(max_dim: int) -> void:
 	add_child(piece_shatter_view)
 
 	sudden_death_mgr = SuddenDeathManager.new()
-	sudden_death_mgr.sudden_death_triggered.connect(func(): Music.sudden_death())
+	sudden_death_mgr.sudden_death_triggered.connect(func():
+		Music.sudden_death()
+		boss_say("sudden_death", true))
 	add_child(sudden_death_mgr)
 	sudden_death_mgr.configure(max_dim)
 	sudden_death_view = SuddenDeathView.new()
@@ -720,9 +722,42 @@ func _get_common_piece_positions(team: int) -> Array[Vector2i]:
 	return positions
 
 # O Chefe comenta (se este duelo for de Chefe). Sem efeito nos outros duelos.
-func boss_say(event: String) -> void:
+func boss_say(event: String, force: bool = false) -> void:
 	if boss_banter != null and is_instance_valid(boss_banter):
-		boss_banter.react(event)
+		boss_banter.react(event, force)
+
+# Falas de virada: o chefe ou o jogador ficou com 3 peças ou menos (uma vez cada).
+var _said_low: Dictionary = {}
+func _check_low_pieces() -> void:
+	if boss_banter == null or is_game_over or board == null:
+		return
+	var counts := {human_team: 0, ai_team: 0}
+	for r in range(board.rows):
+		for c in range(board.cols):
+			var p: BoardPiece = board.grid[r][c]
+			if p != Board.EMPTY and not p.is_tree and counts.has(p.owner_team):
+				counts[p.owner_team] += 1
+	for team in [ai_team, human_team]:
+		var key: String = "boss_low" if team == ai_team else "player_low"
+		if int(counts[team]) <= 3 and int(counts[team]) > 0 and not _said_low.has(key):
+			_said_low[key] = true
+			boss_say(key, true)
+			return
+
+# O jogador está pensando há muito tempo na vez dele: o chefe comenta (no máximo
+# de 40 em 40 s).
+var _idle_t: float = 0.0
+func _tick_boss_idle(delta: float) -> void:
+	if boss_banter == null or is_game_over or is_starting_match:
+		_idle_t = 0.0
+		return
+	if current_turn != human_team or _is_board_input_blocked():
+		_idle_t = 0.0
+		return
+	_idle_t += delta
+	if _idle_t >= 22.0:
+		_idle_t = -18.0
+		boss_say("idle", true)
 
 func _on_board_piece_destroyed(grid_pos: Vector2i, destroyed_piece: BoardPiece) -> void:
 	# Perdeu uma peça por QUALQUER causa (captura, carta como Duelo de Sorte,
@@ -731,6 +766,7 @@ func _on_board_piece_destroyed(grid_pos: Vector2i, destroyed_piece: BoardPiece) 
 		lost_piece_last_enemy_turn = true
 	if destroyed_piece != null and not is_game_over:
 		boss_say("piece_lost" if destroyed_piece.owner_team == ai_team else "capture_boss")
+		_check_low_pieces.call_deferred()
 	var piece_center = board_offset + Vector2(grid_pos.x * cell_size + cell_size / 2.0, grid_pos.y * cell_size + cell_size / 2.0)
 	piece_shatter_view.shatter_piece(piece_center, destroyed_piece, cell_size)
 
@@ -915,6 +951,7 @@ func _can_use_debug_keys() -> bool:
 
 func _process(delta: float) -> void:
 	_update_skip_extra_button(delta)
+	_tick_boss_idle(delta)
 	_poll_tutorial_tips(delta)
 
 func _update_skip_extra_button(delta: float = 0.0) -> void:

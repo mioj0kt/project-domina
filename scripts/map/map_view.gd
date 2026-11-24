@@ -89,6 +89,8 @@ func _ready() -> void:
 			_assign_storms(RunManager.map_data)
 		if _current_biome() == "cume":
 			_assign_cume_terrain(RunManager.map_data)
+		if _current_biome() == "caldeira":
+			_assign_caldeira_terrain(RunManager.map_data)
 		if not RunManager.map_data.is_empty() and not RunManager.map_data[0].is_empty():
 			RunManager.current_node = RunManager.map_data[0][0]
 
@@ -98,6 +100,7 @@ func _ready() -> void:
 	_build_covers(RunManager.map_data)
 	_build_storms(RunManager.map_data)
 	_build_cume_terrain(RunManager.map_data)
+	_build_caldeira_terrain(RunManager.map_data)
 	_restore_visited_connections()
 
 	if RunManager.current_node != null:
@@ -195,37 +198,6 @@ func _input(event: InputEvent) -> void:
 			is_traveling = true
 			SceneTransition.go("res://scenes/event_view.tscn")
 			get_viewport().set_input_as_handled()
-		elif DebugFlags.SHORTCUTS and event.keycode >= KEY_1 and event.keycode <= KEY_6:
-			# DEBUG: abre um duelo de CHEFE direto, com a lei escolhida
-			# (1 Sapo, 2 Coruja, 3 Floresta, 4 Cipós, 5 Vaga-lumes, 6 Raízes).
-			var law_idx: int = event.keycode - KEY_1
-			var desert: bool = _current_biome() == "deserto"
-			var mine: bool = _current_biome() == "mina"
-			var cume: bool = _current_biome() == "cume"
-			var law_count: int = DuelBossDesert.DESERT_LAWS.size() if desert else (DuelBossMine.MINE_LAWS.size() if mine else DuelBoss.LAWS.size())
-			if cume:
-				law_count = DuelBossCume.CUME_LAWS.size()
-			if law_idx < law_count:
-				# No deserto: 1 Sol, 2 Tempestade, 3 Areia Movediça, 4 Ampulheta, 5 Sarcófagos, 6 Cactos.
-				# Na mina: 1 Lampião, 2 Ricochete, 3 Desabamento, 4 Trilhos, 5 Garimpo.
-				if desert:
-					RunManager.map_biome = "deserto"
-					RunManager.desert_boss_law_id = DuelBossDesert.DESERT_LAWS[law_idx]
-				elif mine:
-					RunManager.map_biome = "mina"
-					RunManager.mine_boss_law_id = DuelBossMine.MINE_LAWS[law_idx]
-				elif cume:
-					# No cume: 1 Geada, 2 Gelo, 3 Avalanche, 4 Cordada, 5 Ar Rarefeito, 6 Luz Polar.
-					RunManager.map_biome = "cume"
-					RunManager.cume_boss_law_id = DuelBossCume.CUME_LAWS[law_idx]
-				else:
-					RunManager.forest_boss_law_id = DuelBoss.LAWS[law_idx]
-				RunManager.current_node_type = MapNode.NodeType.Chefe
-				RunManager.current_board_size = Vector2i(10, 10)
-				RunManager.current_board_layout = Board.LAYOUT_CLASSIC
-				is_traveling = true
-				SceneTransition.go("res://scenes/main.tscn")
-				get_viewport().set_input_as_handled()
 
 # DEBUG: lembrete das teclas de atalho do mapa (só com DebugFlags.SHORTCUTS).
 func _build_debug_hint() -> void:
@@ -233,17 +205,8 @@ func _build_debug_hint() -> void:
 	layer.layer = 90
 	add_child(layer)
 	var lbl := Label.new()
-	var laws: String
-	match _current_biome():
-		"deserto":
-			laws = "1 Sol  2 Tempestade  3 Areia Movediça  4 Ampulheta  5 Sarcófagos  6 Cactos"
-		"mina":
-			laws = "1 Lampião  2 Ricochete  3 Desabamento  4 Trilhos  5 Garimpo"
-		"cume":
-			laws = "1 Geada  2 Gelo  3 Avalanche  4 Cordada  5 Ar Rarefeito  6 Luz Polar"
-		_:
-			laws = "1 Sapo  2 Coruja  3 Floresta  4 Cipós  5 Vaga-lumes  6 Raízes"
-	lbl.text = "DEBUG  CHEFE: " + laws + "   |   B Apostas   E Evento"
+	# os chefes de cada lei agora ficam no botão CHEFES (canto inferior direito)
+	lbl.text = "DEBUG   B Apostas   E Evento   |   chefes: botão CHEFES"
 	lbl.add_theme_font_size_override("font_size", 16)
 	lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
 	lbl.add_theme_color_override("font_outline_color", Color(0.05, 0.03, 0.08))
@@ -313,6 +276,8 @@ func _build_forest(layers: Array[Array]) -> void:
 	forest.name = "ForestBackground"
 	add_child(forest)
 	move_child(forest, 0)
+	if _current_biome() == "caldeira":
+		forest.reserved_rects = _caldeira_layout(layers, -half + 1, half - 1)
 	# Uma coluna a menos de cada lado (antes: só do direito), então a largura
 	# fica simétrica em torno do centro; a câmera acompanha o centro do tabuleiro.
 	forest.build(layers, TILE_SIZE, MAP_SPRITE_SCALE, -half + 1, half - 1, min_r - 2, max_r + 2)
@@ -411,7 +376,7 @@ func _refresh_lines() -> void:
 				if RunManager.visited_connections.has(key):
 					state = "percorrido"
 				elif current != null and node == current:
-					state = "selecionado"
+					state = "bloqueado" if _edge_blocked(node, child) else "selecionado"
 				elif current != null and node.id.x <= current.id.x:
 					state = "bloqueado"
 				line.set_state(state)
@@ -645,9 +610,13 @@ func _assign_cume_terrain(layers: Array[Array]) -> void:
 		return
 	# desfiladeiro: fileira do miolo com pelo menos um duelo (a mais perto do meio)
 	var bridge_li: int = -1
-	var order: Array = range(2, n - 2)
 	var mid: float = float(n - 1) / 2.0
-	order.sort_custom(func(a, b): return absf(float(a) - mid) + randf() * 1.5 < absf(float(b) - mid) + randf() * 1.5)
+	# chave sorteada UMA vez por fileira (sortear dentro da comparação quebra a ordenação)
+	var keyed: Array = []
+	for li0 in range(2, n - 2):
+		keyed.append([absf(float(li0) - mid) + randf() * 1.5, li0])
+	keyed.sort_custom(func(a, b): return a[0] < b[0])
+	var order: Array = keyed.map(func(e): return e[1])
 	for li in order:
 		if layers[li].any(func(x: MapNode): return _is_duel(x)):
 			bridge_li = li
@@ -762,6 +731,342 @@ func _update_glaciers() -> void:
 		for i in range(nodes.size()):
 			if nodes[i] == pawn_rest_node and nodes[i] == RunManager.current_node:
 				gl.set_cracked(i, true)
+
+# ------------------------------------------- erupção e maré de lava (Caldeira) ----
+# Erupção: a cada ERUPTION_EVERY fileiras, as bombas caem quando a peça chega na
+# fileira `li` e cortam trilhas que saem dela (cada nodo mantém ao menos uma) e
+# chamuscam 1 ou 2 duelos da fileira seguinte. Um passo antes, tudo fica marcado.
+# Maré: uma fileira do miolo (3+ nodos); a lava entra TIDE_LEAD passos antes e engole
+# um nodo por passo. Duelo engolido fica numa ilha (tabuleiro menor, ouro em dobro);
+# loja/evento/altar/aposta afundam, a não ser que isso deixe algum pai sem saída.
+const ERUPTION_EVERY: int = 3
+const ERUPTION_FIRST: int = 2
+const ERUPTION_BLOCK_CHANCE: float = 0.45
+const TIDE_LEAD: int = 3
+var eruption_fx: MapEruption = null
+var tide_fx: MapTide = null
+var _cald_geo: Dictionary = {}
+
+func _assign_caldeira_terrain(layers: Array[Array]) -> void:
+	var n: int = layers.size()
+	var plan: Dictionary = {"eruptions": [], "tide": {}, "fired": [], "tide_shown": -1}
+	# maré: a fileira com mais nodos no miolo (sem começo/chefe)
+	var best: int = -1
+	var best_score: float = -INF
+	for li in range(TIDE_LEAD + 1, n - 2):
+		var cnt: int = layers[li].size()
+		if cnt < 3:
+			continue
+		if layers[li].any(func(x: MapNode): return x.type == MapNode.NodeType.Chefe or x.type == MapNode.NodeType.Começo):
+			continue
+		var score: float = float(cnt) + randf() * 1.5 - absf(float(li) - float(n) * 0.5) * 0.25
+		if score > best_score:
+			best_score = score
+			best = li
+	if best >= 0:
+		var dir: int = 1 if randf() < 0.5 else -1
+		var row: Array = layers[best].duplicate()
+		row.sort_custom(func(a: MapNode, b: MapNode): return a.position.x < b.position.x if dir > 0 else a.position.x > b.position.x)
+		# só os nodos engolidos ANTES da peça escolher (os TIDE_LEAD-1 primeiros) podem prender alguém
+		var sunk_early: Array = []
+		var safe: Array = []
+		for i in range(mini(TIDE_LEAD - 1, row.size())):
+			var nd: MapNode = row[i]
+			if _is_duel(nd):
+				continue
+			var strands := false
+			for p in nd.parents:
+				var open := false
+				for c in p.children:
+					if c != nd and not (c in sunk_early):
+						open = true
+				if not open:
+					strands = true
+			if strands:
+				safe.append(nd)
+			else:
+				sunk_early.append(nd)
+		for nd in row:
+			nd.tide = true
+		plan["tide"] = {"li": best, "dir": dir, "order": row, "safe": safe}
+	# erupções
+	# (nunca na fileira logo antes da maré: as trilhas que entram nela já são da lava)
+	var li: int = ERUPTION_FIRST
+	while li <= n - 3:
+		if best >= 0 and li == best - 1:
+			li += 1
+			continue
+		# primeiro os duelos chamuscados (fileira seguinte); as trilhas que levam até eles
+		# NUNCA são cortadas (a bola de fogo não pode trancar o próprio duelo que ela marcou)
+		var duels: Array = layers[li + 1].filter(func(x: MapNode): return _is_duel(x) and not x.tide)
+		duels.shuffle()
+		var hits: Array = duels.slice(0, 2 if randf() < 0.4 else 1)
+		for h in hits:
+			h.scorched = true
+		var edges: Array = []
+		var candidates: Array = []
+		for p in layers[li]:
+			var kids: Array = p.children.filter(func(c: MapNode): return not (c in hits))
+			if kids.size() < 1 or p.children.size() < 2:
+				continue
+			kids.shuffle()
+			candidates.append([p, kids[0]])
+			var blocked: int = 0
+			for c in kids:
+				if blocked >= p.children.size() - 1:
+					break
+				if randf() < ERUPTION_BLOCK_CHANCE:
+					edges.append(_get_connection_key(p, c))
+					blocked += 1
+		if edges.is_empty() and not candidates.is_empty():
+			var pc: Array = candidates[randi() % candidates.size()]
+			edges.append(_get_connection_key(pc[0], pc[1]))
+		if not edges.is_empty() or not hits.is_empty():
+			plan["eruptions"].append({"li": li, "edges": edges, "nodes": hits})
+		li += ERUPTION_EVERY
+	RunManager.caldeira_plan = plan
+
+func _cald_plan() -> Dictionary:
+	return RunManager.caldeira_plan if _current_biome() == "caldeira" else {}
+
+func _edge_blocked(parent: MapNode, child: MapNode) -> bool:
+	if child.sunk:
+		return true
+	var plan: Dictionary = _cald_plan()
+	if plan.is_empty():
+		return false
+	var key: String = _get_connection_key(parent, child)
+	for e in plan.get("eruptions", []):
+		if plan["fired"].has(int(e["li"])) and (e["edges"] as Array).has(key):
+			return true
+	return false
+
+func _node_by_key(key: String, layers: Array[Array]) -> Array:
+	for layer in layers:
+		for node in layer:
+			for child in node.children:
+				if _get_connection_key(node, child) == key:
+					return [node, child]
+	return []
+
+# Ponto (mundo) do meio da trilha de uma aresta: onde cai a bomba / fica a cratera.
+func _edge_mid(parent: MapNode, child: MapNode) -> Vector2:
+	var pts: Array = ForestTrail.cell_points(parent.position, child.position, MAP_SPRITE_SCALE)
+	if pts.size() <= 2:
+		return (parent.position + child.position) * 0.5
+	return pts[pts.size() >> 1]
+
+# Antes do fundo ser montado: o vale da maré e o lugar de cada vulcão (o fundo não
+# põe lagos nem marcos ali). Devolve as áreas reservadas.
+func _caldeira_layout(layers: Array[Array], min_col: int, max_col: int) -> Array:
+	_cald_geo = {"min_col": min_col, "max_col": max_col, "volcanoes": []}
+	var plan: Dictionary = RunManager.caldeira_plan
+	var reserved: Array = []
+	var tide: Dictionary = plan.get("tide", {})
+	if not tide.is_empty():
+		var row: int = int(round(layers[int(tide["li"])][0].position.y / TILE_SIZE))
+		_cald_geo["tide_row"] = row
+		reserved.append(MapTide.band_rect(row, min_col, max_col, TILE_SIZE))
+	# casas de trilha e nodos (o vulcão foge deles)
+	var trail_pts: Array = []
+	var node_pts: Array = []
+	for layer in layers:
+		for node in layer:
+			node_pts.append(node.position)
+			for child in node.children:
+				trail_pts.append_array(ForestTrail.cell_points(node.position, child.position, MAP_SPRITE_SCALE))
+	var vsz: Vector2 = MapEruption.VOLCANO_SIZE * float(MAP_SPRITE_SCALE)
+	if not plan.has("vol_side"):
+		plan["vol_side"] = -1 if randf() < 0.5 else 1
+	var side: int = int(plan["vol_side"])
+	for e in plan.get("eruptions", []):
+		var y_li: float = layers[int(e["li"])][0].position.y
+		var best_spot: Vector2 = Vector2.ZERO
+		var best_cost: float = INF
+		for sd in [side, -side]:
+			var cx: float = float(min_col + 1 if sd < 0 else max_col - 1) * TILE_SIZE
+			for k in range(-1, TILES_PER_LAYER + 1):
+				var base := Vector2(cx, y_li - (float(k) - 0.5) * TILE_SIZE)
+				var rect := Rect2(Vector2(base.x - vsz.x * 0.5, base.y - vsz.y), vsz)
+				var cost: float = absf(float(k) - 2.0) * 0.3 + (0.0 if sd == side else 0.6)
+				for tp in trail_pts:
+					if rect.grow(TILE_SIZE * 0.25).has_point(tp):
+						cost += 6.0
+				for np in node_pts:
+					if rect.grow(TILE_SIZE * 0.6).has_point(np):
+						cost += 20.0
+				for rr in reserved:
+					if (rr as Rect2).intersects(rect):
+						cost += 50.0
+				if cost < best_cost:
+					best_cost = cost
+					best_spot = base
+		_cald_geo["volcanoes"].append(best_spot)
+		reserved.append(Rect2(Vector2(best_spot.x - vsz.x * 0.5, best_spot.y - vsz.y), vsz))
+		side = -side
+	return reserved
+
+func _build_caldeira_terrain(layers: Array[Array]) -> void:
+	eruption_fx = null
+	tide_fx = null
+	var plan: Dictionary = _cald_plan()
+	if plan.is_empty() or forest == null or _cald_geo.is_empty():
+		return
+	var clear: Array = []
+	# erupções
+	var data: Array = []
+	var vols: Array = _cald_geo.get("volcanoes", [])
+	var eruptions: Array = plan.get("eruptions", [])
+	for i in range(eruptions.size()):
+		var e: Dictionary = eruptions[i]
+		var edge_pts: Array = []
+		for key in e["edges"]:
+			var pc: Array = _node_by_key(key, layers)
+			if not pc.is_empty():
+				edge_pts.append(_edge_mid(pc[0], pc[1]))
+		var npts: Array = []
+		for nd in e["nodes"]:
+			npts.append(nd.position)
+		var vbase: Vector2 = vols[i] if i < vols.size() else Vector2.ZERO
+		data.append({"li": e["li"], "volcano": vbase, "edge_pts": edge_pts, "node_pts": npts})
+		var vsz: Vector2 = MapEruption.VOLCANO_SIZE * float(MAP_SPRITE_SCALE)
+		clear.append(Rect2(Vector2(vbase.x - vsz.x * 0.5, vbase.y - vsz.y), vsz).grow(TILE_SIZE * 0.2))
+	if not data.is_empty():
+		var under := Node2D.new()
+		under.name = "EruptionVolcanoes"
+		add_child(under)
+		move_child(under, forest.get_index() + 1)
+		eruption_fx = MapEruption.new()
+		eruption_fx.name = "Eruption"
+		eruption_fx.under = under
+		add_child(eruption_fx)
+		move_child(eruption_fx, lines_container.get_index() + 1)
+		eruption_fx.setup(data, plan["fired"], float(MAP_SPRITE_SCALE))
+	# maré
+	var tide: Dictionary = plan.get("tide", {})
+	if not tide.is_empty():
+		var over := Node2D.new()
+		over.name = "TideOver"
+		add_child(over)
+		move_child(over, lines_container.get_index() + 1)
+		tide_fx = MapTide.new()
+		tide_fx.name = "Tide"
+		tide_fx.over = over
+		add_child(tide_fx)
+		move_child(tide_fx, forest.get_index() + 1)
+		var pts: Array = (tide["order"] as Array).map(func(x: MapNode): return x.position)
+		var row: int = int(_cald_geo.get("tide_row", 0))
+		tide_fx.setup(forest, row, int(tide["dir"]), pts, int(_cald_geo["min_col"]), int(_cald_geo["max_col"]), TILE_SIZE, float(MAP_SPRITE_SCALE), (tide["order"] as Array).map(func(x: MapNode): return _is_duel(x)))
+		var crossing: Array = []
+		for layer in layers:
+			for nd in layer:
+				for ch in nd.children:
+					if nd.tide or ch.tide:
+						crossing.append(ForestTrail.cell_points(nd.position, ch.position, MAP_SPRITE_SCALE))
+		tide_fx.set_trails(crossing)
+		var order_nodes: Array = tide["order"]
+		tide_fx.node_sinking.connect(func(idx: int):
+			var nb: Button = node_buttons.get(order_nodes[idx])
+			if nb != null:
+				nb.visible = false)
+		clear.append(MapTide.band_rect(row, int(_cald_geo["min_col"]), int(_cald_geo["max_col"]), TILE_SIZE).grow(-TILE_SIZE * 0.1))
+		var shown: int = int(plan.get("tide_shown", -1))
+		if shown >= 0:
+			tide_fx.set_progress(shown, _tide_states(shown))
+	if not clear.is_empty():
+		forest.clear_decor_in(clear)
+	_caldeira_refresh()
+
+# Com uma erupção marcada logo à frente, a câmera sobe um pouco para mostrar as trilhas
+# que vão ser cortadas (ficam uma fileira e meia acima da peça).
+func _caldeira_camera_bias(node: MapNode) -> float:
+	var plan: Dictionary = _cald_plan()
+	if plan.is_empty():
+		return 0.0
+	for e in plan.get("eruptions", []):
+		var li: int = int(e["li"])
+		if node.id.x == li - 1 and not (plan["fired"] as Array).has(li):
+			return -TILE_SIZE * 5.0
+	return 0.0
+
+func _cur_layer() -> int:
+	return RunManager.current_node.id.x if RunManager.current_node != null else 0
+
+func _tide_k_for(layer: int) -> int:
+	var tide: Dictionary = _cald_plan().get("tide", {})
+	if tide.is_empty():
+		return -1
+	var stage: int = layer - (int(tide["li"]) - TIDE_LEAD)
+	if stage < 0:
+		return -1
+	return mini(stage, (tide["order"] as Array).size())
+
+# Estado visual de cada nodo da maré com k nodos engolidos (aplica island/sunk).
+func _tide_states(k: int) -> Array:
+	var tide: Dictionary = _cald_plan().get("tide", {})
+	var out: Array = []
+	if tide.is_empty():
+		return out
+	var order: Array = tide["order"]
+	for i in range(order.size()):
+		var nd: MapNode = order[i]
+		if i >= k:
+			out.append("")
+			continue
+		if not nd.island and not nd.sunk:
+			if _is_duel(nd) or (tide["safe"] as Array).has(nd) or nd == RunManager.current_node:
+				nd.island = true
+				if _is_duel(nd):
+					nd.board_size = Vector2i(maxi(6, nd.board_size.x - 2), maxi(6, nd.board_size.y - 2))
+					nd.board_layout = Board.LAYOUT_CLASSIC
+					_refresh_node_labels(nd)
+			else:
+				nd.sunk = true
+		out.append("ilha" if nd.island else "afundando")
+	return out
+
+func _refresh_node_labels(nd: MapNode) -> void:
+	var sl: Label = node_size_labels.get(nd)
+	if sl != null:
+		sl.text = nd.get_size_text()
+	var ll: Label = node_layout_labels.get(nd)
+	if ll != null:
+		ll.visible = nd.has_special_layout()
+
+# Marcas e vulcões seguem a fileira da peça.
+func _caldeira_refresh() -> void:
+	var cur: int = _cur_layer()
+	if eruption_fx != null:
+		eruption_fx.set_layer(cur)
+	if tide_fx != null:
+		var k: int = int(_cald_plan().get("tide_shown", -1))
+		var tide: Dictionary = _cald_plan().get("tide", {})
+		tide_fx.set_next(k if k >= 0 and cur < int(tide.get("li", 0)) else -1)
+
+# A peça chegou num nodo: dispara a erupção da fileira e faz a maré andar.
+func _caldeira_on_arrival(node: MapNode) -> void:
+	var plan: Dictionary = _cald_plan()
+	if plan.is_empty():
+		return
+	var cur: int = node.id.x
+	if eruption_fx != null:
+		# erupção marcada para o próximo passo: o vulcão começa a roncar
+		var nxt: int = eruption_fx.index_for_layer(cur + 1)
+		if nxt >= 0 and not (plan["fired"] as Array).has(cur + 1) and eruption_fx.volcano_visible(nxt):
+			Sfx.play("vulcao_ronco")
+		var i: int = eruption_fx.index_for_layer(cur)
+		if i >= 0 and not (plan["fired"] as Array).has(cur):
+			(plan["fired"] as Array).append(cur)
+			await eruption_fx.fire(i)
+			_update_nodes_visual_state()
+	if tide_fx != null:
+		var k: int = _tide_k_for(cur)
+		var shown: int = int(plan.get("tide_shown", -1))
+		if k > shown:
+			plan["tide_shown"] = k
+			await tide_fx.advance(k, _tide_states(k))
+			_update_nodes_visual_state()
+	_caldeira_refresh()
 
 func _build_covers(layers: Array[Array]) -> void:
 	var groups: Dictionary = {}
@@ -926,9 +1231,16 @@ func _update_nodes_visual_state() -> void:
 		if node == RunManager.current_node:
 			ind_name = "ind_atual"
 			btn.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		elif RunManager.current_node and node in RunManager.current_node.children:
+		elif RunManager.current_node and node in RunManager.current_node.children and not _edge_blocked(RunManager.current_node, node):
 			ind_name = "ind_selecionado" if node == _hovered_node else ""
 			btn.mouse_filter = Control.MOUSE_FILTER_STOP
+		elif RunManager.current_node and node in RunManager.current_node.children:
+			# Caldeira: trilha cortada pela erupção / nodo afundado na maré
+			sprite_name += "_escura"
+			overlay_name = "ind_bloqueado"
+			base_mod = Color(0.62, 0.62, 0.66)
+			label_col = Color(0.5, 0.45, 0.42)
+			btn.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		elif _is_node_completed(node):
 			overlay_name = "ind_concluido"
 			base_mod = Color(0.7, 0.66, 0.62)
@@ -949,6 +1261,7 @@ func _update_nodes_visual_state() -> void:
 			ind_name = overlay_name
 
 		base.modulate = base_mod
+		btn.visible = not node.sunk
 		MapNodeArt.apply(btn, base, ind, _node_sprite_name(node.type), sprite_name, ind_name, overlay_name, boss_suffix, node == pawn_rest_node)
 		if size_label:
 			size_label.add_theme_color_override("font_color", label_col)
@@ -956,6 +1269,7 @@ func _update_nodes_visual_state() -> void:
 		if layout_label:
 			layout_label.add_theme_color_override("font_color", label_col.lerp(Color(0.75, 0.9, 1.0), 0.6))
 	_refresh_lines()
+	_caldeira_refresh()
 	for cnode in covers:
 		var ccv = covers[cnode]
 		if ccv != null and is_instance_valid(ccv):
@@ -1008,13 +1322,18 @@ func _on_node_clicked(node: MapNode) -> void:
 			await cv.reveal_node(_cave_index(cv, node), 0.45)
 	_travel_target = null
 	_travel_from = null
-	
+
+	# Caldeira: a erupção desta fileira e o avanço da maré acontecem quando a peça chega
+	await _caldeira_on_arrival(node)
+
 	RunManager.current_board_size = node.board_size
 	RunManager.current_board_layout = node.board_layout
 	RunManager.current_node_type = node.type
 	RunManager.current_node_storm = node.storm and (node.type == MapNode.NodeType.Duelo or node.type == MapNode.NodeType.DueloForte)
 	RunManager.current_node_glacier = node.glacier and _is_duel(node)
 	RunManager.current_node_bridge = node.bridge and _is_duel(node)
+	RunManager.current_node_scorched = node.scorched and _is_duel(node)
+	RunManager.current_node_island = node.island and _is_duel(node)
 	
 	match node.type:
 		MapNode.NodeType.Duelo, MapNode.NodeType.DueloForte, MapNode.NodeType.Chefe:
@@ -1173,6 +1492,6 @@ func _move_camera_to_node(target_node: MapNode) -> void:
 		_cam_tween.kill()
 	var tween = create_tween()
 	_cam_tween = tween
-	tween.tween_method(_set_cam_y, _cam_y, _camera_target_y(target_node.position.y), 0.85)\
+	tween.tween_method(_set_cam_y, _cam_y, _camera_target_y(target_node.position.y + _caldeira_camera_bias(target_node)), 0.85)\
 		.set_trans(Tween.TRANS_SINE)\
 		.set_ease(Tween.EASE_OUT)

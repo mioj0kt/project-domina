@@ -143,6 +143,22 @@ var water_tiles: Dictionary = {}
 const WATER_ROUNDS: int = 99999
 # Avalanche: montes de neve (Vector2i -> true); o bloqueio fica em scorched_tiles.
 var snow_tiles: Dictionary = {}
+# --- Obstáculos do mapa da Caldeira ---
+# Duelo chamuscado (erupção): casas em brasa (Vector2i -> true), marca VISUAL das casas de
+# scorched_tiles que esfriam sozinhas. Duelo na ilha (maré): casas de lava nos cantos
+# (Vector2i -> true), bloqueadas em scorched_tiles até o fim do duelo.
+var ember_tiles: Dictionary = {}
+var lava_tiles: Dictionary = {}
+# --- Leis do Chefe da Caldeira ---
+# Bigorna: casas-bigorna (Vector2i -> jogadas de resfriamento; 0 = quente, pronta).
+# Peça que começa a vez do dono numa bigorna pronta vira Dama.
+var anvil_tiles: Dictionary = {}
+# Escorrida: casas de lava da escorrida (Vector2i -> true; também em lava_tiles para o
+# desenho e em scorched_tiles para o bloqueio) e basalto esfriando (Vector2i -> true).
+var flow_tiles: Dictionary = {}
+var crust_tiles: Dictionary = {}
+# Coroa Torta: time cujas Damas saem tortas da coroação (0 = lei inativa).
+var crown_price_team: int = 0   # Preço da Coroa (chefe da Caldeira): coroar derrete a peça mais atrasada
 # Cordada: pares de peças do chefe amarradas [[BoardPiece, BoardPiece], ...].
 var rope_pairs: Array = []
 const ROPE_REACH: int = 3
@@ -249,6 +265,8 @@ func clear_board() -> void:
 	cracked_tiles.clear()
 	water_tiles.clear()
 	snow_tiles.clear()
+	ember_tiles.clear()
+	lava_tiles.clear()
 	rope_pairs.clear()
 	last_moved_piece = null
 	rail_lines.clear()
@@ -271,6 +289,7 @@ func tick_scorched_tiles() -> void:
 		scorched_tiles[pos] -= 1
 		if scorched_tiles[pos] <= 0:
 			scorched_tiles.erase(pos)
+			ember_tiles.erase(pos)
 			snow_tiles.erase(pos)   # Avalanche: o monte de neve derrete junto
 	# Lei das Cinzas: toda chama some 1 turno mais cedo.
 	var fire_decay: int = 2 if (rule_pipeline != null and rule_pipeline.has_rule("cinders")) else 1
@@ -1103,6 +1122,8 @@ func make_move(move_dict: Dictionary) -> bool:
 		if reached_end or custom_promo:
 			piece.is_king = true
 			promoted = true
+			if crown_price_team != 0 and piece.owner_team == crown_price_team:
+				_pay_crown_price(piece, to_pos)
 			if pipeline != null:
 				pipeline.emit_event(&"on_promotion", {
 					"piece": piece,
@@ -1112,6 +1133,32 @@ func make_move(move_dict: Dictionary) -> bool:
 	if thin_ice:
 		_thin_ice_leave(move_dict["from"])
 	return promoted or nugget_crowned
+
+# Preço da Coroa: a peça COMUM mais atrasada do time (a mais longe da fileira onde
+# ele coroa; empate = a mais perto do meio) — é ela que derrete quando o time coroa.
+func crown_price_victim(team: int, exclude: BoardPiece = null) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var best_k: float = -INF
+	var promo_row: int = 0 if team == human_team_color else rows - 1
+	for r in range(rows):
+		for c in range(cols):
+			var p: BoardPiece = grid[r][c]
+			if p == EMPTY or p == exclude or p.is_tree or p.is_king or p.owner_team != team:
+				continue
+			var k: float = float(absi(r - promo_row)) * 100.0 - absf(float(c) - float(cols - 1) * 0.5)
+			if k > best_k:
+				best_k = k
+				best = Vector2i(c, r)
+	return best
+
+func _pay_crown_price(crowned: BoardPiece, at: Vector2i) -> void:
+	var v: Vector2i = crown_price_victim(crowned.owner_team, crowned)
+	if v.x < 0:
+		return   # só sobrou Dama: a coroa sai de graça
+	var victim: BoardPiece = grid[v.y][v.x]
+	grid[v.y][v.x] = EMPTY
+	if not is_simulation:
+		mine_events.append({"type": "crown_price", "pos": v, "piece": victim, "crown": at})
 
 # Gelo Fino: quantas casas podem afundar no duelo (o tabuleiro nunca vira só água).
 func thin_ice_hole_cap() -> int:
@@ -1273,10 +1320,16 @@ func clone() -> Board:
 	new_b.thin_ice = thin_ice
 	new_b.cracked_tiles = cracked_tiles.duplicate()
 	new_b.water_tiles = water_tiles.duplicate()
+	new_b.ember_tiles = ember_tiles.duplicate()
+	new_b.lava_tiles = lava_tiles.duplicate()
 	new_b.silenced_turns = silenced_turns.duplicate()
 	new_b.rail_lines = rail_lines
 	new_b.nugget_tiles = nugget_tiles.duplicate()
 	new_b.nugget_counts = nugget_counts.duplicate()
+	new_b.anvil_tiles = anvil_tiles.duplicate()
+	new_b.flow_tiles = flow_tiles.duplicate()
+	new_b.crust_tiles = crust_tiles.duplicate()
+	new_b.crown_price_team = crown_price_team
 
 	for r in range(rows):
 		for c in range(cols):

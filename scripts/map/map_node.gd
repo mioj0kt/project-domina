@@ -39,6 +39,13 @@ var glacier: bool = false
 var glacier_id: int = -1
 var bridge: bool = false
 
+# Caldeira: duelo chamuscado pela erupção / nodo da fileira da maré de lava.
+# island: engolido pela lava e de pé numa ilha de basalto; sunk: afundou (sem acesso).
+var scorched: bool = false
+var tide: bool = false
+var island: bool = false
+var sunk: bool = false
+
 # Disposição inicial das peças (ver Board.layout_cells); só duelos comuns/fortes sorteiam.
 var board_layout: String = Board.LAYOUT_CLASSIC
 

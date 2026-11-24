@@ -885,7 +885,7 @@ func _ai_find_advanced_enemy(card: ActionCard, board: Board, host: Node2D) -> Va
 				best_row = dist
 				best = pos
 	# só vale a carta quando a peça já passou da metade
-	if best != null and best_row <= board.rows / 2:
+	if best != null and best_row <= (board.rows >> 1):
 		return best
 	return null
 
@@ -1212,6 +1212,8 @@ func _process_boss_turn_events() -> void:
 		(boss_duel as DuelBossMine).mover_team = host.current_turn
 	elif boss_duel is DuelBossCume:
 		(boss_duel as DuelBossCume).mover_team = host.current_turn
+	elif boss_duel is DuelBossCaldeira:
+		(boss_duel as DuelBossCaldeira).mover_team = host.current_turn
 	await _process_boss_law_events(boss_duel)
 	if boss_duel.should_trigger_devour:
 		boss_duel.should_trigger_devour = false
@@ -1284,9 +1286,87 @@ func _process_boss_law_events(boss_duel: DuelBoss) -> void:
 	var host = _host
 	var center = host.board_offset + Vector2(host.board.cols * host.cell_size / 2.0, host.board.rows * host.cell_size / 2.0)
 	for ev in boss_duel.advance_turn():
-		if ev["type"] != "fireflies":
+		if ev["type"] != "fireflies" and not (ev["type"] in ["lava_flow", "foundry_fill", "cauldron_fill"]):
 			host.boss_say("law_" + str(ev["type"]))
 		match ev["type"]:
+			# ---------------- Caldeira (a Ferreira) ----------------
+			"anvil_crown":
+				var mine: bool = int(ev["team"]) == host.human_team
+				host.rule_banner_view.pop_rule_trigger(center, "MARTELADA NA BIGORNA!", Color(1.0, 0.7, 0.3), "anvil")
+				for ap in ev["tiles"]:
+					await _anvil_strike(ap)
+					host.boss_say("promote_player" if mine else "promote_boss")
+					host.animating_coronation_tile = ap
+					await host.king_animation_view.play_coronation(_cell_center(ap), host.cell_size, host.board.grid[ap.y][ap.x])
+					host.animating_coronation_tile = Vector2i(-1, -1)
+			"foundry_fill":
+				host.board.rule_fired.emit("foundry")
+				Sfx.play("moeda_conta", -4.0, 0.7 + 0.15 * float(ev["count"]))
+			"foundry_pour":
+				host.rule_banner_view.pop_rule_trigger(center, "A FERREIRA DERRAMA UMA PEÇA NOVA!", Color(1.0, 0.62, 0.3), "foundry")
+				Sfx.play("brotar")
+				var twf = create_tween().set_parallel(true)
+				for fp2 in ev["tiles"]:
+					host.piece_spawn_scales[fp2] = 0.0
+					Juice.burst(host, _cell_center(fp2), Color(1.0, 0.6, 0.2), 16, 220.0, 0.5, maxf(3.0, host.cell_size / 18.0), 200.0, 70.0)
+					twf.tween_method(func(v): host.piece_spawn_scales[fp2] = v, 0.0, 1.0, 0.5)\
+						.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+				await twf.finished
+				for fp3 in ev["tiles"]:
+					host.piece_spawn_scales.erase(fp3)
+			"lava_warn":
+				host.rule_banner_view.pop_rule_trigger(center, "A LAVA VAI ESCORRER!", Color(1.0, 0.55, 0.25), "lava_flow")
+				await get_tree().create_timer(0.55).timeout
+			"lava_flow":
+				Sfx.play("lava_mare", -10.0, 1.2)
+				for hp2 in ev["tiles"]:
+					Juice.burst(host, _cell_center(hp2), Color(1.0, 0.55, 0.2), 6, 120.0, 0.35, maxf(2.0, host.cell_size / 24.0), 220.0, 80.0)
+				if not ev["killed"].is_empty():
+					host.rule_banner_view.pop_rule_trigger(_cell_center(ev["killed"][0][0]), "ENGOLIDA PELA LAVA!", Color(1.0, 0.5, 0.2), "lava_flow")
+					for kv2 in ev["killed"]:
+						host.board.piece_destroyed.emit(kv2[0], kv2[1])
+					await get_tree().create_timer(0.35).timeout
+			"hammer_warn", "hammer_mark":
+				var tdama: bool = ev["type"] == "hammer_warn"
+				host.rule_banner_view.pop_rule_trigger(center, "A FERREIRA MIRA SUA DAMA!" if tdama else "A FERREIRA MIRA SUA PEÇA!", Color(1.0, 0.45, 0.35), "hammer")
+				await get_tree().create_timer(0.6).timeout
+			"hammer":
+				var hpos: Vector2i = ev["tiles"][0]
+				await _anvil_strike(hpos, 9.0 if ev["hit"] else 5.0)
+				if ev["hit"] and ev.get("smashed", false):
+					host.rule_banner_view.pop_rule_trigger(_cell_center(hpos), "ESMAGADA!", Color(1.0, 0.45, 0.35), "hammer")
+					host.board.piece_destroyed.emit(hpos, ev["piece"])
+					await get_tree().create_timer(0.45).timeout
+				elif ev["hit"]:
+					host.rule_banner_view.pop_rule_trigger(_cell_center(hpos), "DESCOROADA!", Color(1.0, 0.45, 0.35), "hammer")
+					await get_tree().create_timer(0.5).timeout
+					var cpos: Vector2i = ev["crown"]
+					if cpos.x >= 0 and host.board.grid[cpos.y][cpos.x] != Board.EMPTY:
+						host.boss_say("promote_boss")
+						host.animating_coronation_tile = cpos
+						await host.king_animation_view.play_coronation(_cell_center(cpos), host.cell_size, host.board.grid[cpos.y][cpos.x])
+						host.animating_coronation_tile = Vector2i(-1, -1)
+				elif ev["saved"]:
+					host.rule_banner_view.pop_rule_trigger(_cell_center(hpos), "PROTEGIDA!", Color(0.6, 0.95, 0.65), "hammer")
+					await get_tree().create_timer(0.5).timeout
+				else:
+					host.rule_banner_view.pop_rule_trigger(_cell_center(hpos), "ERROU!", Color(0.9, 0.85, 0.75), "hammer")
+					await get_tree().create_timer(0.45).timeout
+			"cauldron_fill":
+				host.board.rule_fired.emit("boiling_cauldron")
+			"cauldron_warn":
+				host.rule_banner_view.pop_rule_trigger(center, "O CALDEIRÃO VAI TRANSBORDAR!", Color(1.0, 0.55, 0.25), "boiling_cauldron")
+				Sfx.play("vulcao_ronco", -6.0)
+				await get_tree().create_timer(0.6).timeout
+			"cauldron":
+				host.rule_banner_view.pop_rule_trigger(center, "O CALDEIRÃO TRANSBORDOU!", Color(1.0, 0.5, 0.2), "boiling_cauldron")
+				Sfx.play("bomba_impacto", -4.0)
+				Juice.shake(host, 10.0, 0.35)
+				for cp3 in ev["tiles"]:
+					Juice.burst(host, _cell_center(cp3), Color(1.0, 0.55, 0.15), 12, 260.0, 0.5, maxf(3.0, host.cell_size / 18.0), 380.0, 90.0)
+				for kv3 in ev["killed"]:
+					host.board.piece_destroyed.emit(kv3[0], kv3[1])
+				await get_tree().create_timer(0.45).timeout
 			"night":
 				host.rule_banner_view.pop_rule_trigger(center, "A NOITE CAI!", Color(0.65, 0.55, 1.0), "owl_night")
 				await get_tree().create_timer(0.7).timeout
@@ -1451,6 +1531,17 @@ func _play_mine_move_events(pos: Vector2i, by_player: bool) -> Vector2i:
 				Juice.burst(host, bc, Color(0.85, 0.95, 1.0), 14, 220.0, 0.45, maxf(3.0, host.cell_size / 18.0), 320.0, 80.0)
 				Juice.burst(host, bc, Color(0.2, 0.35, 0.55), 8, 140.0, 0.4, maxf(3.0, host.cell_size / 20.0), 300.0, 80.0)
 				await get_tree().create_timer(0.3).timeout
+			"crown_price":
+				# Preço da Coroa: coroou, e a peça mais atrasada derrete na forja.
+				var vc = _cell_center(ev["pos"])
+				host.boss_say("law_crown_price")
+				Sfx.play("lava_mare", -6.0, 1.3)
+				host.board.piece_destroyed.emit(ev["pos"], ev["piece"])
+				Juice.ring(host, vc, host.cell_size * 0.6, Color(1.0, 0.55, 0.2), 4.0, 0.3)
+				Juice.burst(host, vc, Color(1.0, 0.55, 0.2), 14, 160.0, 0.5, maxf(3.0, host.cell_size / 20.0), -120.0, 80.0)
+				Juice.burst(host, vc, Color(1.0, 0.85, 0.4), 8, 120.0, 0.4, maxf(2.0, host.cell_size / 26.0), -80.0, 60.0)
+				host.rule_banner_view.pop_rule_trigger(vc, "DERRETEU NA FORJA!", Color(1.0, 0.55, 0.25), "crown_price")
+				await get_tree().create_timer(0.45).timeout
 			"slide":
 				# Gelo Escorregadio: a peça desliza mais uma casa.
 				pos = ev["to"]
@@ -1713,7 +1804,10 @@ func check_game_over() -> bool:
 	var host = _host
 	var custom_res = host.current_duel.check_custom_victory()
 	if custom_res.ended:
-		var reward = host.current_duel.calculate_reward_gold() if custom_res.won else {}
+		var kind: String = String(custom_res.get("kind", "")) if custom_res.won else ""
+		if kind == "blockade":
+			await _show_blockade()
+		var reward = host.current_duel.calculate_reward_gold(kind) if custom_res.won else {}
 		trigger_game_over(custom_res.won, reward, custom_res.title)
 		return true
 
@@ -1741,14 +1835,48 @@ func check_game_over() -> bool:
 			TutorialManager.duel1_sudden_death_done = true
 			await tutorial_force_sudden_death()
 			return false
-		var reward = host.current_duel.calculate_reward_gold()
-		trigger_game_over(true, reward, "VITORIA NO DUELO!")
+		# Sem peças = eliminação; com peças mas sem jogada = bloqueio total. O bloqueio
+		# ganha uma cena própria antes do painel (antes a vitória vinha do nada).
+		var kind: String = "elimination" if host.board.count_pieces(host.ai_team) == 0 else "blockade"
+		if kind == "blockade":
+			await _show_blockade()
+		var reward = host.current_duel.calculate_reward_gold(kind)
+		trigger_game_over(true, reward, "BLOQUEIO TOTAL!" if kind == "blockade" else "VITORIA NO DUELO!")
 		return true
 	elif host.board.get_all_valid_moves(host.human_team).is_empty():
 		trigger_game_over(false, {}, "", "Seu exercito ficou sem movimentos possiveis — bloqueio total do inimigo!")
 		return true
 
 	return false
+
+# Martelo da Ferreira descendo numa casa (Bigorna / Martelada): espera até a
+# batida, aí estalo de metal, tremor, faíscas; devolve logo depois do impacto.
+func _anvil_strike(pos: Vector2i, shake: float = 7.0) -> void:
+	var host = _host
+	CaldeiraBossFx.strike(pos)
+	await get_tree().create_timer(CaldeiraBossFx.STRIKE_IMPACT).timeout
+	var c = _cell_center(pos)
+	Sfx.play("martelo_bigorna")
+	Juice.shake(host, shake, 0.25)
+	Juice.ring(host, c, host.cell_size * 0.7, Color(1.0, 0.75, 0.4), 5.0, 0.3)
+	Juice.burst(host, c, Color(1.0, 0.82, 0.4), 18, 320.0, 0.45, maxf(3.0, host.cell_size / 18.0), 380.0, 90.0)
+	Juice.burst(host, c, Color(1.0, 0.5, 0.15), 8, 200.0, 0.35, maxf(2.0, host.cell_size / 24.0), 300.0, 60.0)
+	await get_tree().create_timer(0.22).timeout
+
+# Bloqueio total: marca cada peça inimiga travada e mostra a faixa explicando.
+func _show_blockade() -> void:
+	var host = _host
+	host.selected_tile = Vector2i(-1, -1)
+	host.valid_moves_for_selected = []
+	host.queue_redraw()
+	var cells: Array = []
+	var b = host.board
+	for r in range(b.rows):
+		for c in range(b.cols):
+			var p = b.grid[r][c]
+			if p != Board.EMPTY and p.owner_team == host.ai_team:
+				cells.append(Vector2i(c, r))
+	await BlockadeView.play(host, cells, host)
 
 func on_sudden_death_ended(won: bool, _base_msg: String) -> void:
 	if won:

@@ -7,7 +7,7 @@ extends Node
 # Duelos: Music.play_duel("floresta") toca seções de 8 compassos sorteadas (sem repetir a
 # anterior), cada uma em 2 camadas sincronizadas (base + tensão). Music.set_tension(0..1)
 # faz a camada de tensão subir/descer; Music.muffle(true/false) abafa tudo (moeda girando).
-# As faixas são geradas por tools/music_gen.py e tools/music_duel.py.
+# As faixas são geradas por tools/music_gen.py e tools/music_duel.py (Caldeira: tools/music_caldeira.py).
 
 const TRACKS := {
 	"menu": "res://assets/audio/musica/mapa/menu.ogg",
@@ -15,8 +15,7 @@ const TRACKS := {
 	"deserto": "res://assets/audio/musica/mapa/deserto.ogg",
 	"mina": "res://assets/audio/musica/mapa/mina.ogg",
 	"cume": "res://assets/audio/musica/mapa/cume.ogg",
-	# Caldeira ainda sem trilha própria: usa a do Deserto (calor) até gerar a dela.
-	"caldeira": "res://assets/audio/musica/mapa/deserto.ogg",
+	"caldeira": "res://assets/audio/musica/mapa/caldeira.ogg",
 }
 # (+6 dB em relação à versão antiga: a trilha estava baixa mesmo no 100%)
 const TRACK_DB := {"menu": -1.0, "floresta": -2.0, "deserto": -2.0, "mina": -2.0, "cume": -2.0, "caldeira": -2.0}
@@ -25,10 +24,10 @@ const SILENT_DB := -60.0
 # arquivos continuam os que tools/music_*.py geram).
 const DUEL_DIR := "res://assets/audio/musica/duelo/"
 
-const DUEL_SECTIONS := {"floresta": 6, "deserto": 6, "mina": 6, "cume": 6, "boss_floresta": 6, "boss_deserto": 6, "boss_mina": 6, "boss_cume": 6}
-const DUEL_SD_SECTIONS := {"floresta": 2, "deserto": 2, "mina": 2, "cume": 2, "boss_floresta": 2, "boss_deserto": 2, "boss_mina": 2, "boss_cume": 2}   # Morte Súbita: andamento maior, mais seco e urgente
+const DUEL_SECTIONS := {"floresta": 6, "deserto": 6, "mina": 6, "cume": 6, "caldeira": 6, "boss_floresta": 6, "boss_deserto": 6, "boss_mina": 6, "boss_cume": 6, "boss_caldeira": 6}
+const DUEL_SD_SECTIONS := {"floresta": 2, "deserto": 2, "mina": 2, "cume": 2, "caldeira": 2, "boss_floresta": 2, "boss_deserto": 2, "boss_mina": 2, "boss_cume": 2, "boss_caldeira": 2}   # Morte Súbita: andamento maior, mais seco e urgente
 # Biomas sem seções de duelo próprias usam as de outro (provisório).
-const DUEL_ALIAS := {"caldeira": "deserto", "boss_caldeira": "boss_deserto"}
+const DUEL_ALIAS := {}
 const DUEL_BASE_DB := -3.0
 
 ## Chave de duelo que realmente tem seções (aplica DUEL_ALIAS); "" se nenhuma.
@@ -36,6 +35,11 @@ static func duel_key(key: String) -> String:
 	key = String(DUEL_ALIAS.get(key, key))
 	return key if DUEL_SECTIONS.has(key) else ""
 const DUEL_TENSION_DB := -2.0
+# Andamento das faixas que têm algo no cenário batendo junto (marretas da Caldeira).
+# Tem que bater com tools/music_caldeira.py. Toda faixa/seção começa num tempo forte.
+const TRACK_BPM := {"caldeira": 84.0}
+const DUEL_BPM := {"caldeira": 96.0, "boss_caldeira": 108.0}
+const DUEL_SD_BPM := {"caldeira": 128.0, "boss_caldeira": 136.0}
 const MUFFLE_HZ := 900.0
 const OPEN_HZ := 20500.0
 
@@ -58,6 +62,30 @@ var _b: AudioStreamPlayer
 var _active: AudioStreamPlayer = null
 var _current: String = ""
 var _tween: Tween = null
+
+## Quantos tempos (batidas) já tocaram na faixa atual, já descontando a latência da
+## saída de áudio (para o que se vê bater junto com o que se ouve). -1 se a faixa que
+## está tocando não tem andamento conhecido (TRACK_BPM / DUEL_BPM).
+static func beat_time() -> float:
+	if _inst == null:
+		return -1.0
+	return _inst._beat_time()
+
+func _beat_time() -> float:
+	var p: AudioStreamPlayer = null
+	var bpm: float = 0.0
+	if _duel_on:
+		var cur: Dictionary = _slots[_slot_cur]
+		if cur["live"]:
+			p = cur["base"]
+		bpm = float((DUEL_SD_BPM if _sd_on else DUEL_BPM).get(_duel_biome, 0.0))
+	elif _current != "" and _active != null:
+		p = _active
+		bpm = float(TRACK_BPM.get(_current, 0.0))
+	if p == null or bpm <= 0.0 or not p.playing:
+		return -1.0
+	var pos: float = p.get_playback_position() + AudioServer.get_time_since_last_mix() - AudioServer.get_output_latency()
+	return maxf(0.0, pos) * bpm / 60.0
 
 func _duel_folder() -> String:
 	return _duel_biome.replace("boss_", "chefe_")

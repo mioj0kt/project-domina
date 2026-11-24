@@ -4,8 +4,8 @@ extends RefCounted
 # Biblioteca estática de "game juice" (feedback visual): hover/clique em
 # controles, pulso, partículas pixel, texto flutuante, screen shake e hit-stop.
 # Tudo é opcional e seguro: se o alvo for liberado no meio, o tween morre junto.
-# O usuário pode desligar os efeitos fortes (shake/hit-stop) em SettingsMenu
-# via Juice.screen_fx = false (aqui fica ligado por padrão).
+# Juice.screen_fx = false desliga os efeitos fortes (shake/hit-stop); fica sempre
+# ligado no jogo (a opção foi tirada das configurações), sobra só para testes.
 
 const C_GOLD := Color("#d9a441")
 const C_CREAM := Color("#efe6cf")
@@ -25,8 +25,8 @@ static func hover_pop(ctrl: Control, hover_scale: float = 1.05, press_scale: flo
 	var go := func(target: float, t: float, trans: int):
 		if not is_instance_valid(ctrl) or not ctrl.is_inside_tree():
 			return
-		if ctrl is BaseButton and (ctrl as BaseButton).disabled:
-			target = 1.0
+		if (ctrl is BaseButton and (ctrl as BaseButton).disabled) or ctrl.has_meta("slab"):
+			target = 1.0   # placas com encaixe (SlabStyleBox) não crescem: a peça já marca a escolha
 		ctrl.pivot_offset = ctrl.size / 2.0
 		var old: Tween = ctrl.get_meta("juice_tween") if ctrl.has_meta("juice_tween") else null
 		if old != null and old.is_valid():

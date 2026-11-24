@@ -70,11 +70,14 @@ func _draw() -> void:
 				draw_rect(rect, board.grid_border_color, false, 1.0)
 
 	for pos in board.scorched_tiles.keys():
-		if board.crystal_tiles.has(pos) or board.snow_tiles.has(pos) or board.water_tiles.has(pos):
+		if board.crystal_tiles.has(pos) or board.snow_tiles.has(pos) or board.water_tiles.has(pos) or board.crust_tiles.has(pos):
 			continue   # cristal do Ricochete (junto com as peças) / neve da Avalanche (CumeBossFx)
 		var tile_rect = Rect2(board_offset.x + pos.x * cell_size, board_offset.y + pos.y * cell_size, cell_size, cell_size)
 		if board.sand_tiles.has(pos):
 			_draw_sand_cover(tile_rect, pos)
+			continue
+		if board.lava_tiles.has(pos) or board.ember_tiles.has(pos):
+			_draw_caldeira_tile(tile_rect, pos, board)
 			continue
 		draw_rect(tile_rect, Color(1.0, 0.3, 0.05, 0.5))
 		PixelRenderer.draw_pixel_corners(self, tile_rect, Color(1.0, 0.75, 0.1, 0.95), 8.0, 2.5)
@@ -86,6 +89,7 @@ func _draw() -> void:
 	_draw_sandstorm_telegraph(board_offset, cell_size)
 	MineBossFx.draw_under(self, host, board, board_offset, cell_size)
 	CumeBossFx.draw_under(self, host, board, board_offset, cell_size)
+	CaldeiraBossFx.draw_under(self, host, board, board_offset, cell_size)
 	_draw_light_tile_laws(board, board_offset, cell_size)
 
 	if board.rule_pipeline != null and (board.rule_pipeline.has_rule("sacred_zone") or board.rule_pipeline.has_rule("power_center")):
@@ -204,6 +208,7 @@ func _draw() -> void:
 
 	_draw_ricochet_paths(board_offset, cell_size)
 	CumeBossFx.draw_over(self, host, board, board_offset, cell_size)
+	CaldeiraBossFx.draw_over(self, host, board, board_offset, cell_size)
 	_draw_gust_preview(board_offset, cell_size)
 	_draw_gust_slide(board, board_offset, cell_size)
 	_draw_silence_badges(board, board_offset, cell_size)
@@ -516,6 +521,76 @@ func _draw_trap_tiles(board: Board, board_offset: Vector2, cell_size: float) -> 
 		draw_rect(Rect2(o + Vector2(3.6, 8) * u, Vector2(1.6, 0.9) * u), lit)
 		PixelRenderer.draw_pixel_corners(self, rect, Color(0.75, 0.55, 0.95, 0.9), 8.0, 2.0)
 
+# Obstáculos do mapa da Caldeira: casa de lava (ilha) / casa em brasa com as rodadas que
+# faltam para esfriar (duelo chamuscado). Arte animada das casas da Caldeira.
+const _CALDEIRA_CASAS := "res://assets/sprites/biomas/caldeira/tabuleiro/casas/anim/"
+static var _cald_tex: Dictionary = {}
+
+static func _cald_frame(kind: String, light: bool, f: int) -> Texture2D:
+	var key: String = "%s_%s_f%d" % [kind, "clara" if light else "escura", f % 4 + 1]
+	if not _cald_tex.has(key):
+		var p: String = _CALDEIRA_CASAS + key + ".png"
+		_cald_tex[key] = load(p) if ResourceLoader.exists(p) else null
+	return _cald_tex[key]
+
+const _CALDEIRA_LAGO := "res://assets/sprites/biomas/caldeira/tabuleiro/lagos/anim/lago_1111_f%d.png"
+
+static func _lago_frame(f: int) -> Texture2D:
+	var key: String = "lago_f%d" % (f % 4 + 1)
+	if not _cald_tex.has(key):
+		var p: String = _CALDEIRA_LAGO % (f % 4 + 1)
+		_cald_tex[key] = load(p) if ResourceLoader.exists(p) else null
+	return _cald_tex[key]
+
+func _draw_caldeira_tile(rect: Rect2, pos: Vector2i, board: Board) -> void:
+	var t: float = Time.get_ticks_msec() / 1000.0
+	var light: bool = (pos.x + pos.y) % 2 == 0
+	var lava: bool = board.lava_tiles.has(pos)
+	if lava:
+		# lava de borda a borda (a peça do miolo do lago do mapa, animada); casas de lava
+		# vizinhas emendam e só a beira que encosta em casa de pedra ganha a crosta
+		var lt: Texture2D = _lago_frame(int(t * 5.0))
+		if lt != null:
+			draw_texture_rect(lt, rect, false)
+		else:
+			draw_rect(rect, Color(0.94, 0.4, 0.16))
+		var u: float = maxf(1.0, roundf(rect.size.x / 26.0))
+		var crust := Color("#7a2420")
+		var hot := Color("#c63a22")
+		for d in [Vector2i(0, -1), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(1, 0)]:
+			var nb: Vector2i = pos + d
+			if board.lava_tiles.has(nb) or not board.is_valid_pos(nb.y, nb.x):
+				continue
+			var outer: Rect2
+			var inner: Rect2
+			match d:
+				Vector2i(0, -1):
+					outer = Rect2(rect.position, Vector2(rect.size.x, u))
+					inner = Rect2(rect.position + Vector2(0, u), Vector2(rect.size.x, u))
+				Vector2i(0, 1):
+					outer = Rect2(rect.position + Vector2(0, rect.size.y - u), Vector2(rect.size.x, u))
+					inner = Rect2(rect.position + Vector2(0, rect.size.y - u * 2.0), Vector2(rect.size.x, u))
+				Vector2i(-1, 0):
+					outer = Rect2(rect.position, Vector2(u, rect.size.y))
+					inner = Rect2(rect.position + Vector2(u, 0), Vector2(u, rect.size.y))
+				_:
+					outer = Rect2(rect.position + Vector2(rect.size.x - u, 0), Vector2(u, rect.size.y))
+					inner = Rect2(rect.position + Vector2(rect.size.x - u * 2.0, 0), Vector2(u, rect.size.y))
+			draw_rect(inner, hot)
+			draw_rect(outer, crust)
+		return
+	var tex: Texture2D = _cald_frame("casa_brasa", light, int(t * 5.0) + pos.x + pos.y)
+	if tex != null:
+		draw_texture_rect(tex, rect, false)
+	else:
+		draw_rect(rect, Color(0.9, 0.3, 0.05, 0.8))
+	var turns: int = int(board.scorched_tiles.get(pos, 0))
+	var fs: int = int(rect.size.y * 0.55)
+	var base_y: float = rect.position.y + rect.size.y * 0.5 + fs * 0.32
+	var txt: String = str(turns)
+	draw_string(_BADGE_FONT, Vector2(rect.position.x + 2.0, base_y + 2.0), txt, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, fs, Color(0.12, 0.05, 0.05))
+	draw_string(_BADGE_FONT, Vector2(rect.position.x, base_y), txt, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, fs, Color(1.0, 0.92, 0.6))
+
 func _draw_fire_tiles(board: Board, board_offset: Vector2, cell_size: float) -> void:
 	if _fire_tex == null and ResourceLoader.exists(FIRE_SHEET):
 		_fire_tex = load(FIRE_SHEET)
@@ -548,12 +623,7 @@ func _draw_piece_status(piece: BoardPiece, center: Vector2, size: float) -> void
 	elif piece.rooted_turns > 0 and host.board != null and host.board.hungry_roots_team != 0:
 		_draw_roots_front(piece, center, size)
 	elif piece.rooted_turns > 0:
-		var half = size * 0.34
-		var col = Color(0.62, 0.42, 0.85, 0.95)
-		for i in range(3):
-			var x = center.x - half + half * i
-			draw_line(Vector2(x, center.y - half), Vector2(x, center.y + half), col, 3.0)
-		draw_rect(Rect2(center - Vector2(half, half), Vector2(half * 2.0, half * 2.0)), col, false, 3.0)
+		_draw_chained(center, size, piece.rooted_turns)
 	if piece.fuse:
 		# Estopim: pavio aceso no canto superior esquerdo.
 		var fc = center + Vector2(-size * 0.3, -size * 0.3)
@@ -562,23 +632,7 @@ func _draw_piece_status(piece: BoardPiece, center: Vector2, size: float) -> void
 		draw_arc(fc, size * 0.13, 0, TAU, 16, Color(1.0, 0.55, 0.15), 2.0)
 		draw_circle(fc + Vector2(size * 0.04, -size * 0.09), size * (0.05 + 0.03 * fp), Color(1.0, 0.85, 0.3))
 	if piece.shield_turns > 0:
-		# Escudo (Lei do Luto): bolha azul pulsante + contorno ao redor da peça.
-		var pulse = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 220.0)
-		var rad = size * 0.46
-		draw_circle(center, rad, Color(0.35, 0.65, 1.0, 0.16 + 0.1 * pulse))
-		draw_arc(center, rad, 0, TAU, 32, Color(0.55, 0.8, 1.0, 0.75 + 0.25 * pulse), 3.0)
-		# Selo de escudo no canto inferior esquerdo.
-		# O número no selo = quantos turnos do dono o escudo ainda dura.
-		var sc = center + Vector2(-size * 0.3, size * 0.24)
-		var s = size * 0.2
-		var shield_pts = PackedVector2Array([sc + Vector2(-s, -s), sc + Vector2(s, -s), sc + Vector2(s, s * 0.2), sc + Vector2(0, s * 1.3), sc + Vector2(-s, s * 0.2)])
-		draw_colored_polygon(shield_pts, Color(0.16, 0.36, 0.7))
-		draw_polyline(PackedVector2Array([shield_pts[0], shield_pts[1], shield_pts[2], shield_pts[3], shield_pts[4], shield_pts[0]]), Color(0.9, 0.97, 1.0), 2.0)
-		var sfs: int = 32 if size >= 60.0 else 16
-		var stxt := str(piece.shield_turns)
-		var sbase: float = sc.y + s * 0.15 + (_BADGE_FONT.get_ascent(sfs) - _BADGE_FONT.get_descent(sfs)) / 2.0
-		draw_string(_BADGE_FONT, Vector2(sc.x - s + 1, sbase + 1), stxt, HORIZONTAL_ALIGNMENT_CENTER, s * 2.0, sfs, Color(0.05, 0.08, 0.16))
-		draw_string(_BADGE_FONT, Vector2(sc.x - s, sbase), stxt, HORIZONTAL_ALIGNMENT_CENTER, s * 2.0, sfs, Color(1, 1, 1))
+		_draw_shielded(center, size, piece.shield_turns)
 	if piece.temp_king_turns > 0:
 		var badge = center + Vector2(size * 0.3, -size * 0.3)
 		draw_circle(badge, size * 0.15, Color(0.14, 0.1, 0.17))
@@ -591,6 +645,120 @@ func _draw_piece_status(piece: BoardPiece, center: Vector2, size: float) -> void
 		var r = size * 0.15
 		var base_y = badge.y + (font.get_ascent(fs) - font.get_descent(fs)) / 2.0
 		draw_string(font, Vector2(badge.x - r, base_y), txt, HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, fs, Color(1.0, 0.9, 0.5))
+
+# --- Marcas de status em pixel art (mesmo tamanho de pixel das peças) ---------------
+func _pix_unit(size: float) -> float:
+	return maxf(2.0, roundf(size / 24.0))
+
+# Desenha um desenho de pixels (linhas de texto) centrado em `c`; cada letra é uma cor
+# da paleta, "." é vazio.
+func _draw_pix(c: Vector2, u: float, rows: Array, pal: Dictionary, alpha: float = 1.0) -> void:
+	var h: int = rows.size()
+	var w: int = String(rows[0]).length()
+	var o: Vector2 = (c - Vector2(w, h) * u * 0.5).round()
+	for y in range(h):
+		var row: String = rows[y]
+		for x in range(w):
+			var ch: String = row[x]
+			if ch == "." or not pal.has(ch):
+				continue
+			var col: Color = pal[ch]
+			draw_rect(Rect2(o + Vector2(x, y) * u, Vector2(u, u)), Color(col, col.a * alpha))
+
+const _SHIELD_BADGE: Array = [
+	"..OOOOOOO..",
+	".OHHHHHHHO.",
+	"OHBBBBBBBHO",
+	"OHBBBBBBBHO",
+	"OHBBBBBBBHO",
+	"OHBBBBBBBHO",
+	"OHBBBBBBBHO",
+	".OHBBBBBHO.",
+	".OHBBBBBHO.",
+	"..OHBBBHO..",
+	"...OHBHO...",
+	"....OOO....",
+]
+const _PADLOCK: Array = [
+	"..OOOOO..",
+	".OHHHHHO.",
+	".OH...HO.",
+	".OH...HO.",
+	"OOOOOOOOO",
+	"OGGGGGGGO",
+	"OGGGKGGGO",
+	"OGGKKKGGO",
+	"OGGGKGGGO",
+	"ODDDDDDDO",
+	"OOOOOOOOO",
+]
+
+# Escudo: anel de pixels azul-claro girando em volta da peça + selo de escudo com os
+# turnos que faltam (canto de baixo à esquerda).
+func _draw_shielded(center: Vector2, size: float, turns: int) -> void:
+	var t: float = Time.get_ticks_msec() / 1000.0
+	var u: float = _pix_unit(size)
+	var rad: float = size * 0.5
+	var steps: int = int(TAU * rad / u)
+	var rot: int = int(t * 10.0)
+	for i in range(steps):
+		var seg: int = (i + rot) % 8
+		if seg >= 5:
+			continue
+		var a: float = TAU * float(i) / float(steps)
+		var p: Vector2 = (center + Vector2(cos(a), sin(a)) * rad - Vector2(u, u) * 0.5).round()
+		var col := Color("#e8f4ff") if seg == 2 else Color("#7fb6ff")
+		draw_rect(Rect2(p, Vector2(u, u)), Color(col, 0.9))
+	# brilhinhos subindo pelo anel
+	for j in range(2):
+		var a2: float = t * 2.2 + PI * float(j)
+		var q: Vector2 = (center + Vector2(cos(a2), sin(a2)) * (rad - u * 2.0) - Vector2(u, u) * 0.5).round()
+		draw_rect(Rect2(q, Vector2(u, u)), Color(1, 1, 1, 0.8))
+	var sc: Vector2 = center + Vector2(-size * 0.32, size * 0.26)
+	_draw_pix(sc, u, _SHIELD_BADGE, {"O": Color("#1b2340"), "H": Color("#cfe6ff"), "B": Color("#3b6cc4")})
+	# número no miolo azul do escudo (a parte larga, um pouco acima do meio do desenho)
+	var so: Vector2 = (sc - Vector2(11, 12) * u * 0.5).round()
+	_draw_pix_number(so + Vector2(5.5, 5.0) * u, str(turns), maxi(1, int(roundf(u * 0.5))), Color(1, 1, 1), Color("#1b2340"))
+
+# Número em pixel art nítido (fonte m5x7: cada pixel da letra = `k` pixels da tela; o
+# tamanho da fonte tem que ser 16*k, senão os pixels da letra saem tortos), com o
+# desenho dos algarismos (não a caixa da fonte) centrado em `c` e alinhado à grade.
+func _draw_pix_number(c: Vector2, txt: String, k: int, col: Color, shadow: Color) -> void:
+	var fs: int = 16 * k
+	var ink_w: float = _BADGE_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x - float(k)
+	var top_left: Vector2 = (c - Vector2(ink_w, 7.0 * k) * 0.5).round()
+	var base: Vector2 = top_left + Vector2(0, 7.0 * k)    # a tinta vai de base-7k até base
+	draw_string(_BADGE_FONT, base + Vector2(k, k), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, shadow)
+	draw_string(_BADGE_FONT, base, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+
+# Presa (Emboscada, Mão Sombria...): duas correntes cruzadas por cima da peça e um
+# cadeado embaixo, com os turnos que faltam.
+func _draw_chained(center: Vector2, size: float, turns: int) -> void:
+	var u: float = _pix_unit(size)
+	var reach: float = size * 0.4
+	var dark := Color("#2a2236")
+	var mid := Color("#6e6083")
+	var lite := Color("#b9aed0")
+	for sgn in [-1.0, 1.0]:
+		var a: Vector2 = center + Vector2(-reach, -reach * sgn)
+		var b: Vector2 = center + Vector2(reach, reach * sgn)
+		var n: int = int(a.distance_to(b) / (u * 2.5))
+		for i in range(n + 1):
+			var p: Vector2 = a.lerp(b, float(i) / float(n))
+			var o: Vector2 = (p - Vector2(u, u) * 1.5).round()
+			# elo: quadradinho vazado 3x3 (alternando claro/escuro para parecer corrente)
+			draw_rect(Rect2(o, Vector2(u * 3.0, u)), lite if i % 2 == 0 else mid)
+			draw_rect(Rect2(o + Vector2(0, u), Vector2(u, u)), mid)
+			draw_rect(Rect2(o + Vector2(u * 2.0, u), Vector2(u, u)), mid)
+			draw_rect(Rect2(o + Vector2(0, u * 2.0), Vector2(u * 3.0, u)), dark)
+	var lc: Vector2 = center + Vector2(0, size * 0.3)
+	_draw_pix(lc, u, _PADLOCK, {"O": dark, "H": lite, "G": Color("#c99a3a"), "K": Color("#3a2410"), "D": Color("#8a5428")})
+	var fs: int = int(u * 6.0)
+	if turns > 0 and turns < 99:
+		var tx := str(turns)
+		var by: float = lc.y + u * 1.5 + (_BADGE_FONT.get_ascent(fs) - _BADGE_FONT.get_descent(fs)) / 2.0
+		draw_string(_BADGE_FONT, Vector2(lc.x + u * 4.0 + u * 0.5, by + u * 0.5), tx, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, dark)
+		draw_string(_BADGE_FONT, Vector2(lc.x + u * 4.0, by), tx, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1))
 
 # Contragolpe: coroa de espinhos roxos (pontas vermelhas) em volta da peça, pulsando.
 func _draw_counterstrike_spikes(center: Vector2, size: float) -> void:

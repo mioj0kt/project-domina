@@ -21,8 +21,6 @@ const C_CREAM := Color(0.94, 0.9, 0.81)
 # 0 = janela, 1 = janela em tela cheia (sem borda), 2 = tela cheia (exclusiva)
 var display_mode: int = 0
 var resolution: Vector2i = Vector2i(1920, 1080)
-var screen_fx: bool = true   # tremor de tela + hit-stop (Juice.screen_fx)
-var _fx_btn: Button
 # Volumes (0..1) por canal de áudio; ver Sfx.ensure_buses().
 var volumes: Dictionary = {"Master": 1.0, "SFX": 1.0, "Music": 0.8}
 const VOLUME_LABELS: Dictionary = {"Master": "VOLUME GERAL", "SFX": "EFEITOS SONOROS", "Music": "MÚSICA"}
@@ -44,6 +42,7 @@ var _res_list: Array[Vector2i] = []
 var _apply_token: int = 0
 
 func _ready() -> void:
+	MenuPieceCursor.auto(self)   # peça do jogador acompanhando o mouse pelos botões
 	layer = 180
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	# Sliders pixel art em todo o jogo: mescla no tema do projeto (a janela raiz
@@ -73,8 +72,7 @@ func _load_settings() -> void:
 		volumes[k] = clampf(float(cfg.get_value("audio", String(k), volumes[k])), 0.0, 1.0)
 	_apply_volumes()
 	display_mode = clampi(int(cfg.get_value("display", "mode", 0)), 0, 2)
-	screen_fx = bool(cfg.get_value("display", "screen_fx", true))
-	Juice.screen_fx = screen_fx
+	Juice.screen_fx = true   # tremor/impacto sempre ligados (a opção saiu das configurações)
 	PieceSkin.set_player(int(cfg.get_value("pieces", "player", 0)))
 	PieceSkin.set_star(int(cfg.get_value("pieces", "player_star", 0)))
 	var r = cfg.get_value("display", "resolution", resolution)
@@ -99,7 +97,6 @@ func _save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("display", "mode", display_mode)
 	cfg.set_value("display", "resolution", resolution)
-	cfg.set_value("display", "screen_fx", screen_fx)
 	cfg.set_value("pieces", "player", PieceSkin.player_idx)
 	cfg.set_value("pieces", "player_star", PieceSkin.player_star)
 	for k in volumes.keys():
@@ -281,19 +278,6 @@ func _build_ui() -> void:
 		if k == "SFX":
 			sl.drag_ended.connect(func(_c): Sfx.play("mover"))
 
-	v.add_child(_section_label("EFEITOS DE TELA (TREMOR E IMPACTO)"))
-	_fx_btn = Button.new()
-	_fx_btn.toggle_mode = true
-	_fx_btn.custom_minimum_size = Vector2(0, 72)
-	_fx_btn.add_theme_font_size_override("font_size", 28)
-	_fx_btn.focus_mode = Control.FOCUS_NONE
-	_fx_btn.pressed.connect(func():
-		screen_fx = not screen_fx
-		Juice.screen_fx = screen_fx
-		_save_settings()
-		_refresh())
-	v.add_child(_fx_btn)
-
 	var hint := Label.new()
 	hint.name = "Hint"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -385,9 +369,6 @@ func _refresh() -> void:
 		var on := i == display_mode
 		_mode_btns[i].button_pressed = on
 		_color_button(_mode_btns[i], C_GREEN if on else Color.WHITE, on)
-	_fx_btn.button_pressed = screen_fx
-	_fx_btn.text = "LIGADOS" if screen_fx else "DESLIGADOS"
-	_color_button(_fx_btn, C_GREEN if screen_fx else C_RED, screen_fx)
 	_res_list = _available_resolutions()
 	_res_label.text = "%d x %d" % [resolution.x, resolution.y]
 	var idx := _res_list.find(resolution)

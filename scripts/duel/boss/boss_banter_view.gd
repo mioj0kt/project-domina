@@ -15,8 +15,8 @@ const FACE_PX: float = 96.0
 const BUBBLE_W: float = 560.0
 const FONT_SIZE: int = 32
 const BUBBLE_H: float = 140.0   # altura do balão (até 3 linhas)
-const TYPE_CPS: float = 38.0       # caracteres por segundo
-const ALWAYS := ["start", "win", "lose"]
+const ALWAYS := ["start", "win", "lose", "sudden_death", "multi_capture", "boss_combo", "boss_low", "player_low"]
+# (velocidade, pausas e voz de cada chefe: BossDialogue.type_cps / pause_mul / voice)
 
 var biome: String = "floresta"
 var law_id: String = ""
@@ -30,7 +30,12 @@ var _name_label: Label
 var _hide_tween: Tween
 var _type_tween: Tween
 var _last_line: String = ""
-var _last_vis: int = 0
+# digitação própria (em vez de tween): segura nas pontuações, no ritmo de cada chefe
+var _typing: bool = false
+var _type_pos: float = 0.0
+var _type_pause: float = 0.0
+var _queued: Array = []          # falas que entram logo depois da atual (ex.: a da lei)
+var _cap_times: Dictionary = {}  # evento de captura -> último instante (detecta combo)
 var _last_time_ms: int = -100000
 var _busy_until_ms: int = 0
 var _intro_fx: IntroFx = null
@@ -194,7 +199,7 @@ func play_intro() -> void:
 	_root.add_child(_big_title)
 
 	# 1) Escurece com um tremor de pressentimento.
-	Sfx.play("boss_intro_deserto" if biome == "deserto" else "boss_intro_floresta")
+	Sfx.play(BossDialogue.intro_sound(biome))
 	var t1 := create_tween()
 	t1.tween_property(_intro_fx, "dim", 1.0, 0.35)
 	await t1.finished
@@ -272,6 +277,14 @@ func place_near(_ref: Control = null) -> void:
 func react(event: String, force: bool = false) -> void:
 	if not enabled or _root == null or intro_playing:
 		return
+	# duas capturas do mesmo lado quase juntas = captura múltipla (fala especial)
+	if event == "piece_lost" or event == "capture_boss":
+		var t_now: int = Time.get_ticks_msec()
+		var prev: int = int(_cap_times.get(event, -100000))
+		_cap_times[event] = t_now
+		if t_now - prev < 1200:
+			_cap_times[event] = -100000   # uma fala por combo
+			event = "multi_capture" if event == "piece_lost" else "boss_combo"
 	var always: bool = ALWAYS.has(event)
 	var now: int = Time.get_ticks_msec()
 	if not always and not force:
@@ -285,20 +298,68 @@ func react(event: String, force: bool = false) -> void:
 	var line: String = BossDialogue.pick(biome, event, law_id, _last_line)
 	if line == "":
 		return
+	_queued.clear()
 	say(line)
+	# no começo: primeiro a personalidade, depois a fala que apresenta a lei
+	if event == "start" and law_id != "":
+		var law_line: String = BossDialogue.pick(biome, "start_" + law_id)
+		if law_line != "":
+			_queued.append(law_line)
 
-# "Blip" de voz por letra revelada (estilo Undertale): Musgo na floresta, Faraó no deserto.
-func _process(_delta: float) -> void:
-	if _label == null:
+# Digitação letra a letra com "blip" de voz (estilo Undertale). Cada chefe tem a
+# sua voz, a sua velocidade e o seu jeito de segurar nas pontuações; o tom de cada
+# letra varia um pouco (mais "cantado" no Faraó e no Garimpeiro, mais reto no
+# Montanhista).
+func _process(delta: float) -> void:
+	if _label == null or not _typing:
 		return
-	var vis: int = _label.visible_characters
+	if _type_pause > 0.0:
+		_type_pause -= delta
+		return
 	var txt: String = _label.text
-	if vis > _last_vis and vis <= txt.length() and _bubble != null and _bubble.visible:
-		for i in range(_last_vis, vis):
-			if i >= 0 and i < txt.length() and not " .,;:!?…-—\n".contains(txt[i]):
-				Sfx.play("voz_farao" if biome == "deserto" else "voz_musgo")
-				break
-	_last_vis = vis if vis >= 0 else txt.length()
+	var before: int = int(_type_pos)
+	_type_pos += delta * BossDialogue.type_cps(biome)
+	var upto: int = mini(int(_type_pos), txt.length())
+	var blipped: bool = false
+	for i in range(before, upto):
+		var ch: String = txt[i]
+		var next: String = txt[i + 1] if i + 1 < txt.length() else " "
+		if not blipped and not " .,;:!?…-—\n\"".contains(ch):
+			var spread: float = BossDialogue.pitch_spread(biome)
+			var up: bool = ch == ch.to_upper() and ch != ch.to_lower()   # CAPS = gritando
+			Sfx.play(BossDialogue.voice(biome), 2.0 if up else 0.0, 1.0 + spread * float((ch.unicode_at(0) % 5) - 2) + (0.08 if up else 0.0))
+			blipped = true
+		# segura nas pontuações (só no fim do sinal: "..." pausa uma vez)
+		if ".!?…".contains(ch) and not ".!?…".contains(next):
+			_type_pause = 0.22 * BossDialogue.pause_mul(biome)
+			upto = i + 1
+			_type_pos = float(upto)
+			break
+		elif (ch == "," or ch == ";" or ch == ":") and next == " ":
+			_type_pause = 0.09 * BossDialogue.pause_mul(biome)
+			upto = i + 1
+			_type_pos = float(upto)
+			break
+	_label.visible_characters = upto
+	if upto >= txt.length():
+		_typing = false
+		_face.talking = false
+		_finish_line(txt)
+
+func _finish_line(text: String) -> void:
+	var hold: float = maxf(2.6, 1.4 + 0.045 * float(text.length()))
+	_busy_until_ms = Time.get_ticks_msec() + int(hold * 1000.0)
+	if _hide_tween != null and _hide_tween.is_valid():
+		_hide_tween.kill()
+	_hide_tween = create_tween()
+	_hide_tween.tween_interval(hold)
+	if not _queued.is_empty():
+		_hide_tween.tween_callback(func():
+			if not _queued.is_empty():
+				say(String(_queued.pop_front())))
+		return
+	_hide_tween.tween_property(_bubble, "modulate:a", 0.0, 0.3)
+	_hide_tween.tween_callback(func(): _bubble.visible = false)
 
 func say(text: String) -> void:
 	var fr0: Control = _root.get_node("Frame")
@@ -323,13 +384,8 @@ func say(text: String) -> void:
 	fr.pivot_offset = fr.size / 2.0
 	fr.scale = Vector2(1.12, 1.12)
 	create_tween().tween_property(fr, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	var type_t: float = float(text.length()) / TYPE_CPS
-	_type_tween = create_tween()
-	_type_tween.tween_property(_label, "visible_characters", text.length(), type_t)
-	_type_tween.tween_callback(func(): _face.talking = false)
-	var hold: float = maxf(3.2, 1.8 + 0.05 * float(text.length()))
-	_busy_until_ms = Time.get_ticks_msec() + int((type_t + hold) * 1000.0)
-	_hide_tween = create_tween()
-	_hide_tween.tween_interval(type_t + hold)
-	_hide_tween.tween_property(_bubble, "modulate:a", 0.0, 0.3)
-	_hide_tween.tween_callback(func(): _bubble.visible = false)
+	_typing = true
+	_type_pos = 0.0
+	_type_pause = 0.0
+	# enquanto digita, ninguém interrompe (só falas forçadas/importantes)
+	_busy_until_ms = Time.get_ticks_msec() + int((float(text.length()) / BossDialogue.type_cps(biome) + 3.0) * 1000.0)

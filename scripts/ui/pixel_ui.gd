@@ -299,6 +299,12 @@ static func make_button_style(size_key: String, factor: int, state_file: String,
 # Aplica o skin de botão (4 estados) a um Button. accent tinge o sprite (ex.:
 # verde = confirmar, vermelho = cancelar); Color.WHITE mantém o marrom puro.
 static func skin_button(btn: Button, accent: Color = Color.WHITE, force_size: String = "", icon: String = "") -> void:
+	# guarda a pele pedida: o MenuPieceCursor converte o botão para placa depois
+	btn.set_meta("skin_accent", accent)
+	btn.set_meta("skin_icon", icon)
+	if btn.has_meta("slab"):
+		skin_slab_button(btn, accent, icon)
+		return
 	var picked = _pick_button_sprite(btn.custom_minimum_size.y if btn.custom_minimum_size.y > 0.0 else 30.0)
 	var size_key: String = force_size if force_size != "" else picked[0]
 	var factor: int = picked[1]
@@ -314,6 +320,31 @@ static func skin_button(btn: Button, accent: Color = Color.WHITE, force_size: St
 	btn.add_theme_color_override("font_pressed_color", Color(0.85, 0.75, 0.5))
 	btn.add_theme_color_override("font_disabled_color", Color(0.5, 0.47, 0.42))
 	Juice.hover_pop(btn)   # game juice: cresce no hover, afunda no clique
+
+# Botão no estilo das placas do menu inicial, com o encaixe da peça na ponta
+# esquerda (ver SlabStyleBox). Usado nos botões que o MenuPieceCursor vigia.
+static func skin_slab_button(btn: Button, accent: Color = Color.WHITE, icon: String = "") -> void:
+	btn.set_meta("slab", true)
+	btn.set_meta("skin_accent", accent)
+	btn.set_meta("skin_icon", icon)
+	var h: float = maxf(btn.custom_minimum_size.y, 40.0)
+	var states := {"normal": "idle", "hover": "hover", "pressed": "pressed", "hover_pressed": "pressed", "disabled": "dis"}
+	for k in states:
+		btn.add_theme_stylebox_override(k, SlabStyleBox.make(states[k], accent, h))
+	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	btn.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var txt: Color = Color(0.96, 0.89, 0.72)
+	if accent != Color.WHITE:
+		txt = txt.lerp(accent.lightened(0.35), 0.35)
+	btn.add_theme_color_override("font_color", txt)
+	btn.add_theme_color_override("font_hover_color", Color("f8e6a0"))
+	btn.add_theme_color_override("font_pressed_color", Color("f0d27a"))
+	btn.add_theme_color_override("font_hover_pressed_color", Color("f0d27a"))
+	btn.add_theme_color_override("font_disabled_color", Color("6a616c"))
+	btn.add_theme_color_override("font_outline_color", Color("1f161d"))
+	btn.add_theme_constant_override("outline_size", 4)
+	if icon != "":
+		set_button_icon(btn, icon)
 
 # Ícone do HUD (icone_*.png / moeda_pequena) à esquerda do texto do botão,
 # ampliado por inteiro (2x quando o botão tem altura >= 36) e sem filtro.
@@ -359,9 +390,9 @@ static func make_hud_icon(file: String, px: float = 32.0) -> TextureRect:
 
 # Painel com slot de ícone à esquerda (painel_dinheiro / painel_cartas /
 # painel_leis): a parte do ícone fica sem esticar, o resto estica.
-static func make_hud_icon_panel(file: String, icon_slot: int = 30, factor: int = 1, tint: Color = Color.WHITE) -> StyleBoxTexture:
+static func make_hud_icon_panel(file: String, icon_slot: int = 30, factor: int = 1, tint: Color = Color.WHITE, icon_file: String = "", icon_center: Vector2i = Vector2i(13, 11)) -> StyleBoxTexture:
 	var style = StyleBoxTexture.new()
-	style.texture = hud_texture(file, factor)
+	style.texture = hud_texture(file, factor) if icon_file == "" else _baked_icon_panel(file, icon_file, icon_center, factor)
 	style.texture_margin_left = icon_slot * factor
 	style.texture_margin_right = 6 * factor
 	style.texture_margin_top = 6 * factor
@@ -372,6 +403,36 @@ static func make_hud_icon_panel(file: String, icon_slot: int = 30, factor: int =
 	style.content_margin_bottom = 6 * factor
 	style.modulate_color = tint
 	return style
+
+
+# Painel com o ícone já "carimbado" no encaixe redondo, na mesma imagem: com a
+# tela esticada (canvas_items em resoluções que não são 1920x1080) um ícone
+# separado arredondava diferente do painel e saía do centro do encaixe.
+# `center` = centro do encaixe em pixels do sprite (13, 11 nos painéis 80x26).
+static func _baked_icon_panel(file: String, icon_file: String, center: Vector2i, factor: int) -> Texture2D:
+	var key := "baked:%s+%s@%d" % [file, icon_file, factor]
+	if _tex_cache.has(key):
+		return _tex_cache[key]
+	var base: Texture2D = hud_texture(file, 1)
+	var icon: Texture2D = hud_texture(icon_file, 1)
+	if base == null or icon == null:
+		return hud_texture(file, factor)
+	var img: Image = base.get_image()
+	img.convert(Image.FORMAT_RGBA8)
+	var ic: Image = icon.get_image()
+	ic.convert(Image.FORMAT_RGBA8)
+	var f: int = maxi(1, factor)
+	if f > 1:
+		img.resize(img.get_width() * f, img.get_height() * f, Image.INTERPOLATE_NEAREST)
+		ic.resize(ic.get_width() * f, ic.get_height() * f, Image.INTERPOLATE_NEAREST)
+	# o furo do encaixe tem diâmetro ímpar e o ícone é par: centraliza no MEIO do
+	# pixel central (na escala final), em vez de sobrar meio pixel para um lado
+	var mid := center * f + Vector2i(f >> 1, f >> 1)
+	var pos := mid - Vector2i(ic.get_width() >> 1, ic.get_height() >> 1)
+	img.blend_rect(ic, Rect2i(Vector2i.ZERO, ic.get_size()), pos)
+	var tex := ImageTexture.create_from_image(img)
+	_tex_cache[key] = tex
+	return tex
 
 
 # Slider vertical pixel art minimalista: trilho fino ameixa com borda de 2 px e

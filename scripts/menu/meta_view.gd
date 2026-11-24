@@ -44,6 +44,7 @@ var _card_tip: ActionCardTooltip
 var _msg_label: Label
 
 func _ready() -> void:
+	MenuPieceCursor.auto(self)   # peça do jogador acompanhando o mouse pelos botões
 	Music.play("menu")
 	add_child(SpaceBackground.new())
 	var canvas := CanvasLayer.new()

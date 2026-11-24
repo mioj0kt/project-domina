@@ -70,6 +70,8 @@ func _setup_ui() -> void:
 	elif MetaProgress.grimorio_just_unlocked:
 		MetaProgress.grimorio_just_unlocked = false
 		_board.set_new(1)
+	elif can_spend_coroas():
+		_board.set_alert(1)   # "!" no Grimório: dá para girar o Oráculo
 	_board.add_option("TUTORIAL", _on_tutorial_pressed)
 	_board.add_option("SAIR", _on_quit_pressed)
 	center_box.add_child(_board)
@@ -203,6 +205,12 @@ func _on_reset_pressed() -> void:
 	RunManager.start_new_run()  # descarta qualquer run em andamento
 	get_tree().call_deferred("change_scene_to_file", "res://scenes/main_menu.tscn")
 
+# Dá para gastar Coroas no Grimório: o Oráculo ainda tem o que liberar e as Coroas
+# pagam um giro. (Levar itens na mochila não conta: é gasto de toda run, não novidade.)
+static func can_spend_coroas() -> bool:
+	return MetaProgress.grimorio_unlocked and MetaProgress.machine_remaining() > 0 \
+		and MetaProgress.coroas >= MetaProgress.machine_price()
+
 func _on_play_pressed() -> void:
 	# Quem nunca concluiu o tutorial recebe um aviso antes da primeira run.
 	if not MetaProgress.tutorial_done and not MetaProgress.tutorial_warned:
@@ -240,6 +248,7 @@ func _show_tutorial_warning() -> void:
 	_warn_layer = CanvasLayer.new()
 	_warn_layer.layer = 150
 	add_child(_warn_layer)
+	MenuPieceCursor.auto(_warn_layer)
 
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.7)

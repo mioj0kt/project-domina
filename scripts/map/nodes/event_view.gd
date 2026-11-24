@@ -148,6 +148,79 @@ const PROSPECT_SEARCH_AMBUSH_BONUS: int = 8
 const PROSPECT_SETUP_BONUS: int = 14
 
 const MIRROR_ALTAR_GOLD: int = 6
+# --- Mina (eventos novos) ---
+const MAPWALL_PAINT_COST: int = 8
+const CANTEEN_SOUP_GOLD: int = 5
+const NOTICE_OBEY_GOLD: int = 5
+const NOTICE_MIX_CARD_CHANCE: float = 0.5
+const NOTICE_MIX_AMBUSH_BONUS: int = 10
+const NOTICE_TEAR_GOLD: int = 8
+const NOTICE_TEAR_AMBUSH_BONUS: int = 6
+const BATS_CHIP_GOLD: int = 6
+const BATS_LIGHT_CARD_CHANCE: float = 0.5
+const BATS_AMBUSH_BONUS: int = 10
+const LIFT_EPIC_CHANCE: float = 0.30
+const LIFT_LOSS_CHANCE: float = 0.35
+const LIFT_LOSS_GOLD: int = 10
+const LIFT_AMBUSH_BONUS: int = 14
+const LIFT_BELL_GOLD: int = 6
+# --- Cume Congelado ---
+const EXPED_LAMP_GOLD: int = 6
+const EXPED_PACK_CHANCE: float = 0.55
+const EXPED_PACK_GOLD: int = 8
+const EXPED_AMBUSH_BONUS: int = 10
+const FROZEN_TOUCH_GOLD: int = 6
+const FROZEN_AMBUSH_BONUS: int = 12
+const ROPE_AMBUSH_BONUS: int = 12
+const SPRING_SOAK_CHANCE: float = 0.55
+const SPRING_SOAK_LOSS: int = 6
+const SPRING_WISH_COST: int = 5
+const SPRING_WISH_CHANCE: float = 0.5
+const SPRING_WISH_GOLD: int = 16
+const PRINTS_FOLLOW_CHANCE: float = 0.5
+const PRINTS_AMBUSH_BONUS: int = 12
+const PRINTS_MEASURE_GOLD: int = 5
+const HERMIT_HELP_GOLD: int = 5
+const CABLE_WIN_CHANCE: float = 0.45
+const CABLE_LOSS_CHANCE: float = 0.30
+const CABLE_WIN_GOLD: int = 18
+const CABLE_LOSS_GOLD: int = 10
+const CABLE_AMBUSH_BONUS: int = 10
+const CABLE_LOOT_GOLD: int = 6
+const BELL_LAW_CHANCE: float = 0.4
+const BELL_AMBUSH_BONUS: int = 12
+const BELL_TAP_GOLD: int = 4
+const FISH_CARD_CHANCE: float = 0.35
+const FISH_GOLD_CHANCE: float = 0.35
+const FISH_GOLD: int = 12
+const FISH_AMBUSH_BONUS: int = 10
+const FISH_BUCKET_GOLD: int = 5
+# --- Caldeira ---
+const FORGE2_HELP_GOLD: int = 6
+const APPRENTICE_BUY_COST: int = 6
+const APPRENTICE_HELP_GOLD: int = 6
+const APPRENTICE_AMBUSH_BONUS: int = 14
+const STONES_WIN_CHANCE: float = 0.45
+const STONES_LOSS_CHANCE: float = 0.30
+const STONES_WIN_GOLD: int = 20
+const STONES_LOSS_GOLD: int = 10
+const STONES_AMBUSH_BONUS: int = 10
+const STONES_AROUND_GOLD: int = 4
+const NEST_EGG_CHANCE: float = 0.5
+const NEST_AMBUSH_BONUS: int = 12
+const NEST_COAL_GOLD: int = 6
+const MOLD_FILL_COST: int = 12
+const MOLD_TOUCH_COST: int = 4
+const GEYSER_GRAB_CHANCE: float = 0.55
+const GEYSER_GRAB_GOLD: int = 16
+const GEYSER_GRAB_LOSS: int = 8
+const GEYSER_PLUG_LAW_CHANCE: float = 0.4
+const GEYSER_AMBUSH_BONUS: int = 12
+const STATUE_POLISH_GOLD: int = 6
+const STATUE_AMBUSH_BONUS: int = 14
+const SMELT_GOLD: int = 16
+const SMELT_STIR_GOLD: int = 5
+const ASH_SWEEP_GOLD: int = 6
 
 var hud_bar: HUDBar
 var inventory_ui: InventoryUI
@@ -187,6 +260,8 @@ var pending_ambush_bonus: int = 0
 
 # Se definido (testes/depuração), força este evento em vez de sortear.
 static var forced_event_id: String = ""
+# Debug (painel TESTAR EVENTO): abre este evento UMA vez e depois volta ao sorteio normal.
+static var debug_next_event_id: String = ""
 # Idem: força o resultado do sorteio (0..1) em vez de randf() — só testes.
 static var forced_roll: float = -1.0
 # Pula a roleta/animações (testes).
@@ -598,10 +673,244 @@ func _build_events() -> Array[Dictionary]:
 				{"id": "skip", "label": "VIRAR AS COSTAS", "hint": "Segue viagem"},
 			]
 		},
+		# ---------------- Mina dos Cristais (eventos novos) ----------------
+		{
+			"id": "map_wall", "biome": "mina", "title": "A PAREDE DO MAPA INTEIRO",
+			"text": "Uma parede lisa com o mundo pintado em tinta de cristal, os lugares colados uns nos outros. No meio, alguém passou a mão e borrou tudo.",
+			"choices": [
+				{"id": "paint", "label": "COMPLETAR O MAPA (%d ouro)" % MAPWALL_PAINT_COST, "hint": "Ganha 1 Lei nova", "requires": "gold_%d" % MAPWALL_PAINT_COST},
+				{"id": "copy", "label": "COPIAR O MAPA", "hint": "As grutas do mapa param de esconder os nodos + 1 carta comum"},
+				{"id": "tear", "label": "ARRANCAR O PEDAÇO BORRADO", "hint": "+%d ouro, mas a parede desaba: EMBOSCADA" % NOTICE_TEAR_GOLD},
+			]
+		},
+		{
+			"id": "cave_canteen", "biome": "mina", "title": "A CANTINA DO SUBSOLO",
+			"text": "Uma panela enorme de sopa de cristal fervendo numa gruta. O cozinheiro, redondo e suado, mexe sem parar.",
+			"choices": [
+				{"id": "mixed", "label": "PEDIR O PRATO MISTURADO", "hint": "Ganha 1 Lei nova, mas a sopa se mexe: EMBOSCADA"},
+				{"id": "soup", "label": "PEDIR A SOPA NORMAL", "hint": "+%d ouro (ele paga a gorjeta ao contrário)" % CANTEEN_SOUP_GOLD},
+				{"id": "ask", "label": "PERGUNTAR QUEM ERA \"ELE\"", "hint": "Ganha 1 carta comum"},
+			]
+		},
+		{
+			"id": "notice_board", "biome": "mina", "title": "O QUADRO DE AVISOS",
+			"text": "Um quadro de cortiça com avisos de segurança. Metade riscada. A lâmpada do lado pisca sozinha.",
+			"choices": [
+				{"id": "obey", "label": "OBEDECER AOS AVISOS", "hint": "+%d ouro" % NOTICE_OBEY_GOLD},
+				{"id": "mix", "label": "JUNTAR MINÉRIOS DE VEIOS DIFERENTES", "hint": "%d%%: carta rara ou melhor  /  %d%%: EMBOSCADA" % [_pct(NOTICE_MIX_CARD_CHANCE), _pct(1.0 - NOTICE_MIX_CARD_CHANCE)]},
+				{"id": "tear", "label": "RASGAR OS AVISOS", "hint": "+%d ouro, mas a mina lembra de quem rasga: EMBOSCADA" % NOTICE_TEAR_GOLD},
+			]
+		},
+		{
+			"id": "crystal_bats", "biome": "mina", "title": "MORCEGOS DE CRISTAL",
+			"text": "Um bando de morcegos pendurado no teto, com asas de cristal que tilintam quando eles respiram. Embaixo, o chão é só lasca.",
+			"choices": [
+				{"id": "chip", "label": "JUNTAR LASCAS NA PONTA DOS PÉS", "hint": "+%d ouro" % BATS_CHIP_GOLD},
+				{"id": "light", "label": "ACENDER A LANTERNA", "hint": "%d%%: carta rara ou melhor (eles derrubam um cristal)  /  %d%%: EMBOSCADA" % [_pct(BATS_LIGHT_CARD_CHANCE), _pct(1.0 - BATS_LIGHT_CARD_CHANCE)]},
+				{"id": "skip", "label": "SAIR DE FININHO", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "mine_lift", "biome": "mina", "title": "O ELEVADOR DO POÇO",
+			"text": "Uma gaiola de madeira pendurada num poço sem fundo, com um sino do lado. Lá de baixo, alguém pergunta quem está subindo.",
+			"choices": [
+				{"id": "descend", "label": "DESCER NA GAIOLA", "hint": "%d%%: carta épica  /  %d%%: -%d ouro  /  %d%%: EMBOSCADA" % [_pct(LIFT_EPIC_CHANCE), _pct(LIFT_LOSS_CHANCE), LIFT_LOSS_GOLD, _pct(1.0 - LIFT_EPIC_CHANCE - LIFT_LOSS_CHANCE)]},
+				{"id": "bell", "label": "TOCAR O SINO", "hint": "+%d ouro: alguém lá embaixo manda moedas pra cima" % LIFT_BELL_GOLD},
+				{"id": "skip", "label": "IR EMBORA", "hint": "Segue viagem"},
+			]
+		},
+		# ---------------- Cume Congelado ----------------
+		{
+			"id": "expedition_camp", "biome": "cume", "title": "A BARRACA DA EXPEDIÇÃO",
+			"text": "Uma barraca meio enterrada na neve, com um caderno aberto do lado. Ninguém responde lá dentro.",
+			"choices": [
+				{"id": "lamp", "label": "ACENDER O LAMPIÃO", "hint": "+%d ouro do que estava escondido na barraca" % EXPED_LAMP_GOLD},
+				{"id": "pack", "label": "PEGAR A MOCHILA", "hint": "%d%%: +%d ouro e 1 carta rara  /  %d%%: EMBOSCADA (nevasca)" % [_pct(EXPED_PACK_CHANCE), EXPED_PACK_GOLD, _pct(1.0 - EXPED_PACK_CHANCE)]},
+				{"id": "read", "label": "LER O CADERNO ATÉ O FIM", "hint": "Nenhuma recompensa. Só a última linha"},
+			]
+		},
+		{
+			"id": "frozen_disc", "biome": "cume", "title": "O DISCO NO GELO",
+			"text": "Um disco liso, sem rosto, preso num bloco de gelo do jeito que parou.",
+			"choices": [
+				{"id": "melt", "label": "DERRETER O GELO", "hint": "Ganha 1 carta rara ou melhor"},
+				{"id": "touch", "label": "ENCOSTAR NO GELO", "hint": "+%d ouro" % FROZEN_TOUCH_GOLD},
+				{"id": "hit", "label": "BATER NO GELO", "hint": "O gelo estala: EMBOSCADA (+%d ouro se vencer)" % FROZEN_AMBUSH_BONUS},
+			]
+		},
+		{
+			"id": "safety_rope", "biome": "cume", "title": "A CORDA DE SEGURANÇA",
+			"text": "Uma corda congelada sobe e some na neve. Lá de cima, bem longe, uma voz pergunta quem está puxando.",
+			"choices": [
+				{"id": "promise", "label": "RESPONDER \"EU AVISO\"", "hint": "Ganha 1 carta rara ou melhor"},
+				{"id": "deny", "label": "RESPONDER \"NINGUÉM SOBE MAIS\"", "hint": "A neve desaba: EMBOSCADA (+%d ouro se vencer)" % ROPE_AMBUSH_BONUS},
+				{"id": "pull", "label": "PUXAR A CORDA", "hint": "Ganha 1 Lei nova"},
+			]
+		},
+		{
+			"id": "hot_spring", "biome": "cume", "title": "AS TERMAS DAS VELHAS",
+			"text": "Duas peças velhinhas de molho numa fonte termal, no meio da neve, fofocando sobre quem subiu e não desceu.",
+			"choices": [
+				{"id": "soak", "label": "ENTRAR NA ÁGUA", "hint": "%d%%: 1 carta (comum ou rara)  /  %d%%: -%d ouro (perde a noção do tempo)" % [_pct(SPRING_SOAK_CHANCE), _pct(1.0 - SPRING_SOAK_CHANCE), SPRING_SOAK_LOSS]},
+				{"id": "wish", "label": "JOGAR UMA MOEDA NO VAPOR (%d ouro)" % SPRING_WISH_COST, "hint": "%d%%: +%d ouro  /  %d%%: nada acontece" % [_pct(SPRING_WISH_CHANCE), SPRING_WISH_GOLD, _pct(1.0 - SPRING_WISH_CHANCE)], "requires": "gold_%d" % SPRING_WISH_COST},
+				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "big_footprints", "biome": "cume", "title": "PEGADAS ENORMES",
+			"text": "Pegadas do tamanho de uma casa do tabuleiro, levando até uma gruta de gelo. Ninguém sabe de quê.",
+			"choices": [
+				{"id": "follow", "label": "SEGUIR AS PEGADAS", "hint": "%d%%: carta rara ou melhor  /  %d%%: EMBOSCADA" % [_pct(PRINTS_FOLLOW_CHANCE), _pct(1.0 - PRINTS_FOLLOW_CHANCE)]},
+				{"id": "measure", "label": "MEDIR UMA PEGADA", "hint": "+%d ouro achado no fundo dela" % PRINTS_MEASURE_GOLD},
+				{"id": "skip", "label": "APAGAR AS PEGADAS E SAIR", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "ice_hermit", "biome": "cume", "title": "O EREMITA DO IGLU",
+			"text": "Uma peça de gorro de pele tomando chá na porta de um iglu. Diz que reescreve Leis com a caligrafia do frio.",
+			"choices": [
+				{"id": "swap", "label": "REESCREVER UMA LEI (%d ouro)" % MONK_SWAP_COST, "hint": "1 Lei aleatória sua é trocada por outra", "requires": "swaplaw_%d" % MONK_SWAP_COST},
+				{"id": "help", "label": "AJUDAR A CORTAR GELO", "hint": "Ele paga o serviço: +%d ouro" % HERMIT_HELP_GOLD},
+				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "cable_car", "biome": "cume", "title": "O TELEFÉRICO PARADO",
+			"text": "Uma cabine enferrujada pendurada num cabo sobre o abismo, balançando sozinha. A casinha da estação está aberta.",
+			"choices": [
+				{"id": "ride", "label": "SUBIR NA CABINE", "hint": "%d%%: +%d ouro  /  %d%%: -%d ouro  /  %d%%: EMBOSCADA" % [_pct(CABLE_WIN_CHANCE), CABLE_WIN_GOLD, _pct(CABLE_LOSS_CHANCE), CABLE_LOSS_GOLD, _pct(1.0 - CABLE_WIN_CHANCE - CABLE_LOSS_CHANCE)]},
+				{"id": "loot", "label": "REVIRAR A ESTAÇÃO", "hint": "+%d ouro" % CABLE_LOOT_GOLD},
+				{"id": "skip", "label": "SEGUIR A PÉ", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "mountain_bell", "biome": "cume", "title": "O SINO DA MONTANHA",
+			"text": "Um sino de bronze pendurado num arco de gelo. Dizem que ele chama a neve.",
+			"choices": [
+				{"id": "ring", "label": "TOCAR COM FORÇA", "hint": "%d%%: 1 Lei nova  /  %d%%: EMBOSCADA (avalanche)" % [_pct(BELL_LAW_CHANCE), _pct(1.0 - BELL_LAW_CHANCE)]},
+				{"id": "tap", "label": "BATER DE LEVE", "hint": "+%d ouro" % BELL_TAP_GOLD},
+				{"id": "skip", "label": "DEIXAR QUIETO", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "fur_trader", "biome": "cume", "title": "O PELEIRO",
+			"text": "Um mercador todo agasalhado, puxando um trenó cheio de coisas. Compra e vende de tudo, menos frio.",
+			"choices": [
+				{"id": "buy", "label": "COMPRAR (%d ouro)" % MERCHANT_BUY_COST, "hint": "Ganha 1 carta aleatória", "requires": "gold_%d" % MERCHANT_BUY_COST},
+				{"id": "sell", "label": "VENDER UMA CARTA", "hint": "Perde 1 carta aleatória do baralho e ganha +%d ouro" % MERCHANT_SELL_GOLD, "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "ice_fishing", "biome": "cume", "title": "PESCA NO GELO",
+			"text": "Um buraco no lago congelado, com uma vara fincada e um balde deixados para trás. A linha está esticada.",
+			"choices": [
+				{"id": "fish", "label": "PUXAR A LINHA", "hint": "%d%%: 1 carta  /  %d%%: +%d ouro  /  %d%%: EMBOSCADA" % [_pct(FISH_CARD_CHANCE), _pct(FISH_GOLD_CHANCE), FISH_GOLD, _pct(1.0 - FISH_CARD_CHANCE - FISH_GOLD_CHANCE)]},
+				{"id": "bucket", "label": "ESVAZIAR O BALDE", "hint": "+%d ouro" % FISH_BUCKET_GOLD},
+				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
+			]
+		},
+		# ---------------- Caldeira ----------------
+		{
+			"id": "lost_forge", "biome": "caldeira", "title": "A FORJA ESQUECIDA",
+			"text": "Uma bigorna com uma coroa pela metade em cima, e a fornalha ainda acesa. Quem estava trabalhando saiu correndo.",
+			"choices": [
+				{"id": "forge", "label": "TERMINAR O SERVIÇO (%d ouro)" % FORGE_COST, "hint": "1 carta aleatória sobe de raridade", "requires": "upgradable_%d" % FORGE_COST},
+				{"id": "help", "label": "PISAR NO FOLE", "hint": "+%d ouro achado nas cinzas" % FORGE2_HELP_GOLD},
+				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "apprentice", "biome": "caldeira", "title": "O APRENDIZ DA FERREIRA",
+			"text": "Uma peça jovem de óculos enormes e avental, nervosa, escondendo uma bancada de peças com defeito.",
+			"choices": [
+				{"id": "buy", "label": "COMPRAR BARATINHO (%d ouro)" % APPRENTICE_BUY_COST, "hint": "Ganha 1 carta comum", "requires": "gold_%d" % APPRENTICE_BUY_COST},
+				{"id": "help", "label": "AJUDAR A ESCONDER O ERRO", "hint": "+%d ouro" % APPRENTICE_HELP_GOLD},
+				{"id": "report", "label": "CONTAR PRA MESTRA", "hint": "Ela manda os ajudantes: EMBOSCADA (+%d ouro se vencer)" % APPRENTICE_AMBUSH_BONUS},
+			]
+		},
+		{
+			"id": "lava_stones", "biome": "caldeira", "title": "PEDRAS NO RIO DE LAVA",
+			"text": "Pedras chatas boiando num rio de lava. Do outro lado, um baú de obsidiana com a tampa entreaberta.",
+			"choices": [
+				{"id": "jump", "label": "PULAR PELAS PEDRAS", "hint": "%d%%: +%d ouro  /  %d%%: -%d ouro  /  %d%%: EMBOSCADA" % [_pct(STONES_WIN_CHANCE), STONES_WIN_GOLD, _pct(STONES_LOSS_CHANCE), STONES_LOSS_GOLD, _pct(1.0 - STONES_WIN_CHANCE - STONES_LOSS_CHANCE)]},
+				{"id": "around", "label": "DAR A VOLTA", "hint": "+%d ouro achado na margem" % STONES_AROUND_GOLD},
+				{"id": "skip", "label": "DESISTIR", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "salamander_nest", "biome": "caldeira", "title": "O NINHO DE SALAMANDRAS",
+			"text": "Salamandras de fogo dormindo enroladas em volta de um ninho de ovos que brilham por dentro.",
+			"choices": [
+				{"id": "egg", "label": "PEGAR UM OVO", "hint": "%d%%: carta rara ou melhor  /  %d%%: EMBOSCADA" % [_pct(NEST_EGG_CHANCE), _pct(1.0 - NEST_EGG_CHANCE)]},
+				{"id": "coal", "label": "DAR CARVÃO PRA ELAS", "hint": "+%d ouro: elas cospem pepitas" % NEST_COAL_GOLD},
+				{"id": "skip", "label": "SAIR NA PONTA DOS PÉS", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "crown_mold", "biome": "caldeira", "title": "O MOLDE DA COROA",
+			"text": "Um bloco de pedra cavado em forma de coroa. Uma calha despeja ouro derretido do lado, sem parar.",
+			"choices": [
+				{"id": "fill", "label": "ENCHER O MOLDE (%d ouro)" % MOLD_FILL_COST, "hint": "Ganha 1 Lei nova", "requires": "gold_%d" % MOLD_FILL_COST},
+				{"id": "swap", "label": "MERGULHAR UMA CARTA NO OURO (%d ouro)" % MOLD_TOUCH_COST, "hint": "1 carta aleatória vira outra da mesma raridade", "requires": "swapcard_%d" % MOLD_TOUCH_COST},
+				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "geyser", "biome": "caldeira", "title": "O GÊISER",
+			"text": "Um gêiser de vapor e lava que estoura de tempos em tempos. Na beirada da boca, moedas presas na crosta.",
+			"choices": [
+				{"id": "grab", "label": "PEGAR AS MOEDAS ENTRE UM JATO E OUTRO", "hint": "%d%%: +%d ouro  /  %d%%: -%d ouro" % [_pct(GEYSER_GRAB_CHANCE), GEYSER_GRAB_GOLD, _pct(1.0 - GEYSER_GRAB_CHANCE), GEYSER_GRAB_LOSS]},
+				{"id": "plug", "label": "TAMPAR COM UMA PEDRA", "hint": "%d%%: 1 Lei nova  /  %d%%: EMBOSCADA" % [_pct(GEYSER_PLUG_LAW_CHANCE), _pct(1.0 - GEYSER_PLUG_LAW_CHANCE)]},
+				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "glassblower", "biome": "caldeira", "title": "A VIDREIRA",
+			"text": "Uma peça de lenço na cabeça soprando vidro de lava. Na prateleira, cartas com moldura de vidro.",
+			"choices": [
+				{"id": "buy", "label": "COMPRAR (%d ouro)" % MERCHANT_BUY_COST, "hint": "Ganha 1 carta aleatória", "requires": "gold_%d" % MERCHANT_BUY_COST},
+				{"id": "sell", "label": "VENDER UMA CARTA", "hint": "Perde 1 carta aleatória do baralho e ganha +%d ouro" % MERCHANT_SELL_GOLD, "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "melted_statue", "biome": "caldeira", "title": "A ESTÁTUA DERRETIDA",
+			"text": "A estátua de uma peça coroada, com a metade de baixo escorrida como cera. Tem uma inscrição na base.",
+			"choices": [
+				{"id": "read", "label": "LER A INSCRIÇÃO INTEIRA", "hint": "Ganha 1 carta rara ou melhor"},
+				{"id": "polish", "label": "POLIR A ESTÁTUA", "hint": "+%d ouro" % STATUE_POLISH_GOLD},
+				{"id": "crown", "label": "TIRAR A COROA DELA", "hint": "Alguém vigia a estátua: EMBOSCADA (+%d ouro se vencer)" % STATUE_AMBUSH_BONUS},
+			]
+		},
+		{
+			"id": "smelter", "biome": "caldeira", "title": "O CALDEIRÃO DE FUNDIÇÃO",
+			"text": "Um caldeirão enorme de metal derretido, borbulhando em cima de um buraco de lava. Tudo que cai ali vira lingote.",
+			"choices": [
+				{"id": "melt", "label": "DERRETER UMA CARTA", "hint": "Perde 1 carta aleatória e ganha +%d ouro" % SMELT_GOLD, "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "stir", "label": "MEXER O CALDEIRÃO", "hint": "+%d ouro" % SMELT_STIR_GOLD},
+				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
+			]
+		},
+		{
+			"id": "ash_altar", "biome": "caldeira", "title": "O ALTAR DAS CINZAS",
+			"text": "Um altar de obsidiana coberto de cinza, com marcas de mãos de quem já passou. No meio, uma fresta de lava respira.",
+			"choices": [
+				{"id": "offer", "label": "OFERECER UMA CARTA", "hint": "Perde 1 carta aleatória e ganha 1 Lei aleatória", "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "sweep", "label": "VARRER A CINZA", "hint": "+%d ouro" % ASH_SWEEP_GOLD},
+				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
+			]
+		},
 	]
 
 func _pick_event() -> Dictionary:
 	var all = _build_events()
+	if debug_next_event_id != "":
+		var want: String = debug_next_event_id
+		debug_next_event_id = ""
+		for e in all:
+			if e["id"] == want:
+				return e
 	if forced_event_id != "":
 		for e in all:
 			if e["id"] == forced_event_id:
@@ -940,8 +1249,8 @@ func _show_event() -> void:
 func _choice_color(choice_id: String) -> Color:
 	match choice_id:
 		"skip": return Color(0.45, 0.45, 0.5)
-		"pry", "tome", "rob", "search", "eat", "potion", "drink", "wish", "run", "open", "time", "shadow", "cross": return Color(0.9, 0.5, 0.3)
-		"setup", "challenge": return Color(0.85, 0.35, 0.35)
+		"pry", "tome", "rob", "search", "eat", "potion", "drink", "wish", "run", "open", "time", "shadow", "cross", "mix", "light", "descend", "pack", "soak", "follow", "ride", "ring", "fish", "jump", "egg", "grab", "plug": return Color(0.9, 0.5, 0.3)
+		"setup", "challenge", "hit", "deny", "report", "crown", "tear", "mixed": return Color(0.85, 0.35, 0.35)
 		_: return Color(0.4, 0.85, 0.5)
 
 func _refresh_gold_label() -> void:
@@ -1077,6 +1386,80 @@ func _luck_segments(event_id: String, choice_id: String) -> Array:
 				{"key": "win", "chance": STORM_WIN_CHANCE, "label": "+%d OURO" % STORM_WIN_GOLD, "kind": "good"},
 				{"key": "loss", "chance": STORM_LOSS_CHANCE, "label": "-%d OURO" % STORM_LOSS_GOLD, "kind": "bad"},
 				{"key": "ambush", "chance": 1.0 - STORM_WIN_CHANCE - STORM_LOSS_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
+			]
+		"notice_board.mix":
+			return [
+				{"key": "card", "chance": NOTICE_MIX_CARD_CHANCE, "label": "CARTA RARA", "kind": "good"},
+				{"key": "ambush", "chance": 1.0 - NOTICE_MIX_CARD_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
+			]
+		"crystal_bats.light":
+			return [
+				{"key": "card", "chance": BATS_LIGHT_CARD_CHANCE, "label": "CARTA RARA", "kind": "good"},
+				{"key": "ambush", "chance": 1.0 - BATS_LIGHT_CARD_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
+			]
+		"mine_lift.descend":
+			return [
+				{"key": "epic", "chance": LIFT_EPIC_CHANCE, "label": "CARTA ÉPICA", "kind": "good"},
+				{"key": "loss", "chance": LIFT_LOSS_CHANCE, "label": "-%d OURO" % LIFT_LOSS_GOLD, "kind": "bad"},
+				{"key": "ambush", "chance": 1.0 - LIFT_EPIC_CHANCE - LIFT_LOSS_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
+			]
+		"expedition_camp.pack":
+			return [
+				{"key": "loot", "chance": EXPED_PACK_CHANCE, "label": "OURO + CARTA", "kind": "good"},
+				{"key": "ambush", "chance": 1.0 - EXPED_PACK_CHANCE, "label": "NEVASCA", "kind": "danger"},
+			]
+		"hot_spring.soak":
+			return [
+				{"key": "card", "chance": SPRING_SOAK_CHANCE, "label": "CARTA", "kind": "good"},
+				{"key": "loss", "chance": 1.0 - SPRING_SOAK_CHANCE, "label": "-%d OURO" % SPRING_SOAK_LOSS, "kind": "bad"},
+			]
+		"hot_spring.wish":
+			return [
+				{"key": "win", "chance": SPRING_WISH_CHANCE, "label": "+%d OURO" % SPRING_WISH_GOLD, "kind": "good"},
+				{"key": "none", "chance": 1.0 - SPRING_WISH_CHANCE, "label": "NADA", "kind": "bad"},
+			]
+		"big_footprints.follow":
+			return [
+				{"key": "card", "chance": PRINTS_FOLLOW_CHANCE, "label": "CARTA RARA", "kind": "good"},
+				{"key": "ambush", "chance": 1.0 - PRINTS_FOLLOW_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
+			]
+		"cable_car.ride":
+			return [
+				{"key": "win", "chance": CABLE_WIN_CHANCE, "label": "+%d OURO" % CABLE_WIN_GOLD, "kind": "good"},
+				{"key": "loss", "chance": CABLE_LOSS_CHANCE, "label": "-%d OURO" % CABLE_LOSS_GOLD, "kind": "bad"},
+				{"key": "ambush", "chance": 1.0 - CABLE_WIN_CHANCE - CABLE_LOSS_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
+			]
+		"mountain_bell.ring":
+			return [
+				{"key": "law", "chance": BELL_LAW_CHANCE, "label": "NOVA LEI", "kind": "good"},
+				{"key": "ambush", "chance": 1.0 - BELL_LAW_CHANCE, "label": "AVALANCHE", "kind": "danger"},
+			]
+		"ice_fishing.fish":
+			return [
+				{"key": "card", "chance": FISH_CARD_CHANCE, "label": "CARTA", "kind": "good"},
+				{"key": "gold", "chance": FISH_GOLD_CHANCE, "label": "+%d OURO" % FISH_GOLD, "kind": "good"},
+				{"key": "ambush", "chance": 1.0 - FISH_CARD_CHANCE - FISH_GOLD_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
+			]
+		"lava_stones.jump":
+			return [
+				{"key": "win", "chance": STONES_WIN_CHANCE, "label": "+%d OURO" % STONES_WIN_GOLD, "kind": "good"},
+				{"key": "loss", "chance": STONES_LOSS_CHANCE, "label": "-%d OURO" % STONES_LOSS_GOLD, "kind": "bad"},
+				{"key": "ambush", "chance": 1.0 - STONES_WIN_CHANCE - STONES_LOSS_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
+			]
+		"salamander_nest.egg":
+			return [
+				{"key": "card", "chance": NEST_EGG_CHANCE, "label": "CARTA RARA", "kind": "good"},
+				{"key": "ambush", "chance": 1.0 - NEST_EGG_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
+			]
+		"geyser.grab":
+			return [
+				{"key": "win", "chance": GEYSER_GRAB_CHANCE, "label": "+%d OURO" % GEYSER_GRAB_GOLD, "kind": "good"},
+				{"key": "loss", "chance": 1.0 - GEYSER_GRAB_CHANCE, "label": "-%d OURO" % GEYSER_GRAB_LOSS, "kind": "bad"},
+			]
+		"geyser.plug":
+			return [
+				{"key": "law", "chance": GEYSER_PLUG_LAW_CHANCE, "label": "NOVA LEI", "kind": "good"},
+				{"key": "ambush", "chance": 1.0 - GEYSER_PLUG_LAW_CHANCE, "label": "EMBOSCADA", "kind": "danger"},
 			]
 	return []
 
@@ -1548,6 +1931,219 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 			if choice_id == "challenge":
 				return _start_ambush("ambushed", NOMAD_DUEL_BONUS, "Ele guarda a moeda, estende o tapete e arruma as peças. \"Sem rancor.\" Começou o duelo.")
 			return _nomad_swap()
+		# ---------------- Mina (eventos novos) ----------------
+		"map_wall":
+			if choice_id == "paint":
+				RunManager.spend_gold(MAPWALL_PAINT_COST)
+				return "Os pedaços se encaixam por um instante e o mapa vira um lugar só. Do meio dele, sai uma Lei (-%d de ouro). %s" % [MAPWALL_PAINT_COST, _give_random_law()]
+			if choice_id == "copy":
+				var shown: int = 0
+				for layer in RunManager.map_data:
+					for nd in layer:
+						if nd.covered and not nd.revealed:
+							nd.revealed = true
+							shown += 1
+				var lead: String = "Você copia o mapa no verso de uma carta velha. As grutas lá na frente não escondem mais nada." if shown > 0 else "Você copia o mapa no verso de uma carta velha. Por aqui já não tem gruta escondendo nada."
+				return "%s %s" % [lead, _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "COPIADA")]
+			RunManager.add_gold(NOTICE_TEAR_GOLD)
+			return _start_ambush("ambushed", NOTICE_TEAR_AMBUSH_BONUS, "O pedaço sai com tinta e tudo (+%d de ouro). A parede inteira vem atrás, e quem morava atrás dela também." % NOTICE_TEAR_GOLD)
+		"cave_canteen":
+			if choice_id == "soup":
+				RunManager.add_gold(CANTEEN_SOUP_GOLD)
+				return "A sopa é crocante por fora e crocante por dentro. No fundo da tigela, umas moedas que ninguém sabe como foram parar ali: +%d de ouro." % CANTEEN_SOUP_GOLD
+			if choice_id == "ask":
+				return "\"Eu vendo sopa, não inquérito.\" Mas ele te dá uma carta de troco, pra você parar de perguntar. %s" % _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "TROCO")
+			var law_txt: String = _give_random_law()
+			return _start_ambush("ambushed", NOTICE_MIX_AMBUSH_BONUS, "No fundo do prato, a gorjeta dele: um pedaço de Lei. %s Aí a sopa se levanta da tigela e vem tirar satisfação." % law_txt)
+		"notice_board":
+			if choice_id == "obey":
+				RunManager.add_gold(NOTICE_OBEY_GOLD)
+				return "Você não junta minério, não rasga nada e não olha pra lâmpada. Alguém deixa uma recompensa por bom comportamento: +%d de ouro." % NOTICE_OBEY_GOLD
+			if choice_id == "tear":
+				RunManager.add_gold(NOTICE_TEAR_GOLD)
+				return _start_ambush("ambushed", NOTICE_TEAR_AMBUSH_BONUS, "Atrás dos avisos tinha moedas presas na cortiça (+%d de ouro). A lâmpada acende de vez, e a galeria se enche de passos." % NOTICE_TEAR_GOLD)
+			if outcome == "card":
+				return "Os dois montinhos brilham juntos e viram uma coisa só, que não devia existir. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "MISTURADA")
+			return _start_ambush("ambushed", NOTICE_MIX_AMBUSH_BONUS, "O brilho estoura. Era por isso que estava proibido.")
+		"crystal_bats":
+			if choice_id == "chip":
+				RunManager.add_gold(BATS_CHIP_GOLD)
+				return "Você junta as lascas sem fazer barulho. Um morcego abre um olho, pensa, e fecha de novo: +%d de ouro." % BATS_CHIP_GOLD
+			if outcome == "card":
+				return "O bando sai voando de uma vez, tilintando, e derruba um cristal do teto. Dentro dele, uma carta. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "ENCONTRADA")
+			return _start_ambush("ambushed", BATS_AMBUSH_BONUS, "Os morcegos fogem, e o barulho de mil asas de cristal acorda a galeria inteira.")
+		"mine_lift":
+			if choice_id == "bell":
+				RunManager.add_gold(LIFT_BELL_GOLD)
+				return "Você toca o sino. Lá de baixo, depois de muito tempo, sobe um saquinho na corda: +%d de ouro. E um bilhete: \"obrigado por avisar que ainda tem alguém aí\"." % LIFT_BELL_GOLD
+			if outcome == "epic":
+				return "A gaiola desce até onde a luz acaba. Alguém, no escuro, coloca uma carta na sua frente e manda você de volta. %s" % _give_card(_random_card(ActionCard.Rarity.EPIC), "LÁ DE BAIXO")
+			if outcome == "loss":
+				return "A corda escorrega, a gaiola dá um tranco e %d de ouro caem pelo vão. Ninguém lá embaixo devolve." % _lose_gold(LIFT_LOSS_GOLD)
+			return _start_ambush("ambushed", LIFT_AMBUSH_BONUS, "A gaiola para no meio do caminho. Quem estava subindo chegou primeiro.")
+		# ---------------- Cume Congelado ----------------
+		"expedition_camp":
+			if choice_id == "lamp":
+				RunManager.add_gold(EXPED_LAMP_GOLD)
+				return "O lampião acende antes de você encostar. Na luz, aparece o que a expedição deixou escondido: +%d de ouro. E uma frase riscada na lona: \"quem acende não precisa mais subir\"." % EXPED_LAMP_GOLD
+			if choice_id == "read":
+				return "A última página só tem uma linha, escrita com a mão tremendo: \"Ele disse que tudo se resolve no topo.\""
+			if outcome == "loot":
+				RunManager.add_gold(EXPED_PACK_GOLD)
+				return "Dentro da mochila, moedas (+%d de ouro) e uma carta enrolada numa meia de lã. %s" % [EXPED_PACK_GOLD, _give_card(_random_card(ActionCard.Rarity.RARE), "DA MOCHILA")]
+			return _start_ambush("ambushed", EXPED_AMBUSH_BONUS, "Você puxa a mochila e a neve do teto desce inteira. Da nevasca, saem peças geladas.")
+		"frozen_disc":
+			if choice_id == "touch":
+				RunManager.add_gold(FROZEN_TOUCH_GOLD)
+				return "O gelo está morno. Por um instante, parece que o disco olha pra você. Embaixo dele, moedas: +%d de ouro. \"Alguém precisava ficar.\"" % FROZEN_TOUCH_GOLD
+			if choice_id == "melt":
+				return "O gelo cede devagar. O disco não se mexe, mas diz uma palavra só: \"Quase.\" %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "DO GELO")
+			return _start_ambush("ambushed", FROZEN_AMBUSH_BONUS, "O gelo estala de ponta a ponta. Os cacos se levantam como peças.")
+		"safety_rope":
+			if choice_id == "promise":
+				return "\"Obrigado. Ninguém avisa nada.\" A voz some, contente, e uma carta desce pela corda. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "DE CIMA")
+			if choice_id == "pull":
+				return "A corda cede e, lá no alto, aparece uma silhueta que não tem nada a ver com a voz. A voz não parou de subir. A silhueta, sim. %s" % _give_random_law()
+			return _start_ambush("ambushed", ROPE_AMBUSH_BONUS, "A voz fica quieta. Depois, a montanha inteira responde, e a neve desce varrendo tudo.")
+		"hot_spring":
+			if choice_id == "wish":
+				RunManager.spend_gold(SPRING_WISH_COST)
+				if outcome == "win":
+					RunManager.add_gold(SPRING_WISH_GOLD)
+					return "A moeda some no vapor. As velhinhas aplaudem, e o fundo da termas brilha de moedas: +%d de ouro." % SPRING_WISH_GOLD
+				return "A moeda some no vapor. \"Essa foi pro fundo, querido.\" Nada acontece (-%d de ouro)." % SPRING_WISH_COST
+			if outcome == "card":
+				return "A água quente faz tudo parecer mais simples. Quando você sai, uma carta grudou na sua borda. %s" % _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "DO VAPOR")
+			return "Você fecha os olhos um minutinho. Quando abre, as velhinhas foram embora e %d de ouro também." % _lose_gold(SPRING_SOAK_LOSS)
+		"big_footprints":
+			if choice_id == "measure":
+				RunManager.add_gold(PRINTS_MEASURE_GOLD)
+				return "Cabe você inteiro num dedo só. No fundo da pegada, umas moedas que alguém deixou cair correndo: +%d de ouro." % PRINTS_MEASURE_GOLD
+			if outcome == "card":
+				return "A gruta está vazia. Só tem um ninho de neve, ainda morno, e uma carta no meio dele. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "ACHADA")
+			return _start_ambush("ambushed", PRINTS_AMBUSH_BONUS, "A gruta não estava vazia. O dono das pegadas não aparece, mas manda os amigos dele.")
+		"ice_hermit":
+			if choice_id == "help":
+				RunManager.add_gold(HERMIT_HELP_GOLD)
+				return "Vocês cortam blocos em silêncio até o iglu ganhar mais uma fileira. Ele paga com moedas geladas: +%d de ouro." % HERMIT_HELP_GOLD
+			return _monk_swap_law("O eremita")
+		"cable_car":
+			if choice_id == "loot":
+				RunManager.add_gold(CABLE_LOOT_GOLD)
+				return "Na gaveta da estação, os trocados das últimas passagens: +%d de ouro." % CABLE_LOOT_GOLD
+			if outcome == "win":
+				RunManager.add_gold(CABLE_WIN_GOLD)
+				return "A cabine range, anda um pouco e para de novo. No banco, uma bolsa esquecida: +%d de ouro." % CABLE_WIN_GOLD
+			if outcome == "loss":
+				return "A cabine dá um solavanco e a sua bolsa cai no abismo. Lá embaixo, %d de ouro somem na neve." % _lose_gold(CABLE_LOSS_GOLD)
+			return _start_ambush("ambushed", CABLE_AMBUSH_BONUS, "A cabine balança até a estação, e lá tem gente esperando por ela.")
+		"mountain_bell":
+			if choice_id == "tap":
+				RunManager.add_gold(BELL_TAP_GOLD)
+				return "O sino faz um \"tim\" tão baixinho que a neve nem acorda. Do arco, cai uma moeda: +%d de ouro." % BELL_TAP_GOLD
+			if outcome == "law":
+				return "O som atravessa a montanha inteira e volta trazendo uma Lei que estava presa no gelo. %s" % _give_random_law()
+			return _start_ambush("ambushed", BELL_AMBUSH_BONUS, "O sino chama a neve, e a neve vem. Junto com ela, peças geladas.")
+		"fur_trader":
+			if choice_id == "buy":
+				RunManager.spend_gold(MERCHANT_BUY_COST)
+				return "Ele tira uma carta de dentro de um fardo de pele (-%d de ouro). %s" % [MERCHANT_BUY_COST, _give_card(_random_card(ActionCard.Rarity.COMMON), "RECEBIDA")]
+			var sold = _take_random_card()
+			if sold != null:
+				RunManager.add_gold(MERCHANT_SELL_GOLD)
+				preview_hbox.add_child(_labeled_card_visual("VENDIDA", sold, Color(1.0, 0.6, 0.6, 0.8)))
+				return "Ele cheira a carta, aprova e paga %d de ouro." % MERCHANT_SELL_GOLD
+			return "Ele olha suas cartas e balança a cabeça: \"Isso não esquenta ninguém.\""
+		"ice_fishing":
+			if choice_id == "bucket":
+				RunManager.add_gold(FISH_BUCKET_GOLD)
+				return "No fundo do balde, embaixo dos peixes, umas moedas: +%d de ouro." % FISH_BUCKET_GOLD
+			if outcome == "card":
+				return "Na ponta da linha, em vez de peixe, uma carta enrolada. %s" % _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "PESCADA")
+			if outcome == "gold":
+				RunManager.add_gold(FISH_GOLD)
+				return "Você puxa uma bolsa inteira do lago congelado: +%d de ouro." % FISH_GOLD
+			return _start_ambush("ambushed", FISH_AMBUSH_BONUS, "O peixe sai do buraco bravo, com olhos de peça, e não vem sozinho.")
+		# ---------------- Caldeira ----------------
+		"lost_forge":
+			if choice_id == "help":
+				RunManager.add_gold(FORGE2_HELP_GOLD)
+				return "O fole sopra e a cinza voa. Embaixo dela, moedas derretidas que ainda valem: +%d de ouro." % FORGE2_HELP_GOLD
+			return _forge_card()
+		"apprentice":
+			if choice_id == "buy":
+				RunManager.spend_gold(APPRENTICE_BUY_COST)
+				return "\"Tá meio torta, mas funciona. Acho.\" (-%d de ouro). %s" % [APPRENTICE_BUY_COST, _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "COM DEFEITO")]
+			if choice_id == "help":
+				RunManager.add_gold(APPRENTICE_HELP_GOLD)
+				return "Vocês jogam as coroas tortas no fundo do balde. Ele te paga em silêncio: +%d de ouro. \"A mestra não pode saber que eu errei. Ela nunca erra.\"" % APPRENTICE_HELP_GOLD
+			return _start_ambush("ambushed", APPRENTICE_AMBUSH_BONUS, "Você chama a mestra. Ela não vem. Manda os ajudantes, que não gostam de quem dedura.")
+		"lava_stones":
+			if choice_id == "around":
+				RunManager.add_gold(STONES_AROUND_GOLD)
+				return "Pela margem, o caminho é longo e quente. No fim, umas moedas grudadas na crosta: +%d de ouro." % STONES_AROUND_GOLD
+			if outcome == "win":
+				RunManager.add_gold(STONES_WIN_GOLD)
+				return "Pedra, pedra, pedra, baú. Você abre a tampa de obsidiana e ela está cheia: +%d de ouro." % STONES_WIN_GOLD
+			if outcome == "loss":
+				return "Uma pedra afunda no meio do pulo. Você escapa, mas %d de ouro derretem no rio." % _lose_gold(STONES_LOSS_GOLD)
+			return _start_ambush("ambushed", STONES_AMBUSH_BONUS, "Do outro lado, o baú tinha dono. E o dono tinha amigos.")
+		"salamander_nest":
+			if choice_id == "coal":
+				RunManager.add_gold(NEST_COAL_GOLD)
+				return "Elas comem o carvão, satisfeitas, e cospem pepitas como quem paga a conta: +%d de ouro." % NEST_COAL_GOLD
+			if outcome == "card":
+				return "O ovo está quente e leve. Quando você sai de perto, ele racha e de dentro sai uma carta. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "DO OVO")
+			return _start_ambush("ambushed", NEST_AMBUSH_BONUS, "Uma salamandra acorda. Depois outra. Depois todas.")
+		"crown_mold":
+			if choice_id == "fill":
+				RunManager.spend_gold(MOLD_FILL_COST)
+				return "O ouro enche o molde e esfria numa coroa perfeita. Dentro dela, uma Lei inteira (-%d de ouro). \"Aqui se forjava o que vira Dama.\" %s" % [MOLD_FILL_COST, _give_random_law()]
+			return _hunter_swap(MOLD_TOUCH_COST, "O ouro derretido")
+		"geyser":
+			if choice_id == "grab":
+				if outcome == "win":
+					RunManager.add_gold(GEYSER_GRAB_GOLD)
+					return "Você conta os jatos, entra no intervalo e sai com as moedas: +%d de ouro." % GEYSER_GRAB_GOLD
+				return "Você conta errado. O jato sobe na sua frente e %d de ouro voam com ele." % _lose_gold(GEYSER_GRAB_LOSS)
+			if outcome == "law":
+				return "A pedra segura, o gêiser engasga e cospe uma Lei que estava presa lá no fundo. %s" % _give_random_law()
+			return _start_ambush("ambushed", GEYSER_AMBUSH_BONUS, "A pedra voa longe. O gêiser estoura, e o barulho chama gente.")
+		"glassblower":
+			if choice_id == "buy":
+				RunManager.spend_gold(MERCHANT_BUY_COST)
+				return "Ela tira uma carta da prateleira, ainda morna da moldura de vidro (-%d de ouro). %s" % [MERCHANT_BUY_COST, _give_card(_random_card(ActionCard.Rarity.COMMON), "DE VIDRO")]
+			var sold2 = _take_random_card()
+			if sold2 != null:
+				RunManager.add_gold(MERCHANT_SELL_GOLD)
+				preview_hbox.add_child(_labeled_card_visual("VENDIDA", sold2, Color(1.0, 0.6, 0.6, 0.8)))
+				return "Ela olha a carta contra a luz da lava e paga %d de ouro." % MERCHANT_SELL_GOLD
+			return "Ela olha suas cartas e devolve todas: \"Não dá pra emoldurar nenhuma dessas.\""
+		"melted_statue":
+			if choice_id == "polish":
+				RunManager.add_gold(STATUE_POLISH_GOLD)
+				return "Você tira a fuligem do rosto dela. Ela parece sorrir. No degrau, moedas de quem passou antes: +%d de ouro." % STATUE_POLISH_GOLD
+			if choice_id == "read":
+				return "\"A primeira que virou. A última que lembra. Lembrou que não era pra virar.\" Embaixo da inscrição, uma carta presa na pedra. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "DA ESTÁTUA")
+			return _start_ambush("ambushed", STATUE_AMBUSH_BONUS, "A coroa sai fácil demais. Alguém estava vigiando, e não gostou.")
+		"smelter":
+			if choice_id == "stir":
+				RunManager.add_gold(SMELT_STIR_GOLD)
+				return "Você mexe o caldeirão até o braço doer. Sobra um lingotinho na concha: +%d de ouro." % SMELT_STIR_GOLD
+			var melted = _take_random_card()
+			if melted != null:
+				RunManager.add_gold(SMELT_GOLD)
+				preview_hbox.add_child(_labeled_card_visual("DERRETIDA", melted, Color(1.0, 0.6, 0.6, 0.8)))
+				return "A carta afunda no metal e sai do outro lado como lingote: +%d de ouro." % SMELT_GOLD
+			return "Você não tem nada que valha a pena derreter."
+		"ash_altar":
+			if choice_id == "sweep":
+				RunManager.add_gold(ASH_SWEEP_GOLD)
+				return "Você varre a cinza e acha moedas embaixo das marcas de mão: +%d de ouro." % ASH_SWEEP_GOLD
+			var offered2 = _take_random_card()
+			if offered2 != null:
+				preview_hbox.add_child(_labeled_card_visual("OFERECIDA", offered2, Color(1.0, 0.6, 0.6, 0.8)))
+			return "A fresta engole a carta e a cinza se mexe sozinha, desenhando uma Lei. %s" % _give_random_law()
 	return ""
 
 # Marca o desfecho como duelo (o botão vira "LUTAR!"); devolve o texto da cena.

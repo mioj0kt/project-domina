@@ -30,6 +30,7 @@ var tooltip_ref: RuleCardTooltip
 var pending_new_rule: RuleCard = null
 
 func _ready() -> void:
+	MenuPieceCursor.auto(self)   # peça do jogador acompanhando o mouse pelos botões
 	layer = 125
 	visible = false
 	_build_ui()

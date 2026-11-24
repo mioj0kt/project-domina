@@ -23,6 +23,7 @@ func _init(data: Dictionary) -> void:
 
 
 func _ready() -> void:
+	MenuPieceCursor.auto(self)   # peça do jogador acompanhando o mouse pelos botões
 	var dim := ColorRect.new()
 	dim.color = Color(0.03, 0.02, 0.05, 0.86)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)

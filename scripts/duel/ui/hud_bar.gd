@@ -14,9 +14,6 @@ const DECK_PANEL_H: float = 610.0
 const PANEL_W: float = 440.0
 # Linha do topo (Leis + Ouro): botões grandes, sprites ampliados 2x.
 const TOP_BTN_H: float = 52.0
-# Centro do encaixe redondo dos sprites painel_leis/painel_dinheiro (13, 11 no
-# sprite de 80x26, desenhado em 2x).
-const HUD_SOCKET_CENTER := Vector2(26, 22)
 
 var gold_label: Label
 var gold_panel_ctrl: Control   # painel inteiro do ouro (para destaques do tutorial)
@@ -105,9 +102,10 @@ func _build_side_panel() -> void:
 	laws_btn.custom_minimum_size = Vector2(half_w, TOP_BTN_H)
 	laws_btn.add_theme_font_size_override("font_size", 24)
 	# Botão com o painel "leis" (ícone à esquerda); hover/pressed só mudam o brilho.
-	var laws_style = PixelUI.make_hud_icon_panel("painel_leis", 30, 2)
-	var laws_hover = PixelUI.make_hud_icon_panel("painel_leis", 30, 2, Color(1.25, 1.2, 1.1))
-	var laws_pressed = PixelUI.make_hud_icon_panel("painel_leis", 30, 2, Color(0.8, 0.8, 0.8))
+	# o ícone vem carimbado no encaixe do próprio painel (sempre alinhado, em qualquer resolução)
+	var laws_style = PixelUI.make_hud_icon_panel("painel_leis", 30, 2, Color.WHITE, "icone_leis")
+	var laws_hover = PixelUI.make_hud_icon_panel("painel_leis", 30, 2, Color(1.25, 1.2, 1.1), "icone_leis")
+	var laws_pressed = PixelUI.make_hud_icon_panel("painel_leis", 30, 2, Color(0.8, 0.8, 0.8), "icone_leis")
 	laws_btn.add_theme_stylebox_override("normal", laws_style)
 	laws_btn.add_theme_stylebox_override("hover", laws_hover)
 	laws_btn.add_theme_stylebox_override("pressed", laws_pressed)
@@ -116,15 +114,10 @@ func _build_side_panel() -> void:
 	laws_btn.add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.65))
 	laws_btn.pressed.connect(func(): open_laws_requested.emit())
 	top_row.add_child(laws_btn)
-	# Ícone no slot da esquerda do painel (o sprite vem vazio ali).
-	var laws_icon = PixelUI.make_hud_icon("icone_leis", 32.0)
-	laws_icon.position = HUD_SOCKET_CENTER - Vector2(16, 16)
-	laws_icon.size = Vector2(32, 32)
-	laws_btn.add_child(laws_icon)
 
 	var gold_panel = PanelContainer.new()
 	gold_panel.custom_minimum_size = Vector2(half_w, TOP_BTN_H)
-	gold_panel.add_theme_stylebox_override("panel", PixelUI.make_hud_icon_panel("painel_dinheiro", 30, 2))
+	gold_panel.add_theme_stylebox_override("panel", PixelUI.make_hud_icon_panel("painel_dinheiro", 30, 2, Color.WHITE, "icone_dinheiro"))
 	# O painel (PanelContainer) estica filhos; o ícone vai num Control por fora,
 	# na mesma posição do ícone do botão de Leis (slot à esquerda do sprite).
 	var gold_wrap = Control.new()
@@ -134,10 +127,6 @@ func _build_side_panel() -> void:
 	top_row.add_child(gold_wrap)
 	gold_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	gold_wrap.add_child(gold_panel)
-	var gold_icon = PixelUI.make_hud_icon("icone_dinheiro", 32.0)
-	gold_icon.position = HUD_SOCKET_CENTER - Vector2(16, 16)
-	gold_icon.size = Vector2(32, 32)
-	gold_wrap.add_child(gold_icon)
 	_build_rigged_badge(gold_wrap, half_w)
 
 	var gold_hbox = HBoxContainer.new()
