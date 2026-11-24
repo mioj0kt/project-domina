@@ -42,9 +42,18 @@ var draw_deck_stack: Control
 var discard_deck_stack: Control
 var cards_count_label: Label
 
+# Mapa: HUD enxuta — só o ouro e o botão do inventário, numa placa presa no
+# topo da tela (sem o quadro de Leis e sem as pilhas). Definir antes do add_child.
+var map_mode: bool = false
+var map_dock: Control
+var _dock_cards_lbl: Label
+var _dock_laws_lbl: Label
+
 func _ready() -> void:
 	layer = 80
 	_build_side_panel()
+	if map_mode:
+		_build_map_dock()
 
 	set_process(true)
 	if RunManager != null and not RunManager.rules_updated.is_connected(refresh_deck):
@@ -301,6 +310,7 @@ func _on_draw_pile_gui_input(event: InputEvent) -> void:
 # carta empilhadas (mesmo visual/limite de update_pile_visual_stacks) com o
 # contador sobreposto por cima, igual a um "badge".
 func refresh_cards_inventory_count() -> void:
+	_refresh_dock_counts()
 	if cards_count_label == null:
 		return
 	if deck_mgr_ref != null:
@@ -415,6 +425,7 @@ func _on_card_played_animation(card: ActionCard) -> void:
 	update_pile_visual_stacks()
 
 func refresh_deck() -> void:
+	_refresh_dock_counts()
 	var active_rules: Array[RuleCard] = RunManager.active_rules if RunManager != null else []
 	_current_rules = active_rules
 
@@ -451,6 +462,128 @@ func refresh_deck() -> void:
 
 var _shown_gold: int = -1
 var _gold_tween: Tween
+
+# ---------------------------------------------------------------------
+# MAPA: placa pendurada no topo-esquerdo (a borda de cima fica fora da tela,
+# então ela "sai" da beirada em vez de flutuar). Dentro: ouro, botão do
+# inventário e os contadores de cartas e Leis.
+# ---------------------------------------------------------------------
+const DOCK_F: int = 2
+const DOCK_W: float = 250.0
+const DOCK_X: float = 36.0
+
+func _build_map_dock() -> void:
+	side_container.visible = false
+	var root_ctrl: Control = side_container.get_parent()
+
+	var plate := PanelContainer.new()
+	map_dock = plate
+	# Placa inteira (moldura completa), centralizada na vertical na faixa livre
+	# à esquerda do tabuleiro — nada cortado na borda, nada espremido no canto.
+	var st: StyleBoxTexture = PixelUI.make_hud_panel("painel_mensagens", 6, 3)
+	st.content_margin_left = 8.0 * 3.0
+	st.content_margin_right = 8.0 * 3.0
+	st.content_margin_top = 8.0 * 3.0
+	st.content_margin_bottom = 9.0 * 3.0
+	plate.add_theme_stylebox_override("panel", st)
+	plate.mouse_filter = Control.MOUSE_FILTER_STOP
+	plate.anchor_left = 0.0
+	plate.anchor_right = 0.0
+	plate.anchor_top = 0.5
+	plate.anchor_bottom = 0.5
+	plate.offset_left = DOCK_X
+	plate.offset_right = DOCK_X
+	plate.grow_horizontal = Control.GROW_DIRECTION_END
+	plate.grow_vertical = Control.GROW_DIRECTION_BOTH
+	root_ctrl.add_child(plate)
+
+	# Coluna estreita: cabe na faixa livre à esquerda do tabuleiro (o mapa fica centralizado).
+	var row := VBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.add_child(row)
+
+	# Ouro
+	var gold_w: float = DOCK_W
+	var gwrap := Control.new()
+	gwrap.custom_minimum_size = Vector2(gold_w, TOP_BTN_H)
+	gwrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(gwrap)
+	var gp := PanelContainer.new()
+	gp.set_anchors_preset(Control.PRESET_FULL_RECT)
+	gp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gp.add_theme_stylebox_override("panel", PixelUI.make_hud_icon_panel("painel_dinheiro", 30, DOCK_F, Color.WHITE, "icone_dinheiro"))
+	gwrap.add_child(gp)
+	var gh := HBoxContainer.new()
+	gh.alignment = BoxContainer.ALIGNMENT_CENTER
+	gh.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gp.add_child(gh)
+	gold_label = Label.new()
+	gold_label.add_theme_font_size_override("font_size", 28)
+	gold_label.add_theme_color_override("font_color", Color(1.0, 0.90, 0.35))
+	gold_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gh.add_child(gold_label)
+	gold_panel_ctrl = gwrap
+	_shown_gold = -1
+	update_gold()
+
+	# Inventário (abre o grimório; TAB/I também abrem)
+	var inv := Button.new()
+	laws_btn = inv
+	inv.text = "INVENTÁRIO"
+	inv.custom_minimum_size = Vector2(DOCK_W, TOP_BTN_H)
+	inv.add_theme_font_size_override("font_size", 24)
+	inv.add_theme_stylebox_override("normal", PixelUI.make_hud_icon_panel("painel_leis", 30, DOCK_F, Color.WHITE, "icone_cartas"))
+	inv.add_theme_stylebox_override("hover", PixelUI.make_hud_icon_panel("painel_leis", 30, DOCK_F, Color(1.25, 1.2, 1.1), "icone_cartas"))
+	inv.add_theme_stylebox_override("pressed", PixelUI.make_hud_icon_panel("painel_leis", 30, DOCK_F, Color(0.8, 0.8, 0.8), "icone_cartas"))
+	inv.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	inv.add_theme_color_override("font_color", Color(0.96, 0.89, 0.72))
+	inv.add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.65))
+	inv.tooltip_text = "Cartas e Leis (TAB)"
+	inv.pressed.connect(func(): open_laws_requested.emit())
+	inv.mouse_entered.connect(func(): Sfx.play("hover", -10.0))
+	row.add_child(inv)
+
+	# Separador + contadores (cartas e Leis)
+	var counters := HBoxContainer.new()
+	counters.alignment = BoxContainer.ALIGNMENT_CENTER
+	counters.add_theme_constant_override("separation", 10)
+	counters.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(counters)
+	_dock_cards_lbl = _dock_counter(counters, "icone_cartas")
+	_dock_laws_lbl = _dock_counter(counters, "icone_leis")
+	_refresh_dock_counts()
+
+func _dock_counter(row: HBoxContainer, icon: String) -> Label:
+	var chip := PanelContainer.new()
+	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chip.custom_minimum_size = Vector2(0, 46)
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_theme_stylebox_override("panel", PixelUI.make_pixel_panel(Color(0.1, 0.08, 0.11, 0.95), Color(0.62, 0.5, 0.32), 6))
+	row.add_child(chip)
+	var h := HBoxContainer.new()
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_theme_constant_override("separation", 8)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(h)
+	var ic := PixelUI.make_hud_icon(icon, 32.0)
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(ic)
+	var l := Label.new()
+	l.add_theme_font_size_override("font_size", 24)
+	l.add_theme_color_override("font_color", Color(0.93, 0.88, 0.78))
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(l)
+	return l
+
+func _refresh_dock_counts() -> void:
+	if _dock_cards_lbl == null or RunManager == null:
+		return
+	var n_cards: int = RunManager.player_deck.size()
+	_dock_cards_lbl.text = "%d/%d" % [n_cards, RunManager.MAX_PLAYER_DECK_SIZE]
+	_dock_cards_lbl.add_theme_color_override("font_color", Color(1.0, 0.55, 0.45) if n_cards >= RunManager.MAX_PLAYER_DECK_SIZE else Color(0.93, 0.88, 0.78))
+	_dock_laws_lbl.text = "%d/%d" % [RunManager.active_rules.size(), RulePipeline.MAX_ACTIVE_RULES]
 
 func update_gold() -> void:
 	var g = RunManager.gold if RunManager != null else 0

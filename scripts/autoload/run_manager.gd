@@ -231,7 +231,7 @@ func start_new_run():
 
 
 # DEBUG: DE TODAS AS CARTAS
-const DEBUG_ALL_CARDS: bool = true
+const DEBUG_ALL_CARDS: bool = false
 
 
 # ==========================

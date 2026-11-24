@@ -147,6 +147,7 @@ func _setup_player_pawn() -> void:
 func _setup_map_ui() -> void:
 	# Instancia a barra lateral padronizada
 	hud_bar = HUDBar.new()
+	hud_bar.map_mode = true   # mapa: só ouro + inventário (sem quadro de Leis)
 	add_child(hud_bar)
 	hud_bar.open_laws_requested.connect(toggle_inventory)
 	hud_bar.open_cards_requested.connect(func(): inventory_ui.open_on_tab(InventoryUI.Tab.CARDS))

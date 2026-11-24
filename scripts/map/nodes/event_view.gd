@@ -17,29 +17,29 @@ const TRANSFORM_LAW_SCALE: float = 1.2
 # Cofre: sucesso / agulha (perde ouro) / o resto é EMBOSCADA.
 const CHEST_WIN_CHANCE: float = 0.5
 const CHEST_NEEDLE_CHANCE: float = 0.25
-const CHEST_AMBUSH_BONUS: int = 10
-const CHEST_WIN_GOLD: int = 20
+const CHEST_AMBUSH_BONUS: int = 14
+const CHEST_WIN_GOLD: int = 28
 const CHEST_LOSS_GOLD: int = 8
 const MERCHANT_BUY_COST: int = 12
-const MERCHANT_SELL_GOLD: int = 10
-const ALTAR_PRAYER_GOLD: int = 6
-const FORGE_COST: int = 10
-const FORGE_HELP_GOLD: int = 5
+const MERCHANT_SELL_GOLD: int = 20
+const ALTAR_PRAYER_GOLD: int = 12
+const FORGE_COST: int = 8
+const FORGE_HELP_GOLD: int = 10
 # Tomo: carta épica / perde ouro / o resto é EMBOSCADA (guardiões).
 const TOME_CHANCE: float = 0.35
 const TOME_LOSS_CHANCE: float = 0.35
-const TOME_AMBUSH_BONUS: int = 12
+const TOME_AMBUSH_BONUS: int = 17
 const TOME_LOSS_GOLD: int = 10
 const TRAVELER_HELP_COST: int = 5
 # Viajante: roubo certo / perde ouro / o resto é EMBOSCADA (era isca).
 const TRAVELER_ROB_CHANCE: float = 0.45
 const TRAVELER_ROB_LOSS_CHANCE: float = 0.25
-const TRAVELER_AMBUSH_BONUS: int = 10
+const TRAVELER_AMBUSH_BONUS: int = 14
 # Acampamento: vasculhar dá carta, senão EMBOSCADA; montar a emboscada é duelo garantido.
 const CAMP_SEARCH_CHANCE: float = 0.6
-const CAMP_SEARCH_AMBUSH_BONUS: int = 8
-const CAMP_SETUP_BONUS: int = 14
-const TRAVELER_ROB_GOLD: int = 15
+const CAMP_SEARCH_AMBUSH_BONUS: int = 11
+const CAMP_SETUP_BONUS: int = 20
+const TRAVELER_ROB_GOLD: int = 21
 const TRAVELER_ROB_LOSS: int = 10
 const MIN_DECK_FOR_SACRIFICE: int = 3
 # Fonte Encantada
@@ -47,38 +47,38 @@ const FOUNTAIN_DRINK_CARD_CHANCE: float = 0.45
 const FOUNTAIN_THIRST_LOSS: int = 6
 const FOUNTAIN_WISH_COST: int = 5
 const FOUNTAIN_WISH_CHANCE: float = 0.5
-const FOUNTAIN_WISH_GOLD: int = 16
+const FOUNTAIN_WISH_GOLD: int = 22
 # Círculo de Cogumelos
-const MUSHROOM_PICK_GOLD: int = 7
+const MUSHROOM_PICK_GOLD: int = 14
 const MUSHROOM_WIN_CHANCE: float = 0.45
 const MUSHROOM_LOSS_CHANCE: float = 0.30
-const MUSHROOM_WIN_GOLD: int = 14
+const MUSHROOM_WIN_GOLD: int = 20
 const MUSHROOM_LOSS_GOLD: int = 8
-const MUSHROOM_AMBUSH_BONUS: int = 10
+const MUSHROOM_AMBUSH_BONUS: int = 14
 # Caçador Solitário
-const HUNTER_SWAP_COST: int = 4
-const HUNTER_DUEL_BONUS: int = 14
+const HUNTER_SWAP_COST: int = 0
+const HUNTER_DUEL_BONUS: int = 20
 # Bruxa da Clareira
 const WITCH_CARD_CHANCE: float = 0.45
 const WITCH_LOSS_CHANCE: float = 0.30
-const WITCH_GOLD: int = 10
+const WITCH_GOLD: int = 20
 const WITCH_HERBS_COST: int = 10
 # Monge Ermitão
-const MONK_SWAP_COST: int = 8
-const MONK_ALMS_GOLD: int = 5
+const MONK_SWAP_COST: int = 0
+const MONK_ALMS_GOLD: int = 10
 
 # ---- Deserto das Torres ----
 const MIRAGE_OASIS_CHANCE: float = 0.35
 const MIRAGE_THIRST_CHANCE: float = 0.40
 const MIRAGE_THIRST_LOSS: int = 8
-const MIRAGE_RUIN_GOLD: int = 12
-const MIRAGE_DIG_GOLD: int = 5
+const MIRAGE_RUIN_GOLD: int = 17
+const MIRAGE_DIG_GOLD: int = 10
 
 const SARC_CARD_CHANCE: float = 0.40
 const SARC_CURSE_CHANCE: float = 0.25
 const SARC_CURSE_GOLD: int = 10
-const SARC_AMBUSH_BONUS: int = 14
-const SARC_LOOT_GOLD: int = 8
+const SARC_AMBUSH_BONUS: int = 20
+const SARC_LOOT_GOLD: int = 16
 
 const CARAVAN_BREAD_COST: int = 6
 const CARAVAN_RARE_COST: int = 16
@@ -86,147 +86,164 @@ const CARAVAN_RARE_COST: int = 16
 const SPHINX_LAW_CHANCE: float = 0.30
 const SPHINX_WRONG_LOSS: int = 6
 const SPHINX_SHADOW_CARD_CHANCE: float = 0.50
-const SPHINX_AMBUSH_BONUS: int = 12
-const SPHINX_SILENCE_GOLD: int = 4
+const SPHINX_AMBUSH_BONUS: int = 17
+const SPHINX_SILENCE_GOLD: int = 8
 
 const STORM_WIN_CHANCE: float = 0.45
 const STORM_LOSS_CHANCE: float = 0.30
-const STORM_WIN_GOLD: int = 18
+const STORM_WIN_GOLD: int = 25
 const STORM_LOSS_GOLD: int = 10
-const STORM_AMBUSH_BONUS: int = 10
-const STORM_SHELTER_GOLD: int = 3
+const STORM_AMBUSH_BONUS: int = 14
+const STORM_SHELTER_GOLD: int = 6
 
-const NOMAD_SWAP_COST: int = 4
-const NOMAD_DUEL_BONUS: int = 14
+const NOMAD_SWAP_COST: int = 0
+const NOMAD_DUEL_BONUS: int = 20
 
 # Mercador de Relíquias / Obelisco / Forja das Dunas / Escriba / Oásis / Salteadores
 const RELIC_BUY_COST: int = 12
-const RELIC_SELL_GOLD: int = 10
-const OBELISK_PRAYER_GOLD: int = 6
-const SCRIBE_ALMS_GOLD: int = 5
+const RELIC_SELL_GOLD: int = 20
+const OBELISK_PRAYER_GOLD: int = 12
+const SCRIBE_ALMS_GOLD: int = 10
 const OASIS_DRINK_CARD_CHANCE: float = 0.45
 const OASIS_FEVER_LOSS: int = 6
 const OASIS_WISH_COST: int = 5
 const OASIS_WISH_CHANCE: float = 0.5
-const OASIS_WISH_GOLD: int = 16
+const OASIS_WISH_GOLD: int = 22
 const BANDITS_SEARCH_CHANCE: float = 0.6
-const BANDITS_SEARCH_AMBUSH_BONUS: int = 8
-const BANDITS_SETUP_BONUS: int = 14
+const BANDITS_SEARCH_AMBUSH_BONUS: int = 11
+const BANDITS_SETUP_BONUS: int = 20
 
 # ---- Mina dos Cristais ----
 const VEIN_WIN_CHANCE: float = 0.45
 const VEIN_LOSS_CHANCE: float = 0.30
-const VEIN_WIN_GOLD: int = 18
+const VEIN_WIN_GOLD: int = 25
 const VEIN_LOSS_GOLD: int = 10
-const VEIN_AMBUSH_BONUS: int = 10
-const VEIN_CHIP_GOLD: int = 6
+const VEIN_AMBUSH_BONUS: int = 14
+const VEIN_CHIP_GOLD: int = 12
 
 const SHARD_CARD_CHANCE: float = 0.40
 const SHARD_LOSS_CHANCE: float = 0.25
 const SHARD_LOSS_GOLD: int = 8
-const SHARD_AMBUSH_BONUS: int = 12
-const SHARD_COVER_GOLD: int = 3
+const SHARD_AMBUSH_BONUS: int = 17
+const SHARD_COVER_GOLD: int = 6
 
-const MINER_SWAP_COST: int = 4
-const MINER_LISTEN_GOLD: int = 5
+const MINER_SWAP_COST: int = 0
+const MINER_LISTEN_GOLD: int = 10
 
 const CART_WIN_CHANCE: float = 0.45
 const CART_LOSS_CHANCE: float = 0.30
-const CART_WIN_GOLD: int = 16
+const CART_WIN_GOLD: int = 22
 const CART_LOSS_GOLD: int = 8
-const CART_AMBUSH_BONUS: int = 10
-const CART_SIFT_GOLD: int = 7
+const CART_AMBUSH_BONUS: int = 14
+const CART_SIFT_GOLD: int = 14
 
 const ECHO_LAW_CHANCE: float = 0.30
 const ECHO_WRONG_LOSS: int = 6
 const ECHO_WHISPER_CARD_CHANCE: float = 0.50
-const ECHO_AMBUSH_BONUS: int = 12
-const ECHO_SILENCE_GOLD: int = 4
+const ECHO_AMBUSH_BONUS: int = 17
+const ECHO_SILENCE_GOLD: int = 8
 
 const PROSPECT_SEARCH_CHANCE: float = 0.6
-const PROSPECT_SEARCH_AMBUSH_BONUS: int = 8
-const PROSPECT_SETUP_BONUS: int = 14
+const PROSPECT_SEARCH_AMBUSH_BONUS: int = 11
+const PROSPECT_SETUP_BONUS: int = 20
 
-const MIRROR_ALTAR_GOLD: int = 6
+const MIRROR_ALTAR_GOLD: int = 12
 # --- Mina (eventos novos) ---
 const MAPWALL_PAINT_COST: int = 8
-const CANTEEN_SOUP_GOLD: int = 5
-const NOTICE_OBEY_GOLD: int = 5
+const CANTEEN_SOUP_GOLD: int = 10
+const NOTICE_OBEY_GOLD: int = 10
 const NOTICE_MIX_CARD_CHANCE: float = 0.5
-const NOTICE_MIX_AMBUSH_BONUS: int = 10
-const NOTICE_TEAR_GOLD: int = 8
-const NOTICE_TEAR_AMBUSH_BONUS: int = 6
-const BATS_CHIP_GOLD: int = 6
+const NOTICE_MIX_AMBUSH_BONUS: int = 14
+const NOTICE_TEAR_GOLD: int = 16
+const NOTICE_TEAR_AMBUSH_BONUS: int = 8
+const BATS_CHIP_GOLD: int = 12
 const BATS_LIGHT_CARD_CHANCE: float = 0.5
-const BATS_AMBUSH_BONUS: int = 10
+const BATS_AMBUSH_BONUS: int = 14
 const LIFT_EPIC_CHANCE: float = 0.30
 const LIFT_LOSS_CHANCE: float = 0.35
 const LIFT_LOSS_GOLD: int = 10
-const LIFT_AMBUSH_BONUS: int = 14
-const LIFT_BELL_GOLD: int = 6
+const LIFT_AMBUSH_BONUS: int = 20
+const LIFT_BELL_GOLD: int = 12
 # --- Cume Congelado ---
-const EXPED_LAMP_GOLD: int = 6
+const EXPED_LAMP_GOLD: int = 12
 const EXPED_PACK_CHANCE: float = 0.55
-const EXPED_PACK_GOLD: int = 8
-const EXPED_AMBUSH_BONUS: int = 10
-const FROZEN_TOUCH_GOLD: int = 6
-const FROZEN_AMBUSH_BONUS: int = 12
-const ROPE_AMBUSH_BONUS: int = 12
+const EXPED_PACK_GOLD: int = 16
+const EXPED_AMBUSH_BONUS: int = 14
+const FROZEN_TOUCH_GOLD: int = 12
+const FROZEN_AMBUSH_BONUS: int = 17
+const ROPE_AMBUSH_BONUS: int = 17
 const SPRING_SOAK_CHANCE: float = 0.55
 const SPRING_SOAK_LOSS: int = 6
 const SPRING_WISH_COST: int = 5
 const SPRING_WISH_CHANCE: float = 0.5
-const SPRING_WISH_GOLD: int = 16
+const SPRING_WISH_GOLD: int = 22
 const PRINTS_FOLLOW_CHANCE: float = 0.5
-const PRINTS_AMBUSH_BONUS: int = 12
-const PRINTS_MEASURE_GOLD: int = 5
-const HERMIT_HELP_GOLD: int = 5
+const PRINTS_AMBUSH_BONUS: int = 17
+const PRINTS_MEASURE_GOLD: int = 10
+const HERMIT_HELP_GOLD: int = 10
 const CABLE_WIN_CHANCE: float = 0.45
 const CABLE_LOSS_CHANCE: float = 0.30
-const CABLE_WIN_GOLD: int = 18
+const CABLE_WIN_GOLD: int = 25
 const CABLE_LOSS_GOLD: int = 10
-const CABLE_AMBUSH_BONUS: int = 10
-const CABLE_LOOT_GOLD: int = 6
+const CABLE_AMBUSH_BONUS: int = 14
+const CABLE_LOOT_GOLD: int = 12
 const BELL_LAW_CHANCE: float = 0.4
-const BELL_AMBUSH_BONUS: int = 12
-const BELL_TAP_GOLD: int = 4
+const BELL_AMBUSH_BONUS: int = 17
+const BELL_TAP_GOLD: int = 8
 const FISH_CARD_CHANCE: float = 0.35
 const FISH_GOLD_CHANCE: float = 0.35
-const FISH_GOLD: int = 12
-const FISH_AMBUSH_BONUS: int = 10
-const FISH_BUCKET_GOLD: int = 5
+const FISH_GOLD: int = 17
+const FISH_AMBUSH_BONUS: int = 14
+const FISH_BUCKET_GOLD: int = 10
 # --- Caldeira ---
-const FORGE2_HELP_GOLD: int = 6
+const FORGE2_HELP_GOLD: int = 12
 const APPRENTICE_BUY_COST: int = 6
-const APPRENTICE_HELP_GOLD: int = 6
-const APPRENTICE_AMBUSH_BONUS: int = 14
+const APPRENTICE_HELP_GOLD: int = 12
+const APPRENTICE_AMBUSH_BONUS: int = 20
 const STONES_WIN_CHANCE: float = 0.45
 const STONES_LOSS_CHANCE: float = 0.30
-const STONES_WIN_GOLD: int = 20
+const STONES_WIN_GOLD: int = 28
 const STONES_LOSS_GOLD: int = 10
-const STONES_AMBUSH_BONUS: int = 10
-const STONES_AROUND_GOLD: int = 4
+const STONES_AMBUSH_BONUS: int = 14
+const STONES_AROUND_GOLD: int = 8
 const NEST_EGG_CHANCE: float = 0.5
-const NEST_AMBUSH_BONUS: int = 12
-const NEST_COAL_GOLD: int = 6
+const NEST_AMBUSH_BONUS: int = 17
+const NEST_COAL_GOLD: int = 12
 const MOLD_FILL_COST: int = 12
-const MOLD_TOUCH_COST: int = 4
+const MOLD_TOUCH_COST: int = 0
 const GEYSER_GRAB_CHANCE: float = 0.55
-const GEYSER_GRAB_GOLD: int = 16
+const GEYSER_GRAB_GOLD: int = 22
 const GEYSER_GRAB_LOSS: int = 8
 const GEYSER_PLUG_LAW_CHANCE: float = 0.4
-const GEYSER_AMBUSH_BONUS: int = 12
-const STATUE_POLISH_GOLD: int = 6
-const STATUE_AMBUSH_BONUS: int = 14
-const SMELT_GOLD: int = 16
-const SMELT_STIR_GOLD: int = 5
-const ASH_SWEEP_GOLD: int = 6
+const GEYSER_AMBUSH_BONUS: int = 17
+const STATUE_POLISH_GOLD: int = 12
+const STATUE_AMBUSH_BONUS: int = 20
+const SMELT_GOLD: int = 22
+const SMELT_STIR_GOLD: int = 10
+const ASH_SWEEP_GOLD: int = 12
 
 var hud_bar: HUDBar
 var inventory_ui: InventoryUI
 var card_tooltip: ActionCardTooltip
 var rule_tooltip: RuleCardTooltip
 var discard_modal: RuleDiscardModal
+var pick_modal: ItemPickModal
+# Escolha feita no ItemPickModal antes de resolver a opção (carta/Lei do jogador ou carta oferecida).
+var picked_card: ActionCard = null
+var picked_law: RuleCard = null
+var _pending_pick_choice: String = ""
+var _picked_offer: bool = false   # true = picked_card veio da oferta (não está no baralho)
+
+# Falas das novas opções "achar uma carta" (escolha 1 de 3 comuns).
+const SCAVENGE_TEXT := {
+	"chest": "Em volta do cofre, a terra mexida esconde o que o dono deixou cair.",
+	"mushrooms": "Embaixo de um chapéu, sem pisar no círculo, tem uma carta seca e inteira.",
+	"sandstorm": "Nos destroços que a tempestade espalhou, uma carta presa entre duas tábuas.",
+	"crystal_vein": "Dentro do cristal, como um inseto no âmbar, uma carta. Ela sai inteira.",
+	"cable_car": "A caixa do operador abre com um chute. Lá dentro, além do apito, uma carta.",
+	"lava_stones": "Na margem, uma carta boia num pedaço de crosta, mal tostada.",
+	"geyser": "Entre um jato e outro, você descola uma carta grudada na pedra quente.",
+}
 
 var title_label: Label
 var text_label: Label
@@ -308,6 +325,9 @@ func _enter_stage() -> void:
 	await stage.play_intro(event)
 	if not is_inside_tree():
 		return
+	_show_stage_choices()
+
+func _show_stage_choices() -> void:
 	var list: Array = []
 	for choice in event["choices"]:
 		var req: String = choice.get("requires", "")
@@ -412,15 +432,15 @@ func _build_events() -> Array[Dictionary]:
 			"text": "Um cofre preso entre as raízes, meio engolido pela terra. A tranca está podre de velha: uma batida boa e ela cede. Se ninguém ouvir.",
 			"choices": [
 				{"id": "pry", "label": "FORÇAR A TRANCA", "hint": "%d%%: +%d ouro  /  %d%%: -%d ouro  /  %d%%: EMBOSCADA" % [_pct(CHEST_WIN_CHANCE), CHEST_WIN_GOLD, _pct(CHEST_NEEDLE_CHANCE), CHEST_LOSS_GOLD, _pct(1.0 - CHEST_WIN_CHANCE - CHEST_NEEDLE_CHANCE)]},
-				{"id": "skip", "label": "DEIXAR ENTERRADO", "hint": "Nada acontece"},
+				{"id": "scavenge", "label": "CAVAR EM VOLTA", "hint": "Escolha 1 entre 3 cartas comuns", "pick": "offer:0:0"},
 			]
 		},
 		{
 			"id": "merchant", "title": "MERCADOR ENCAPUZADO",
 			"text": "Um sujeito de capuz abre a capa: cartas que caíram das ilhas quando o mundo rachou, embrulhadas em pano. Ele compra as suas também.",
 			"choices": [
-				{"id": "buy", "label": "COMPRAR (%d ouro)" % MERCHANT_BUY_COST, "hint": "Ganha 1 carta aleatória", "requires": "gold_%d" % MERCHANT_BUY_COST},
-				{"id": "sell", "label": "VENDER UMA CARTA", "hint": "Perde 1 carta aleatória do baralho e ganha +%d ouro" % MERCHANT_SELL_GOLD, "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "buy", "label": "COMPRAR (%d ouro)" % MERCHANT_BUY_COST, "hint": "Escolha 1 entre 3 cartas", "requires": "gold_%d" % MERCHANT_BUY_COST, "pick": "offer:0:3"},
+				{"id": "sell", "label": "VENDER UMA CARTA", "hint": "Você escolhe a carta: +%d a +%d ouro, conforme a raridade" % [_sell_value_r(ActionCard.Rarity.COMMON), _sell_value_r(ActionCard.Rarity.LEGENDARY)], "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE, "pick": "card"},
 				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
 			]
 		},
@@ -428,7 +448,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "altar", "title": "ALTAR DAS LEIS",
 			"text": "Um altar de pedra coberto de musgo, com uma runa que pulsa fraca. Antes da Rachadura, cada lugar guardava as suas Leis em altares assim, e este ainda tem um pedaço de uma.",
 			"choices": [
-				{"id": "offer", "label": "OFERECER UMA CARTA", "hint": "Perde 1 carta aleatória e ganha 1 Lei aleatória", "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "offer", "label": "OFERECER UMA CARTA", "hint": "Você escolhe a carta que vai; ganha 1 Lei nova", "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE, "pick": "card"},
 				{"id": "pray", "label": "DESCANSAR AO PÉ DO ALTAR", "hint": "+%d ouro" % ALTAR_PRAYER_GOLD},
 			]
 		},
@@ -436,7 +456,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "forge", "title": "FERREIRO ANDARILHO",
 			"text": "Um ferreiro andarilho bate brasa numa bigorna no meio da mata. Por umas moedas, ele martela uma carta sua até ela virar coisa melhor.",
 			"choices": [
-				{"id": "forge", "label": "FORJAR (%d ouro)" % FORGE_COST, "hint": "1 carta aleatória sobe de raridade", "requires": "upgradable_%d" % FORGE_COST},
+				{"id": "forge", "label": "FORJAR (%d ouro)" % FORGE_COST, "hint": "Você escolhe a carta; ela sobe de raridade", "requires": "upgradable_%d" % FORGE_COST, "pick": "upgradable"},
 				{"id": "help", "label": "PISAR NO FOLE", "hint": "+%d ouro pelo trabalho" % FORGE_HELP_GOLD},
 			]
 		},
@@ -444,7 +464,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "library", "title": "BIBLIOTECA ESQUECIDA",
 			"text": "Uma biblioteca de pedra engolida pelo mato. Lá dentro, no meio do salão, um tomo preso por correntes treme sozinho.",
 			"choices": [
-				{"id": "read", "label": "LER COM CALMA", "hint": "Ganha 1 carta (comum ou rara)"},
+				{"id": "read", "label": "LER COM CALMA", "hint": "Escolha 1 entre 3 cartas (comuns ou raras)", "pick": "offer:0:1"},
 				{"id": "tome", "label": "SOLTAR O TOMO ACORRENTADO", "hint": "%d%%: carta épica  /  %d%%: -%d ouro  /  %d%%: EMBOSCADA" % [_pct(TOME_CHANCE), _pct(TOME_LOSS_CHANCE), TOME_LOSS_GOLD, _pct(1.0 - TOME_CHANCE - TOME_LOSS_CHANCE)]},
 			]
 		},
@@ -452,7 +472,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "traveler", "title": "VIAJANTE FERIDO",
 			"text": "Um viajante caído na beira da trilha, com a borda rachada e a bolsa aberta. Ele pede ajuda com a voz fraca.",
 			"choices": [
-				{"id": "help", "label": "PAGAR O CURATIVO (%d ouro)" % TRAVELER_HELP_COST, "hint": "Ganha 1 carta rara ou melhor", "requires": "gold_%d" % TRAVELER_HELP_COST},
+				{"id": "help", "label": "PAGAR O CURATIVO (%d ouro)" % TRAVELER_HELP_COST, "hint": "Escolha 1 entre 3 cartas raras ou melhores", "requires": "gold_%d" % TRAVELER_HELP_COST, "pick": "offer:1:3"},
 				{"id": "rob", "label": "REVISTAR A BOLSA", "hint": "%d%%: +%d ouro  /  %d%%: -%d ouro  /  %d%%: EMBOSCADA" % [_pct(TRAVELER_ROB_CHANCE), TRAVELER_ROB_GOLD, _pct(TRAVELER_ROB_LOSS_CHANCE), TRAVELER_ROB_LOSS, _pct(1.0 - TRAVELER_ROB_CHANCE - TRAVELER_ROB_LOSS_CHANCE)]},
 				{"id": "skip", "label": "IGNORAR", "hint": "Segue viagem"},
 			]
@@ -481,14 +501,14 @@ func _build_events() -> Array[Dictionary]:
 			"choices": [
 				{"id": "pick", "label": "COLHER PARA VENDER", "hint": "+%d ouro" % MUSHROOM_PICK_GOLD},
 				{"id": "eat", "label": "PISAR NO CÍRCULO", "hint": "%d%%: +%d ouro  /  %d%%: -%d ouro  /  %d%%: EMBOSCADA" % [_pct(MUSHROOM_WIN_CHANCE), MUSHROOM_WIN_GOLD, _pct(MUSHROOM_LOSS_CHANCE), MUSHROOM_LOSS_GOLD, _pct(1.0 - MUSHROOM_WIN_CHANCE - MUSHROOM_LOSS_CHANCE)]},
-				{"id": "skip", "label": "DAR A VOLTA", "hint": "Segue viagem"},
+				{"id": "scavenge", "label": "OLHAR EMBAIXO DOS CHAPÉUS", "hint": "Escolha 1 entre 3 cartas comuns", "pick": "offer:0:0"},
 			]
 		},
 		{
 			"id": "hunter", "title": "CAÇADOR SOLITÁRIO",
 			"text": "Um caçador de capuz verde, com arco nas costas, te mede de cima a baixo. Tem um negócio pra propor. Ou uma briga, tanto faz.",
 			"choices": [
-				{"id": "swap", "label": "TROCAR UMA CARTA (%d ouro)" % HUNTER_SWAP_COST, "hint": "1 carta aleatória vira outra da mesma raridade", "requires": "swapcard_%d" % HUNTER_SWAP_COST},
+				{"id": "swap", "label": "TROCAR UMA CARTA", "hint": "Você escolhe a carta; ela vira outra da mesma raridade", "requires": "swapcard_0", "pick": "card"},
 				{"id": "challenge", "label": "DESAFIAR PARA UM DUELO", "hint": "Duelo garantido. Vitória: +%d ouro" % HUNTER_DUEL_BONUS},
 				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
 			]
@@ -498,7 +518,7 @@ func _build_events() -> Array[Dictionary]:
 			"text": "Uma bruxa mexe um caldeirão de poção verde. Diz que a poção acabou de ficar pronta e que ninguém teve coragem de provar ainda.",
 			"choices": [
 				{"id": "potion", "label": "PROVAR A POÇÃO", "hint": "%d%%: carta rara ou melhor  /  %d%%: perde 1 carta  /  %d%%: +%d ouro" % [_pct(WITCH_CARD_CHANCE), _pct(WITCH_LOSS_CHANCE), _pct(1.0 - WITCH_CARD_CHANCE - WITCH_LOSS_CHANCE), WITCH_GOLD]},
-				{"id": "herbs", "label": "COMPRAR ERVAS (%d ouro)" % WITCH_HERBS_COST, "hint": "Ganha 1 carta comum", "requires": "gold_%d" % WITCH_HERBS_COST},
+				{"id": "herbs", "label": "COMPRAR ERVAS (%d ouro)" % WITCH_HERBS_COST, "hint": "Escolha 1 entre 3 cartas comuns", "requires": "gold_%d" % WITCH_HERBS_COST, "pick": "offer:0:0"},
 				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
 			]
 		},
@@ -506,7 +526,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "monk", "title": "MONGE ERMITÃO",
 			"text": "Um monge de olhos fechados medita embaixo de uma árvore velha, cercado de pergaminhos. Diz que as suas Leis podiam ser melhores.",
 			"choices": [
-				{"id": "swap", "label": "REESCREVER UMA LEI (%d ouro)" % MONK_SWAP_COST, "hint": "1 Lei aleatória sua é trocada por outra", "requires": "swaplaw_%d" % MONK_SWAP_COST},
+				{"id": "swap", "label": "REESCREVER UMA LEI", "hint": "Você escolhe a Lei; ela vira outra que você ainda não tem", "requires": "swaplaw_0", "pick": "law"},
 				{"id": "alms", "label": "AJUDAR NO JARDIM", "hint": "Ele paga o serviço: +%d ouro" % MONK_ALMS_GOLD},
 				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
 			]
@@ -534,8 +554,8 @@ func _build_events() -> Array[Dictionary]:
 			"id": "caravan", "biome": "deserto", "title": "CARAVANA À DERIVA",
 			"text": "Uma caravana parada à sombra de uma tenda listrada. O caravaneiro vende cartas: um maço barato na frente e as boas no baú do fundo.",
 			"choices": [
-				{"id": "bread", "label": "MAÇO BARATO (%d ouro)" % CARAVAN_BREAD_COST, "hint": "Ganha 1 carta comum", "requires": "gold_%d" % CARAVAN_BREAD_COST},
-				{"id": "rare", "label": "O BAÚ DO FUNDO (%d ouro)" % CARAVAN_RARE_COST, "hint": "Ganha 1 carta rara ou melhor", "requires": "gold_%d" % CARAVAN_RARE_COST},
+				{"id": "bread", "label": "MAÇO BARATO (%d ouro)" % CARAVAN_BREAD_COST, "hint": "Escolha 1 entre 3 cartas comuns", "requires": "gold_%d" % CARAVAN_BREAD_COST, "pick": "offer:0:0"},
+				{"id": "rare", "label": "O BAÚ DO FUNDO (%d ouro)" % CARAVAN_RARE_COST, "hint": "Escolha 1 entre 3 cartas raras ou melhores", "requires": "gold_%d" % CARAVAN_RARE_COST, "pick": "offer:1:3"},
 				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
 			]
 		},
@@ -554,13 +574,14 @@ func _build_events() -> Array[Dictionary]:
 			"choices": [
 				{"id": "cross", "label": "ATRAVESSAR A TEMPESTADE", "hint": "%d%%: +%d ouro  /  %d%%: -%d ouro  /  %d%%: EMBOSCADA" % [_pct(STORM_WIN_CHANCE), STORM_WIN_GOLD, _pct(STORM_LOSS_CHANCE), STORM_LOSS_GOLD, _pct(1.0 - STORM_WIN_CHANCE - STORM_LOSS_CHANCE)]},
 				{"id": "shelter", "label": "ABRIGAR-SE NA TORRE", "hint": "+%d ouro" % STORM_SHELTER_GOLD},
+				{"id": "scavenge", "label": "REVIRAR OS DESTROÇOS", "hint": "Escolha 1 entre 3 cartas comuns", "pick": "offer:0:0"},
 			]
 		},
 		{
 			"id": "nomad", "biome": "deserto", "title": "NÔMADE DAS DUNAS",
 			"text": "Um nômade de turbante azul gira uma moeda nos dedos ao lado de um tapete com um tabuleiro desenhado. Troca cartas, e respeita quem joga bem.",
 			"choices": [
-				{"id": "swap", "label": "TROCAR UMA CARTA (%d ouro)" % NOMAD_SWAP_COST, "hint": "1 carta aleatória vira outra da mesma raridade", "requires": "swapcard_%d" % NOMAD_SWAP_COST},
+				{"id": "swap", "label": "TROCAR UMA CARTA", "hint": "Você escolhe a carta; ela vira outra da mesma raridade", "requires": "swapcard_0", "pick": "card"},
 				{"id": "challenge", "label": "DESAFIAR PARA UM DUELO", "hint": "Duelo garantido. Vitória: +%d ouro" % NOMAD_DUEL_BONUS},
 				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
 			]
@@ -569,8 +590,8 @@ func _build_events() -> Array[Dictionary]:
 			"id": "relics", "biome": "deserto", "title": "MERCADOR DE RELÍQUIAS",
 			"text": "Debaixo de um toldo de linho, um velho vende amuletos e cartas desenterradas de tumbas. Compra o que você tiver, sem perguntar de onde veio.",
 			"choices": [
-				{"id": "buy", "label": "COMPRAR (%d ouro)" % RELIC_BUY_COST, "hint": "Ganha 1 carta aleatória", "requires": "gold_%d" % RELIC_BUY_COST},
-				{"id": "sell", "label": "VENDER UMA CARTA", "hint": "Perde 1 carta aleatória do baralho e ganha +%d ouro" % RELIC_SELL_GOLD, "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "buy", "label": "COMPRAR (%d ouro)" % RELIC_BUY_COST, "hint": "Escolha 1 entre 3 cartas", "requires": "gold_%d" % RELIC_BUY_COST, "pick": "offer:0:3"},
+				{"id": "sell", "label": "VENDER UMA CARTA", "hint": "Você escolhe a carta: +%d a +%d ouro, conforme a raridade" % [_sell_value_r(ActionCard.Rarity.COMMON), _sell_value_r(ActionCard.Rarity.LEGENDARY)], "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE, "pick": "card"},
 				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
 			]
 		},
@@ -578,7 +599,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "obelisk", "biome": "deserto", "title": "OBELISCO DAS LEIS",
 			"text": "Um obelisco coberto de hieróglifos, com oferendas velhas aos pés. Como os altares da mata, ele guarda um pedaço de uma Lei perdida.",
 			"choices": [
-				{"id": "offer", "label": "OFERECER UMA CARTA", "hint": "Perde 1 carta aleatória e ganha 1 Lei aleatória", "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "offer", "label": "OFERECER UMA CARTA", "hint": "Você escolhe a carta que vai; ganha 1 Lei nova", "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE, "pick": "card"},
 				{"id": "pray", "label": "DESCANSAR NA SOMBRA DELE", "hint": "+%d ouro" % OBELISK_PRAYER_GOLD},
 			]
 		},
@@ -586,7 +607,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "scribe", "biome": "deserto", "title": "ESCRIBA DE PAPIRO",
 			"text": "Um escriba sentado sobre uma pilha de papiros. Diz que as suas Leis foram escritas com pressa, e que reescreve uma por um preço justo.",
 			"choices": [
-				{"id": "swap", "label": "REESCREVER UMA LEI (%d ouro)" % MONK_SWAP_COST, "hint": "1 Lei aleatória sua é trocada por outra", "requires": "swaplaw_%d" % MONK_SWAP_COST},
+				{"id": "swap", "label": "REESCREVER UMA LEI", "hint": "Você escolhe a Lei; ela vira outra que você ainda não tem", "requires": "swaplaw_0", "pick": "law"},
 				{"id": "alms", "label": "ORGANIZAR OS PAPIROS", "hint": "Ele paga o serviço: +%d ouro" % SCRIBE_ALMS_GOLD},
 				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
 			]
@@ -616,7 +637,7 @@ func _build_events() -> Array[Dictionary]:
 			"choices": [
 				{"id": "pry", "label": "QUEBRAR O CRISTAL", "hint": "%d%%: +%d ouro  /  %d%%: -%d ouro (desabamento)  /  %d%%: EMBOSCADA" % [_pct(VEIN_WIN_CHANCE), VEIN_WIN_GOLD, _pct(VEIN_LOSS_CHANCE), VEIN_LOSS_GOLD, _pct(1.0 - VEIN_WIN_CHANCE - VEIN_LOSS_CHANCE)]},
 				{"id": "chip", "label": "JUNTAR AS LASCAS", "hint": "+%d ouro" % VEIN_CHIP_GOLD},
-				{"id": "skip", "label": "DEIXAR BRILHANDO", "hint": "Segue viagem"},
+				{"id": "scavenge", "label": "OLHAR DENTRO DO CRISTAL", "hint": "Escolha 1 entre 3 cartas comuns", "pick": "offer:0:0"},
 			]
 		},
 		{
@@ -632,7 +653,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "echo_miner", "biome": "mina", "title": "MINEIRO DO ECO",
 			"text": "Um mineiro de olhos leitosos escuta a parede com a picareta encostada. Diz que viu você chegando, duas vezes. Tem cartas viradas num pano.",
 			"choices": [
-				{"id": "swap", "label": "TROCAR UMA CARTA (%d ouro)" % MINER_SWAP_COST, "hint": "1 carta aleatória vira outra da mesma raridade", "requires": "swapcard_%d" % MINER_SWAP_COST},
+				{"id": "swap", "label": "TROCAR UMA CARTA", "hint": "Você escolhe a carta; ela vira outra da mesma raridade", "requires": "swapcard_0", "pick": "card"},
 				{"id": "listen", "label": "ESCUTAR A PAREDE COM ELE", "hint": "+%d ouro: ele divide o que o eco achar" % MINER_LISTEN_GOLD},
 				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
 			]
@@ -668,7 +689,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "mirror_altar", "biome": "mina", "title": "ALTAR DE ESPELHO",
 			"text": "Um altar de cristal com uma face espelhada. Nela, uma versão sua mais velha e gasta. Uma mão de cristal sai do espelho pedindo uma carta.",
 			"choices": [
-				{"id": "offer", "label": "OFERECER UMA CARTA", "hint": "Perde 1 carta aleatória e ganha 1 Lei aleatória", "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "offer", "label": "OFERECER UMA CARTA", "hint": "Você escolhe a carta que vai; ganha 1 Lei nova", "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE, "pick": "card"},
 				{"id": "gaze", "label": "SÓ OLHAR", "hint": "+%d ouro" % MIRROR_ALTAR_GOLD},
 				{"id": "skip", "label": "VIRAR AS COSTAS", "hint": "Segue viagem"},
 			]
@@ -689,7 +710,7 @@ func _build_events() -> Array[Dictionary]:
 			"choices": [
 				{"id": "mixed", "label": "PEDIR O PRATO MISTURADO", "hint": "Ganha 1 Lei nova, mas a sopa se mexe: EMBOSCADA"},
 				{"id": "soup", "label": "PEDIR A SOPA NORMAL", "hint": "+%d ouro (ele paga a gorjeta ao contrário)" % CANTEEN_SOUP_GOLD},
-				{"id": "ask", "label": "PERGUNTAR QUEM ERA \"ELE\"", "hint": "Ganha 1 carta comum"},
+				{"id": "ask", "label": "PERGUNTAR QUEM ERA \"ELE\"", "hint": "Escolha 1 entre 3 cartas comuns", "pick": "offer:0:0"},
 			]
 		},
 		{
@@ -733,7 +754,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "frozen_disc", "biome": "cume", "title": "O DISCO NO GELO",
 			"text": "Um disco liso, sem rosto, preso num bloco de gelo do jeito que parou.",
 			"choices": [
-				{"id": "melt", "label": "DERRETER O GELO", "hint": "Ganha 1 carta rara ou melhor"},
+				{"id": "melt", "label": "DERRETER O GELO", "hint": "Escolha 1 entre 3 cartas raras ou melhores", "pick": "offer:1:3"},
 				{"id": "touch", "label": "ENCOSTAR NO GELO", "hint": "+%d ouro" % FROZEN_TOUCH_GOLD},
 				{"id": "hit", "label": "BATER NO GELO", "hint": "O gelo estala: EMBOSCADA (+%d ouro se vencer)" % FROZEN_AMBUSH_BONUS},
 			]
@@ -742,7 +763,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "safety_rope", "biome": "cume", "title": "A CORDA DE SEGURANÇA",
 			"text": "Uma corda congelada sobe e some na neve. Lá de cima, bem longe, uma voz pergunta quem está puxando.",
 			"choices": [
-				{"id": "promise", "label": "RESPONDER \"EU AVISO\"", "hint": "Ganha 1 carta rara ou melhor"},
+				{"id": "promise", "label": "RESPONDER \"EU AVISO\"", "hint": "Escolha 1 entre 3 cartas raras ou melhores", "pick": "offer:1:3"},
 				{"id": "deny", "label": "RESPONDER \"NINGUÉM SOBE MAIS\"", "hint": "A neve desaba: EMBOSCADA (+%d ouro se vencer)" % ROPE_AMBUSH_BONUS},
 				{"id": "pull", "label": "PUXAR A CORDA", "hint": "Ganha 1 Lei nova"},
 			]
@@ -769,7 +790,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "ice_hermit", "biome": "cume", "title": "O EREMITA DO IGLU",
 			"text": "Uma peça de gorro de pele tomando chá na porta de um iglu. Diz que reescreve Leis com a caligrafia do frio.",
 			"choices": [
-				{"id": "swap", "label": "REESCREVER UMA LEI (%d ouro)" % MONK_SWAP_COST, "hint": "1 Lei aleatória sua é trocada por outra", "requires": "swaplaw_%d" % MONK_SWAP_COST},
+				{"id": "swap", "label": "REESCREVER UMA LEI", "hint": "Você escolhe a Lei; ela vira outra que você ainda não tem", "requires": "swaplaw_0", "pick": "law"},
 				{"id": "help", "label": "AJUDAR A CORTAR GELO", "hint": "Ele paga o serviço: +%d ouro" % HERMIT_HELP_GOLD},
 				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
 			]
@@ -780,7 +801,7 @@ func _build_events() -> Array[Dictionary]:
 			"choices": [
 				{"id": "ride", "label": "SUBIR NA CABINE", "hint": "%d%%: +%d ouro  /  %d%%: -%d ouro  /  %d%%: EMBOSCADA" % [_pct(CABLE_WIN_CHANCE), CABLE_WIN_GOLD, _pct(CABLE_LOSS_CHANCE), CABLE_LOSS_GOLD, _pct(1.0 - CABLE_WIN_CHANCE - CABLE_LOSS_CHANCE)]},
 				{"id": "loot", "label": "REVIRAR A ESTAÇÃO", "hint": "+%d ouro" % CABLE_LOOT_GOLD},
-				{"id": "skip", "label": "SEGUIR A PÉ", "hint": "Segue viagem"},
+				{"id": "scavenge", "label": "ABRIR A CAIXA DO OPERADOR", "hint": "Escolha 1 entre 3 cartas comuns", "pick": "offer:0:0"},
 			]
 		},
 		{
@@ -796,8 +817,8 @@ func _build_events() -> Array[Dictionary]:
 			"id": "fur_trader", "biome": "cume", "title": "O PELEIRO",
 			"text": "Um mercador todo agasalhado, puxando um trenó cheio de coisas. Compra e vende de tudo, menos frio.",
 			"choices": [
-				{"id": "buy", "label": "COMPRAR (%d ouro)" % MERCHANT_BUY_COST, "hint": "Ganha 1 carta aleatória", "requires": "gold_%d" % MERCHANT_BUY_COST},
-				{"id": "sell", "label": "VENDER UMA CARTA", "hint": "Perde 1 carta aleatória do baralho e ganha +%d ouro" % MERCHANT_SELL_GOLD, "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "buy", "label": "COMPRAR (%d ouro)" % MERCHANT_BUY_COST, "hint": "Escolha 1 entre 3 cartas", "requires": "gold_%d" % MERCHANT_BUY_COST, "pick": "offer:0:3"},
+				{"id": "sell", "label": "VENDER UMA CARTA", "hint": "Você escolhe a carta: +%d a +%d ouro, conforme a raridade" % [_sell_value_r(ActionCard.Rarity.COMMON), _sell_value_r(ActionCard.Rarity.LEGENDARY)], "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE, "pick": "card"},
 				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
 			]
 		},
@@ -815,7 +836,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "lost_forge", "biome": "caldeira", "title": "A FORJA ESQUECIDA",
 			"text": "Uma bigorna com uma coroa pela metade em cima, e a fornalha ainda acesa. Quem estava trabalhando saiu correndo.",
 			"choices": [
-				{"id": "forge", "label": "TERMINAR O SERVIÇO (%d ouro)" % FORGE_COST, "hint": "1 carta aleatória sobe de raridade", "requires": "upgradable_%d" % FORGE_COST},
+				{"id": "forge", "label": "TERMINAR O SERVIÇO", "hint": "Grátis: você escolhe a carta; ela sobe de raridade", "requires": "upgradable_0", "pick": "upgradable", "free": true},
 				{"id": "help", "label": "PISAR NO FOLE", "hint": "+%d ouro achado nas cinzas" % FORGE2_HELP_GOLD},
 				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
 			]
@@ -824,7 +845,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "apprentice", "biome": "caldeira", "title": "O APRENDIZ DA FERREIRA",
 			"text": "Uma peça jovem de óculos enormes e avental, nervosa, escondendo uma bancada de peças com defeito.",
 			"choices": [
-				{"id": "buy", "label": "COMPRAR BARATINHO (%d ouro)" % APPRENTICE_BUY_COST, "hint": "Ganha 1 carta comum", "requires": "gold_%d" % APPRENTICE_BUY_COST},
+				{"id": "buy", "label": "COMPRAR BARATINHO (%d ouro)" % APPRENTICE_BUY_COST, "hint": "Escolha 1 entre 3 cartas comuns", "requires": "gold_%d" % APPRENTICE_BUY_COST, "pick": "offer:0:0"},
 				{"id": "help", "label": "AJUDAR A ESCONDER O ERRO", "hint": "+%d ouro" % APPRENTICE_HELP_GOLD},
 				{"id": "report", "label": "CONTAR PRA MESTRA", "hint": "Ela manda os ajudantes: EMBOSCADA (+%d ouro se vencer)" % APPRENTICE_AMBUSH_BONUS},
 			]
@@ -835,7 +856,7 @@ func _build_events() -> Array[Dictionary]:
 			"choices": [
 				{"id": "jump", "label": "PULAR PELAS PEDRAS", "hint": "%d%%: +%d ouro  /  %d%%: -%d ouro  /  %d%%: EMBOSCADA" % [_pct(STONES_WIN_CHANCE), STONES_WIN_GOLD, _pct(STONES_LOSS_CHANCE), STONES_LOSS_GOLD, _pct(1.0 - STONES_WIN_CHANCE - STONES_LOSS_CHANCE)]},
 				{"id": "around", "label": "DAR A VOLTA", "hint": "+%d ouro achado na margem" % STONES_AROUND_GOLD},
-				{"id": "skip", "label": "DESISTIR", "hint": "Segue viagem"},
+				{"id": "scavenge", "label": "PESCAR O QUE BOIA NA MARGEM", "hint": "Escolha 1 entre 3 cartas comuns", "pick": "offer:0:0"},
 			]
 		},
 		{
@@ -852,7 +873,7 @@ func _build_events() -> Array[Dictionary]:
 			"text": "Um bloco de pedra cavado em forma de coroa. Uma calha despeja ouro derretido do lado, sem parar.",
 			"choices": [
 				{"id": "fill", "label": "ENCHER O MOLDE (%d ouro)" % MOLD_FILL_COST, "hint": "Ganha 1 Lei nova", "requires": "gold_%d" % MOLD_FILL_COST},
-				{"id": "swap", "label": "MERGULHAR UMA CARTA NO OURO (%d ouro)" % MOLD_TOUCH_COST, "hint": "1 carta aleatória vira outra da mesma raridade", "requires": "swapcard_%d" % MOLD_TOUCH_COST},
+				{"id": "swap", "label": "MERGULHAR UMA CARTA NO OURO", "hint": "Você escolhe a carta; ela vira outra da mesma raridade", "requires": "swapcard_0", "pick": "card"},
 				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
 			]
 		},
@@ -862,15 +883,15 @@ func _build_events() -> Array[Dictionary]:
 			"choices": [
 				{"id": "grab", "label": "PEGAR AS MOEDAS ENTRE UM JATO E OUTRO", "hint": "%d%%: +%d ouro  /  %d%%: -%d ouro" % [_pct(GEYSER_GRAB_CHANCE), GEYSER_GRAB_GOLD, _pct(1.0 - GEYSER_GRAB_CHANCE), GEYSER_GRAB_LOSS]},
 				{"id": "plug", "label": "TAMPAR COM UMA PEDRA", "hint": "%d%%: 1 Lei nova  /  %d%%: EMBOSCADA" % [_pct(GEYSER_PLUG_LAW_CHANCE), _pct(1.0 - GEYSER_PLUG_LAW_CHANCE)]},
-				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
+				{"id": "scavenge", "label": "SECAR AS CARTAS DA PEDRA", "hint": "Escolha 1 entre 3 cartas comuns", "pick": "offer:0:0"},
 			]
 		},
 		{
 			"id": "glassblower", "biome": "caldeira", "title": "A VIDREIRA",
 			"text": "Uma peça de lenço na cabeça soprando vidro de lava. Na prateleira, cartas com moldura de vidro.",
 			"choices": [
-				{"id": "buy", "label": "COMPRAR (%d ouro)" % MERCHANT_BUY_COST, "hint": "Ganha 1 carta aleatória", "requires": "gold_%d" % MERCHANT_BUY_COST},
-				{"id": "sell", "label": "VENDER UMA CARTA", "hint": "Perde 1 carta aleatória do baralho e ganha +%d ouro" % MERCHANT_SELL_GOLD, "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "buy", "label": "COMPRAR (%d ouro)" % MERCHANT_BUY_COST, "hint": "Escolha 1 entre 3 cartas", "requires": "gold_%d" % MERCHANT_BUY_COST, "pick": "offer:0:3"},
+				{"id": "sell", "label": "VENDER UMA CARTA", "hint": "Você escolhe a carta: +%d a +%d ouro, conforme a raridade" % [_sell_value_r(ActionCard.Rarity.COMMON), _sell_value_r(ActionCard.Rarity.LEGENDARY)], "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE, "pick": "card"},
 				{"id": "skip", "label": "RECUSAR", "hint": "Segue viagem"},
 			]
 		},
@@ -878,7 +899,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "melted_statue", "biome": "caldeira", "title": "A ESTÁTUA DERRETIDA",
 			"text": "A estátua de uma peça coroada, com a metade de baixo escorrida como cera. Tem uma inscrição na base.",
 			"choices": [
-				{"id": "read", "label": "LER A INSCRIÇÃO INTEIRA", "hint": "Ganha 1 carta rara ou melhor"},
+				{"id": "read", "label": "LER A INSCRIÇÃO INTEIRA", "hint": "Escolha 1 entre 3 cartas raras ou melhores", "pick": "offer:1:3"},
 				{"id": "polish", "label": "POLIR A ESTÁTUA", "hint": "+%d ouro" % STATUE_POLISH_GOLD},
 				{"id": "crown", "label": "TIRAR A COROA DELA", "hint": "Alguém vigia a estátua: EMBOSCADA (+%d ouro se vencer)" % STATUE_AMBUSH_BONUS},
 			]
@@ -887,7 +908,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "smelter", "biome": "caldeira", "title": "O CALDEIRÃO DE FUNDIÇÃO",
 			"text": "Um caldeirão enorme de metal derretido, borbulhando em cima de um buraco de lava. Tudo que cai ali vira lingote.",
 			"choices": [
-				{"id": "melt", "label": "DERRETER UMA CARTA", "hint": "Perde 1 carta aleatória e ganha +%d ouro" % SMELT_GOLD, "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "melt", "label": "DERRETER UMA CARTA", "hint": "Você escolhe a carta: vira +%d a +%d ouro (preço cheio)" % [_melt_value_r(ActionCard.Rarity.COMMON), _melt_value_r(ActionCard.Rarity.LEGENDARY)], "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE, "pick": "card"},
 				{"id": "stir", "label": "MEXER O CALDEIRÃO", "hint": "+%d ouro" % SMELT_STIR_GOLD},
 				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
 			]
@@ -896,7 +917,7 @@ func _build_events() -> Array[Dictionary]:
 			"id": "ash_altar", "biome": "caldeira", "title": "O ALTAR DAS CINZAS",
 			"text": "Um altar de obsidiana coberto de cinza, com marcas de mãos de quem já passou. No meio, uma fresta de lava respira.",
 			"choices": [
-				{"id": "offer", "label": "OFERECER UMA CARTA", "hint": "Perde 1 carta aleatória e ganha 1 Lei aleatória", "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE},
+				{"id": "offer", "label": "OFERECER UMA CARTA", "hint": "Você escolhe a carta que vai; ganha 1 Lei nova", "requires": "deck_%d" % MIN_DECK_FOR_SACRIFICE, "pick": "card"},
 				{"id": "sweep", "label": "VARRER A CINZA", "hint": "+%d ouro" % ASH_SWEEP_GOLD},
 				{"id": "skip", "label": "SEGUIR VIAGEM", "hint": "Segue viagem"},
 			]
@@ -955,9 +976,9 @@ func _requirement_text(req: String) -> String:
 	match parts[0]:
 		"gold": return "Ouro insuficiente"
 		"deck": return "Poucas cartas"
-		"upgradable": return "Sem ouro ou sem carta para melhorar"
-		"swapcard": return "Sem ouro ou sem cartas"
-		"swaplaw": return "Sem ouro ou sem Leis"
+		"upgradable": return "Sem carta para melhorar" if int(parts[1]) <= 0 else "Sem ouro ou sem carta para melhorar"
+		"swapcard": return "Sem cartas" if int(parts[1]) <= 0 else "Sem ouro ou sem cartas"
+		"swaplaw": return "Sem Leis" if int(parts[1]) <= 0 else "Sem ouro ou sem Leis"
 	return ""
 
 # ==========================================
@@ -1003,6 +1024,11 @@ func _setup_ui() -> void:
 	discard_modal.rule_replaced.connect(_on_reward_law_replaced)
 	discard_modal.replacement_canceled.connect(_on_reward_law_declined)
 	add_child(discard_modal)
+
+	pick_modal = ItemPickModal.new()
+	pick_modal.picked.connect(_on_item_picked)
+	pick_modal.canceled.connect(_on_pick_canceled)
+	add_child(pick_modal)
 
 	rule_tooltip = RuleCardTooltip.new()
 	add_child(rule_tooltip)
@@ -1473,8 +1499,73 @@ func _pick_outcome(segments: Array) -> String:
 			return s["key"]
 	return segments[segments.size() - 1]["key"]
 
-func _on_choice_pressed(choice_id: String) -> void:
+func _choice_def(choice_id: String) -> Dictionary:
+	for c in event.get("choices", []):
+		if c["id"] == choice_id:
+			return c
+	return {}
+
+# Abre a escolha da carta/Lei antes de resolver; devolve true se abriu.
+func _open_pick(choice_id: String) -> bool:
+	var pick: String = String(_choice_def(choice_id).get("pick", ""))
+	if pick == "" or TutorialManager.is_active:
+		return false
+	var label: String = String(_choice_def(choice_id).get("label", ""))
+	label = label.split(" (")[0]
+	_pending_pick_choice = choice_id
+	match pick:
+		"card":
+			pick_modal.present(label, "Escolha a carta do seu baralho.", RunManager.player_deck.duplicate(), Color(0.95, 0.75, 0.35))
+		"upgradable":
+			pick_modal.present(label, "Escolha a carta que vai subir de raridade.", _upgradable_cards(), Color(1.0, 0.55, 0.25))
+		"law":
+			pick_modal.present(label, "Escolha a Lei que vai ser reescrita.", RunManager.active_rules.duplicate(), Color(0.72, 0.55, 1.0))
+		_:
+			if pick.begins_with("offer"):
+				var p = pick.split(":")
+				pick_modal.present(label, "Escolha 1 carta. As outras ficam.", _offer_cards(int(p[1]), int(p[2]), 3), Color(0.5, 0.95, 0.6), true)
+			else:
+				_pending_pick_choice = ""
+				return false
+	return true
+
+# 3 cartas diferentes entre si (por id) na faixa de raridade.
+func _offer_cards(min_r: int, max_r: int, n: int) -> Array:
+	var out: Array = []
+	var ids: Array = []
+	var tries: int = 0
+	while out.size() < n and tries < 40:
+		tries += 1
+		var c: ActionCard = _random_card(min_r, max_r)
+		if ids.has(c.id) and tries < 30:
+			continue
+		ids.append(c.id)
+		out.append(c)
+	return out
+
+func _on_item_picked(item) -> void:
+	var cid: String = _pending_pick_choice
+	_pending_pick_choice = ""
+	_picked_offer = String(_choice_def(cid).get("pick", "")).begins_with("offer")
+	if item is RuleCard:
+		picked_law = item as RuleCard
+	elif item is ActionCard:
+		picked_card = item as ActionCard
+	_on_choice_pressed(cid, true)
+
+func _on_pick_canceled() -> void:
+	_pending_pick_choice = ""
+	picked_card = null
+	picked_law = null
+	if stage != null:
+		_show_stage_choices()
+	else:
+		choices_box.visible = true
+
+func _on_choice_pressed(choice_id: String, picked: bool = false) -> void:
 	if resolved:
+		return
+	if not picked and _open_pick(choice_id):
 		return
 	resolved = true
 	_luck_played = false
@@ -1685,6 +1776,8 @@ func _shake(amp: float) -> void:
 func _resolve(event_id: String, choice_id: String, outcome: String = "") -> String:
 	if choice_id == "skip":
 		return "Você segue seu caminho."
+	if choice_id == "scavenge":
+		return "%s %s" % [SCAVENGE_TEXT.get(event_id, "Você procura com calma e acha uma carta perdida."), _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "ENCONTRADA")]
 	match event_id:
 		"chest":
 			if outcome == "win":
@@ -1696,18 +1789,19 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 		"merchant":
 			if choice_id == "buy":
 				RunManager.spend_gold(MERCHANT_BUY_COST)
-				return "Ele tira uma carta de dentro do capuz (-%d de ouro). %s" % [MERCHANT_BUY_COST, _give_card(_random_card(ActionCard.Rarity.COMMON), "RECEBIDA")]
-			var lost = _take_random_card()
+				return "Ele tira uma carta de dentro do capuz (-%d de ouro). %s" % [MERCHANT_BUY_COST, _give_card(_offer_or_random(ActionCard.Rarity.COMMON), "RECEBIDA")]
+			var lost = _take_chosen_card()
 			if lost != null:
-				RunManager.add_gold(MERCHANT_SELL_GOLD)
+				var sell_gold: int = _sell_value(lost)
+				RunManager.add_gold(sell_gold)
 				preview_hbox.add_child(_labeled_card_visual("VENDIDA", lost, Color(1.0, 0.6, 0.6, 0.8)))
-				return "Ele olha a carta contra a luz da lanterna e paga %d de ouro." % MERCHANT_SELL_GOLD
+				return "Ele olha a carta contra a luz da lanterna e paga %d de ouro." % sell_gold
 			return "Ele olha suas cartas e devolve todas: \"Isso eu já tenho.\""
 		"altar":
 			if choice_id == "pray":
 				RunManager.add_gold(ALTAR_PRAYER_GOLD)
 				return "Quando a runa se apaga, você nota moedas entre as pedras, deixadas por quem passou antes: +%d de ouro." % ALTAR_PRAYER_GOLD
-			var offered = _take_random_card()
+			var offered = _take_chosen_card()
 			if offered != null:
 				preview_hbox.add_child(_labeled_card_visual("OFERECIDA", offered, Color(1.0, 0.6, 0.6, 0.8)))
 			return "A runa engole a carta e devolve o pedaço de Lei que guardava. %s" % _give_random_law()
@@ -1718,16 +1812,16 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 			return _forge_card()
 		"library":
 			if choice_id == "read":
-				return _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
+				return _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
 			if outcome == "epic":
-				return "As correntes caem sozinhas e o tomo se abre numa carta que ninguém via há séculos. %s" % _give_card(_random_card(ActionCard.Rarity.EPIC), "ENCONTRADA")
+				return "As correntes caem sozinhas e o tomo se abre numa carta que ninguém via há séculos. %s" % _give_card(_offer_or_random(ActionCard.Rarity.EPIC), "ENCONTRADA")
 			if outcome == "loss":
 				return "O tomo fecha com força e prende a sua borda. Pra se soltar, você deixa %d de ouro." % _lose_gold(TOME_LOSS_GOLD)
 			return _start_ambush("ambushed", TOME_AMBUSH_BONUS, "As correntes se arrastam pelo salão. Os guardiões da biblioteca acordaram, e não gostam de visita.")
 		"traveler":
 			if choice_id == "help":
 				RunManager.spend_gold(TRAVELER_HELP_COST)
-				return "Ele remenda a borda, respira fundo e tira da bolsa o melhor que tinha. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "PRESENTE")
+				return "Ele remenda a borda, respira fundo e tira da bolsa o melhor que tinha. %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE), "PRESENTE")
 			if outcome == "win":
 				RunManager.add_gold(TRAVELER_ROB_GOLD)
 				return "Ele desmaia de novo antes de perceber. Você sai com +%d de ouro." % TRAVELER_ROB_GOLD
@@ -1738,12 +1832,12 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 			if choice_id == "setup":
 				return _start_ambush("setup", CAMP_SETUP_BONUS, "Você se esconde atrás de uma barraca. Quando o bando volta, quem pega de surpresa é você.")
 			if outcome == "card":
-				return _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
+				return _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
 			return _start_ambush("ambushed", CAMP_SEARCH_AMBUSH_BONUS, "Uma corda estica no chão e um sino toca. O bando volta correndo.")
 		"fountain":
 			if choice_id == "drink":
 				if outcome == "card":
-					return "A água fria lava a poeira da sua borda, e uma carta do fundo sobe junto com você. %s" % _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
+					return "A água fria lava a poeira da sua borda, e uma carta do fundo sobe junto com você. %s" % _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
 				return "A fonte é mais funda do que parece. Quando você consegue sair, %d de ouro ficaram lá embaixo." % _lose_gold(FOUNTAIN_THIRST_LOSS)
 			RunManager.spend_gold(FOUNTAIN_WISH_COST)
 			if outcome == "win":
@@ -1767,9 +1861,9 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 		"witch":
 			if choice_id == "herbs":
 				RunManager.spend_gold(WITCH_HERBS_COST)
-				return "Ela embrulha umas ervas e, no meio delas, uma carta velha. %s" % _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "RECEBIDA")
+				return "Ela embrulha umas ervas e, no meio delas, uma carta velha. %s" % _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "RECEBIDA")
 			if outcome == "card":
-				return "A poção borbulha em cima de você e deixa um desenho novo: uma carta. %s" % _give_card(_random_card(ActionCard.Rarity.RARE, ActionCard.Rarity.EPIC), "RECEBIDA")
+				return "A poção borbulha em cima de você e deixa um desenho novo: uma carta. %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE, ActionCard.Rarity.EPIC), "RECEBIDA")
 			if outcome == "loss":
 				var lost = _take_random_card()
 				if lost != null:
@@ -1788,7 +1882,7 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 				RunManager.add_gold(MIRAGE_DIG_GOLD)
 				return "Onde o ar tremia, a areia estava fofa. Você cava e acha uma bolsa enterrada: +%d de ouro." % MIRAGE_DIG_GOLD
 			if outcome == "oasis":
-				return "A lagoa era de verdade! Na margem, uma carta esquecida por outro viajante. %s" % _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
+				return "A lagoa era de verdade! Na margem, uma carta esquecida por outro viajante. %s" % _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
 			if outcome == "thirst":
 				return "Era miragem. A areia quente racha a sua borda e o remendo custa %d de ouro." % _lose_gold(MIRAGE_THIRST_LOSS)
 			RunManager.add_gold(MIRAGE_RUIN_GOLD)
@@ -1798,16 +1892,16 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 				RunManager.add_gold(SARC_LOOT_GOLD)
 				return "Você recolhe as moedas dos vasos, sem encostar na tampa: +%d de ouro." % SARC_LOOT_GOLD
 			if outcome == "card":
-				return "Entre faixas douradas, uma carta guardada pra outra vida. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "ENCONTRADA")
+				return "Entre faixas douradas, uma carta guardada pra outra vida. %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE), "ENCONTRADA")
 			if outcome == "curse":
 				return "O frio sai da fresta e gruda em você. Ele só solta quando você deixa %d de ouro nos vasos." % _lose_gold(SARC_CURSE_GOLD)
 			return _start_ambush("ambushed", SARC_AMBUSH_BONUS, "A tampa cai, e os guardiões da tumba se levantam da areia em volta!")
 		"caravan":
 			if choice_id == "bread":
 				RunManager.spend_gold(CARAVAN_BREAD_COST)
-				return "Ele te vende o maço mais barato, amarrado com barbante (-%d de ouro). %s" % [CARAVAN_BREAD_COST, _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "RECEBIDA")]
+				return "Ele te vende o maço mais barato, amarrado com barbante (-%d de ouro). %s" % [CARAVAN_BREAD_COST, _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "RECEBIDA")]
 			RunManager.spend_gold(CARAVAN_RARE_COST)
-			return "Ele olha pros lados, abre o baú do fundo e tira uma carta embrulhada em seda (-%d de ouro). %s" % [CARAVAN_RARE_COST, _give_card(_random_card(ActionCard.Rarity.RARE), "RECEBIDA")]
+			return "Ele olha pros lados, abre o baú do fundo e tira uma carta embrulhada em seda (-%d de ouro). %s" % [CARAVAN_RARE_COST, _give_card(_offer_or_random(ActionCard.Rarity.RARE), "RECEBIDA")]
 		"sphinx":
 			if choice_id == "silence":
 				RunManager.add_gold(SPHINX_SILENCE_GOLD)
@@ -1817,7 +1911,7 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 					return "A areia da ampulheta corre pra cima, e com ela sobe uma Lei esquecida. %s" % _give_random_law()
 				return "A areia da ampulheta corre pra baixo e leva %d de ouro junto." % _lose_gold(SPHINX_WRONG_LOSS)
 			if outcome == "card":
-				return "A sua sombra se estica até a esfinge e volta trazendo uma carta. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "RECEBIDA")
+				return "A sua sombra se estica até a esfinge e volta trazendo uma carta. %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE), "RECEBIDA")
 			return _start_ambush("ambushed", SPHINX_AMBUSH_BONUS, "A sombra se levanta do chão, e não vem sozinha: guardiões de pedra saem da areia!")
 		"sandstorm":
 			if choice_id == "shelter":
@@ -1832,18 +1926,19 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 		"relics":
 			if choice_id == "buy":
 				RunManager.spend_gold(RELIC_BUY_COST)
-				return "Ele tira uma carta de uma caixinha de cedro (-%d de ouro). %s" % [RELIC_BUY_COST, _give_card(_random_card(ActionCard.Rarity.COMMON), "RECEBIDA")]
-			var sold = _take_random_card()
+				return "Ele tira uma carta de uma caixinha de cedro (-%d de ouro). %s" % [RELIC_BUY_COST, _give_card(_offer_or_random(ActionCard.Rarity.COMMON), "RECEBIDA")]
+			var sold = _take_chosen_card()
 			if sold != null:
-				RunManager.add_gold(RELIC_SELL_GOLD)
+				var sell_gold: int = _sell_value(sold)
+				RunManager.add_gold(sell_gold)
 				preview_hbox.add_child(_labeled_card_visual("VENDIDA", sold, Color(1.0, 0.6, 0.6, 0.8)))
-				return "O velho guarda a carta na caixinha e conta as moedas devagar: +%d de ouro." % RELIC_SELL_GOLD
+				return "O velho guarda a carta na caixinha e conta as moedas devagar: +%d de ouro." % sell_gold
 			return "O velho olha tudo e balança a cabeça: \"Isso não vale nem a areia.\""
 		"obelisk":
 			if choice_id == "pray":
 				RunManager.add_gold(OBELISK_PRAYER_GOLD)
 				return "Na sombra do obelisco a areia é fresca, e meio enterradas nela, moedas antigas: +%d de ouro." % OBELISK_PRAYER_GOLD
-			var given = _take_random_card()
+			var given = _take_chosen_card()
 			if given != null:
 				preview_hbox.add_child(_labeled_card_visual("OFERECIDA", given, Color(1.0, 0.6, 0.6, 0.8)))
 			return "Os hieróglifos acendem, a areia engole a carta e a pedra devolve o pedaço de Lei que guardava. %s" % _give_random_law()
@@ -1855,7 +1950,7 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 		"oasis":
 			if choice_id == "drink":
 				if outcome == "card":
-					return "A água fria tira a areia da sua borda, e uma carta deixada como oferenda sobe junto. %s" % _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
+					return "A água fria tira a areia da sua borda, e uma carta deixada como oferenda sobe junto. %s" % _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
 				return "Embaixo da água tem lodo. Você afunda, e %d de ouro ficam presos lá." % _lose_gold(OASIS_FEVER_LOSS)
 			RunManager.spend_gold(OASIS_WISH_COST)
 			if outcome == "win":
@@ -1866,7 +1961,7 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 			if choice_id == "setup":
 				return _start_ambush("setup", BANDITS_SETUP_BONUS, "Você espera atrás da duna. Quando o bando volta, quem pega de surpresa é você.")
 			if outcome == "card":
-				return _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
+				return _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
 			return _start_ambush("ambushed", BANDITS_SEARCH_AMBUSH_BONUS, "Um apito corta o ar. O bando não tinha ido longe.")
 		"crystal_vein":
 			if choice_id == "chip":
@@ -1883,7 +1978,7 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 				RunManager.add_gold(SHARD_COVER_GOLD)
 				return "Com o espelho coberto, dá pra juntar os cacos do chão sem ninguém olhando: +%d de ouro." % SHARD_COVER_GOLD
 			if outcome == "card":
-				return "O reflexo para de te imitar, pensa um pouco e empurra uma carta pra fora do vidro. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "RECEBIDA")
+				return "O reflexo para de te imitar, pensa um pouco e empurra uma carta pra fora do vidro. %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE), "RECEBIDA")
 			if outcome == "loss":
 				return "Por um instante vocês trocam de lugar. Quando você volta, %d de ouro ficaram do outro lado." % _lose_gold(SHARD_LOSS_GOLD)
 			return _start_ambush("ambushed", SHARD_AMBUSH_BONUS, "O vidro estala. O reflexo sai do espelho, e traz outros reflexos junto.")
@@ -1911,19 +2006,19 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 					return "As duas batidas voltam ao mesmo tempo, a fenda se abre e mostra uma Lei gravada lá dentro. %s" % _give_random_law()
 				return "As batidas voltam desencontradas, a câmara treme e %d de ouro rolam pra dentro da fenda." % _lose_gold(ECHO_WRONG_LOSS)
 			if outcome == "card":
-				return "A pedrinha bate no fundo e o som volta duas vezes. Na segunda, vem uma carta junto. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "RECEBIDA")
+				return "A pedrinha bate no fundo e o som volta duas vezes. Na segunda, vem uma carta junto. %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE), "RECEBIDA")
 			return _start_ambush("ambushed", ECHO_AMBUSH_BONUS, "O som volta, mas quem responde são passos. Alguém escutou.")
 		"prospectors":
 			if choice_id == "setup":
 				return _start_ambush("setup", PROSPECT_SETUP_BONUS, "Você apaga a lanterna e espera no escuro. Quando eles voltam, quem pega de surpresa é você.")
 			if outcome == "card":
-				return _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
+				return _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "ENCONTRADA")
 			return _start_ambush("ambushed", PROSPECT_SEARCH_AMBUSH_BONUS, "As sombras do fundo se mexem. Eram eles, parados no escuro, te olhando o tempo todo.")
 		"mirror_altar":
 			if choice_id == "gaze":
 				RunManager.add_gold(MIRROR_ALTAR_GOLD)
 				return "Sua versão mais velha te encara um tempão e depois assente, como quem reconhece alguém. Uma moeda cai do altar: +%d de ouro." % MIRROR_ALTAR_GOLD
-			var offered = _take_random_card()
+			var offered = _take_chosen_card()
 			if offered != null:
 				preview_hbox.add_child(_labeled_card_visual("OFERECIDA", offered, Color(1.0, 0.6, 0.6, 0.8)))
 			return "A mão de cristal fecha na carta e volta pro espelho. Quando sai de novo, traz uma Lei. %s" % _give_random_law()
@@ -1944,7 +2039,7 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 							nd.revealed = true
 							shown += 1
 				var lead: String = "Você copia o mapa no verso de uma carta velha. As grutas lá na frente não escondem mais nada." if shown > 0 else "Você copia o mapa no verso de uma carta velha. Por aqui já não tem gruta escondendo nada."
-				return "%s %s" % [lead, _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "COPIADA")]
+				return "%s %s" % [lead, _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "COPIADA")]
 			RunManager.add_gold(NOTICE_TEAR_GOLD)
 			return _start_ambush("ambushed", NOTICE_TEAR_AMBUSH_BONUS, "O pedaço sai com tinta e tudo (+%d de ouro). A parede inteira vem atrás, e quem morava atrás dela também." % NOTICE_TEAR_GOLD)
 		"cave_canteen":
@@ -1952,7 +2047,7 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 				RunManager.add_gold(CANTEEN_SOUP_GOLD)
 				return "A sopa é crocante por fora e crocante por dentro. No fundo da tigela, umas moedas que ninguém sabe como foram parar ali: +%d de ouro." % CANTEEN_SOUP_GOLD
 			if choice_id == "ask":
-				return "\"Eu vendo sopa, não inquérito.\" Mas ele te dá uma carta de troco, pra você parar de perguntar. %s" % _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "TROCO")
+				return "\"Eu vendo sopa, não inquérito.\" Mas ele te dá uma carta de troco, pra você parar de perguntar. %s" % _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "TROCO")
 			var law_txt: String = _give_random_law()
 			return _start_ambush("ambushed", NOTICE_MIX_AMBUSH_BONUS, "No fundo do prato, a gorjeta dele: um pedaço de Lei. %s Aí a sopa se levanta da tigela e vem tirar satisfação." % law_txt)
 		"notice_board":
@@ -1963,21 +2058,21 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 				RunManager.add_gold(NOTICE_TEAR_GOLD)
 				return _start_ambush("ambushed", NOTICE_TEAR_AMBUSH_BONUS, "Atrás dos avisos tinha moedas presas na cortiça (+%d de ouro). A lâmpada acende de vez, e a galeria se enche de passos." % NOTICE_TEAR_GOLD)
 			if outcome == "card":
-				return "Os dois montinhos brilham juntos e viram uma coisa só, que não devia existir. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "MISTURADA")
+				return "Os dois montinhos brilham juntos e viram uma coisa só, que não devia existir. %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE), "MISTURADA")
 			return _start_ambush("ambushed", NOTICE_MIX_AMBUSH_BONUS, "O brilho estoura. Era por isso que estava proibido.")
 		"crystal_bats":
 			if choice_id == "chip":
 				RunManager.add_gold(BATS_CHIP_GOLD)
 				return "Você junta as lascas sem fazer barulho. Um morcego abre um olho, pensa, e fecha de novo: +%d de ouro." % BATS_CHIP_GOLD
 			if outcome == "card":
-				return "O bando sai voando de uma vez, tilintando, e derruba um cristal do teto. Dentro dele, uma carta. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "ENCONTRADA")
+				return "O bando sai voando de uma vez, tilintando, e derruba um cristal do teto. Dentro dele, uma carta. %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE), "ENCONTRADA")
 			return _start_ambush("ambushed", BATS_AMBUSH_BONUS, "Os morcegos fogem, e o barulho de mil asas de cristal acorda a galeria inteira.")
 		"mine_lift":
 			if choice_id == "bell":
 				RunManager.add_gold(LIFT_BELL_GOLD)
 				return "Você toca o sino. Lá de baixo, depois de muito tempo, sobe um saquinho na corda: +%d de ouro. E um bilhete: \"obrigado por avisar que ainda tem alguém aí\"." % LIFT_BELL_GOLD
 			if outcome == "epic":
-				return "A gaiola desce até onde a luz acaba. Alguém, no escuro, coloca uma carta na sua frente e manda você de volta. %s" % _give_card(_random_card(ActionCard.Rarity.EPIC), "LÁ DE BAIXO")
+				return "A gaiola desce até onde a luz acaba. Alguém, no escuro, coloca uma carta na sua frente e manda você de volta. %s" % _give_card(_offer_or_random(ActionCard.Rarity.EPIC), "LÁ DE BAIXO")
 			if outcome == "loss":
 				return "A corda escorrega, a gaiola dá um tranco e %d de ouro caem pelo vão. Ninguém lá embaixo devolve." % _lose_gold(LIFT_LOSS_GOLD)
 			return _start_ambush("ambushed", LIFT_AMBUSH_BONUS, "A gaiola para no meio do caminho. Quem estava subindo chegou primeiro.")
@@ -1990,18 +2085,18 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 				return "A última página só tem uma linha, escrita com a mão tremendo: \"Ele disse que tudo se resolve no topo.\""
 			if outcome == "loot":
 				RunManager.add_gold(EXPED_PACK_GOLD)
-				return "Dentro da mochila, moedas (+%d de ouro) e uma carta enrolada numa meia de lã. %s" % [EXPED_PACK_GOLD, _give_card(_random_card(ActionCard.Rarity.RARE), "DA MOCHILA")]
+				return "Dentro da mochila, moedas (+%d de ouro) e uma carta enrolada numa meia de lã. %s" % [EXPED_PACK_GOLD, _give_card(_offer_or_random(ActionCard.Rarity.RARE), "DA MOCHILA")]
 			return _start_ambush("ambushed", EXPED_AMBUSH_BONUS, "Você puxa a mochila e a neve do teto desce inteira. Da nevasca, saem peças geladas.")
 		"frozen_disc":
 			if choice_id == "touch":
 				RunManager.add_gold(FROZEN_TOUCH_GOLD)
 				return "O gelo está morno. Por um instante, parece que o disco olha pra você. Embaixo dele, moedas: +%d de ouro. \"Alguém precisava ficar.\"" % FROZEN_TOUCH_GOLD
 			if choice_id == "melt":
-				return "O gelo cede devagar. O disco não se mexe, mas diz uma palavra só: \"Quase.\" %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "DO GELO")
+				return "O gelo cede devagar. O disco não se mexe, mas diz uma palavra só: \"Quase.\" %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE), "DO GELO")
 			return _start_ambush("ambushed", FROZEN_AMBUSH_BONUS, "O gelo estala de ponta a ponta. Os cacos se levantam como peças.")
 		"safety_rope":
 			if choice_id == "promise":
-				return "\"Obrigado. Ninguém avisa nada.\" A voz some, contente, e uma carta desce pela corda. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "DE CIMA")
+				return "\"Obrigado. Ninguém avisa nada.\" A voz some, contente, e uma carta desce pela corda. %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE), "DE CIMA")
 			if choice_id == "pull":
 				return "A corda cede e, lá no alto, aparece uma silhueta que não tem nada a ver com a voz. A voz não parou de subir. A silhueta, sim. %s" % _give_random_law()
 			return _start_ambush("ambushed", ROPE_AMBUSH_BONUS, "A voz fica quieta. Depois, a montanha inteira responde, e a neve desce varrendo tudo.")
@@ -2013,14 +2108,14 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 					return "A moeda some no vapor. As velhinhas aplaudem, e o fundo da termas brilha de moedas: +%d de ouro." % SPRING_WISH_GOLD
 				return "A moeda some no vapor. \"Essa foi pro fundo, querido.\" Nada acontece (-%d de ouro)." % SPRING_WISH_COST
 			if outcome == "card":
-				return "A água quente faz tudo parecer mais simples. Quando você sai, uma carta grudou na sua borda. %s" % _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "DO VAPOR")
+				return "A água quente faz tudo parecer mais simples. Quando você sai, uma carta grudou na sua borda. %s" % _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "DO VAPOR")
 			return "Você fecha os olhos um minutinho. Quando abre, as velhinhas foram embora e %d de ouro também." % _lose_gold(SPRING_SOAK_LOSS)
 		"big_footprints":
 			if choice_id == "measure":
 				RunManager.add_gold(PRINTS_MEASURE_GOLD)
 				return "Cabe você inteiro num dedo só. No fundo da pegada, umas moedas que alguém deixou cair correndo: +%d de ouro." % PRINTS_MEASURE_GOLD
 			if outcome == "card":
-				return "A gruta está vazia. Só tem um ninho de neve, ainda morno, e uma carta no meio dele. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "ACHADA")
+				return "A gruta está vazia. Só tem um ninho de neve, ainda morno, e uma carta no meio dele. %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE), "ACHADA")
 			return _start_ambush("ambushed", PRINTS_AMBUSH_BONUS, "A gruta não estava vazia. O dono das pegadas não aparece, mas manda os amigos dele.")
 		"ice_hermit":
 			if choice_id == "help":
@@ -2047,19 +2142,20 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 		"fur_trader":
 			if choice_id == "buy":
 				RunManager.spend_gold(MERCHANT_BUY_COST)
-				return "Ele tira uma carta de dentro de um fardo de pele (-%d de ouro). %s" % [MERCHANT_BUY_COST, _give_card(_random_card(ActionCard.Rarity.COMMON), "RECEBIDA")]
-			var sold = _take_random_card()
+				return "Ele tira uma carta de dentro de um fardo de pele (-%d de ouro). %s" % [MERCHANT_BUY_COST, _give_card(_offer_or_random(ActionCard.Rarity.COMMON), "RECEBIDA")]
+			var sold = _take_chosen_card()
 			if sold != null:
-				RunManager.add_gold(MERCHANT_SELL_GOLD)
+				var sell_gold: int = _sell_value(sold)
+				RunManager.add_gold(sell_gold)
 				preview_hbox.add_child(_labeled_card_visual("VENDIDA", sold, Color(1.0, 0.6, 0.6, 0.8)))
-				return "Ele cheira a carta, aprova e paga %d de ouro." % MERCHANT_SELL_GOLD
+				return "Ele cheira a carta, aprova e paga %d de ouro." % sell_gold
 			return "Ele olha suas cartas e balança a cabeça: \"Isso não esquenta ninguém.\""
 		"ice_fishing":
 			if choice_id == "bucket":
 				RunManager.add_gold(FISH_BUCKET_GOLD)
 				return "No fundo do balde, embaixo dos peixes, umas moedas: +%d de ouro." % FISH_BUCKET_GOLD
 			if outcome == "card":
-				return "Na ponta da linha, em vez de peixe, uma carta enrolada. %s" % _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "PESCADA")
+				return "Na ponta da linha, em vez de peixe, uma carta enrolada. %s" % _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.RARE), "PESCADA")
 			if outcome == "gold":
 				RunManager.add_gold(FISH_GOLD)
 				return "Você puxa uma bolsa inteira do lago congelado: +%d de ouro." % FISH_GOLD
@@ -2069,11 +2165,11 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 			if choice_id == "help":
 				RunManager.add_gold(FORGE2_HELP_GOLD)
 				return "O fole sopra e a cinza voa. Embaixo dela, moedas derretidas que ainda valem: +%d de ouro." % FORGE2_HELP_GOLD
-			return _forge_card()
+			return _forge_card(0)
 		"apprentice":
 			if choice_id == "buy":
 				RunManager.spend_gold(APPRENTICE_BUY_COST)
-				return "\"Tá meio torta, mas funciona. Acho.\" (-%d de ouro). %s" % [APPRENTICE_BUY_COST, _give_card(_random_card(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "COM DEFEITO")]
+				return "\"Tá meio torta, mas funciona. Acho.\" (-%d de ouro). %s" % [APPRENTICE_BUY_COST, _give_card(_offer_or_random(ActionCard.Rarity.COMMON, ActionCard.Rarity.COMMON), "COM DEFEITO")]
 			if choice_id == "help":
 				RunManager.add_gold(APPRENTICE_HELP_GOLD)
 				return "Vocês jogam as coroas tortas no fundo do balde. Ele te paga em silêncio: +%d de ouro. \"A mestra não pode saber que eu errei. Ela nunca erra.\"" % APPRENTICE_HELP_GOLD
@@ -2093,7 +2189,7 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 				RunManager.add_gold(NEST_COAL_GOLD)
 				return "Elas comem o carvão, satisfeitas, e cospem pepitas como quem paga a conta: +%d de ouro." % NEST_COAL_GOLD
 			if outcome == "card":
-				return "O ovo está quente e leve. Quando você sai de perto, ele racha e de dentro sai uma carta. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "DO OVO")
+				return "O ovo está quente e leve. Quando você sai de perto, ele racha e de dentro sai uma carta. %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE), "DO OVO")
 			return _start_ambush("ambushed", NEST_AMBUSH_BONUS, "Uma salamandra acorda. Depois outra. Depois todas.")
 		"crown_mold":
 			if choice_id == "fill":
@@ -2112,35 +2208,37 @@ func _resolve(event_id: String, choice_id: String, outcome: String = "") -> Stri
 		"glassblower":
 			if choice_id == "buy":
 				RunManager.spend_gold(MERCHANT_BUY_COST)
-				return "Ela tira uma carta da prateleira, ainda morna da moldura de vidro (-%d de ouro). %s" % [MERCHANT_BUY_COST, _give_card(_random_card(ActionCard.Rarity.COMMON), "DE VIDRO")]
-			var sold2 = _take_random_card()
+				return "Ela tira uma carta da prateleira, ainda morna da moldura de vidro (-%d de ouro). %s" % [MERCHANT_BUY_COST, _give_card(_offer_or_random(ActionCard.Rarity.COMMON), "DE VIDRO")]
+			var sold2 = _take_chosen_card()
 			if sold2 != null:
-				RunManager.add_gold(MERCHANT_SELL_GOLD)
+				var sell_gold: int = _sell_value(sold2)
+				RunManager.add_gold(sell_gold)
 				preview_hbox.add_child(_labeled_card_visual("VENDIDA", sold2, Color(1.0, 0.6, 0.6, 0.8)))
-				return "Ela olha a carta contra a luz da lava e paga %d de ouro." % MERCHANT_SELL_GOLD
+				return "Ela olha a carta contra a luz da lava e paga %d de ouro." % sell_gold
 			return "Ela olha suas cartas e devolve todas: \"Não dá pra emoldurar nenhuma dessas.\""
 		"melted_statue":
 			if choice_id == "polish":
 				RunManager.add_gold(STATUE_POLISH_GOLD)
 				return "Você tira a fuligem do rosto dela. Ela parece sorrir. No degrau, moedas de quem passou antes: +%d de ouro." % STATUE_POLISH_GOLD
 			if choice_id == "read":
-				return "\"A primeira que virou. A última que lembra. Lembrou que não era pra virar.\" Embaixo da inscrição, uma carta presa na pedra. %s" % _give_card(_random_card(ActionCard.Rarity.RARE), "DA ESTÁTUA")
+				return "\"A primeira que virou. A última que lembra. Lembrou que não era pra virar.\" Embaixo da inscrição, uma carta presa na pedra. %s" % _give_card(_offer_or_random(ActionCard.Rarity.RARE), "DA ESTÁTUA")
 			return _start_ambush("ambushed", STATUE_AMBUSH_BONUS, "A coroa sai fácil demais. Alguém estava vigiando, e não gostou.")
 		"smelter":
 			if choice_id == "stir":
 				RunManager.add_gold(SMELT_STIR_GOLD)
 				return "Você mexe o caldeirão até o braço doer. Sobra um lingotinho na concha: +%d de ouro." % SMELT_STIR_GOLD
-			var melted = _take_random_card()
+			var melted = _take_chosen_card()
 			if melted != null:
-				RunManager.add_gold(SMELT_GOLD)
+				var melt_gold: int = _melt_value(melted)
+				RunManager.add_gold(melt_gold)
 				preview_hbox.add_child(_labeled_card_visual("DERRETIDA", melted, Color(1.0, 0.6, 0.6, 0.8)))
-				return "A carta afunda no metal e sai do outro lado como lingote: +%d de ouro." % SMELT_GOLD
+				return "A carta afunda no metal e sai do outro lado como lingote: +%d de ouro." % melt_gold
 			return "Você não tem nada que valha a pena derreter."
 		"ash_altar":
 			if choice_id == "sweep":
 				RunManager.add_gold(ASH_SWEEP_GOLD)
 				return "Você varre a cinza e acha moedas embaixo das marcas de mão: +%d de ouro." % ASH_SWEEP_GOLD
-			var offered2 = _take_random_card()
+			var offered2 = _take_chosen_card()
 			if offered2 != null:
 				preview_hbox.add_child(_labeled_card_visual("OFERECIDA", offered2, Color(1.0, 0.6, 0.6, 0.8)))
 			return "A fresta engole a carta e a cinza se mexe sozinha, desenhando uma Lei. %s" % _give_random_law()
@@ -2180,6 +2278,37 @@ func _give_card(card: ActionCard, caption: String) -> String:
 	RunManager.add_gold(compensation)
 	return "Seu baralho tá cheio, então ela vira +%d de ouro." % compensation
 
+# Carta escolhida no ItemPickModal (vender/oferecer/derreter); sem escolha, sorteia.
+func _take_chosen_card() -> ActionCard:
+	if picked_card != null and not _picked_offer and RunManager.player_deck.has(picked_card):
+		var c: ActionCard = picked_card
+		picked_card = null
+		RunManager.player_deck.erase(c)
+		return c
+	return _take_random_card()
+
+# Carta escolhida entre as oferecidas (escolha 1 de 3); sem escolha, sorteia.
+func _offer_or_random(min_rarity: int, max_rarity: int = ActionCard.Rarity.LEGENDARY) -> ActionCard:
+	if picked_card != null and _picked_offer:
+		var c: ActionCard = picked_card
+		_picked_offer = false
+		picked_card = null
+		return c
+	return _random_card(min_rarity, max_rarity)
+
+# Preço de venda conforme a raridade (o caldeirão de fundição paga o preço cheio).
+static func _sell_value_r(r: int) -> int:
+	return int(round(ActionCard.get_cost_by_rarity(r) * 0.8))
+
+static func _melt_value_r(r: int) -> int:
+	return ActionCard.get_cost_by_rarity(r)
+
+func _sell_value(card: ActionCard) -> int:
+	return _sell_value_r(card.rarity)
+
+func _melt_value(card: ActionCard) -> int:
+	return _melt_value_r(card.rarity)
+
 func _take_random_card() -> ActionCard:
 	if RunManager.player_deck.is_empty():
 		return null
@@ -2190,12 +2319,14 @@ func _take_random_card() -> ActionCard:
 func _upgradable_cards() -> Array:
 	return RunManager.player_deck.filter(func(c: ActionCard): return c.rarity < ActionCard.Rarity.LEGENDARY)
 
-func _forge_card() -> String:
+func _forge_card(cost: int = FORGE_COST) -> String:
 	var candidates = _upgradable_cards()
 	if candidates.is_empty():
 		return "Não há nada que ele possa melhorar."
-	RunManager.spend_gold(FORGE_COST)
 	var old_card: ActionCard = candidates[randi() % candidates.size()]
+	if picked_card != null and candidates.has(picked_card):
+		old_card = picked_card
+	picked_card = null
 	var target_rarity = old_card.rarity + 1
 	var pool = LootTables.get_player_action_cards().filter(func(c): return c.rarity == target_rarity and c.id != old_card.id)
 	if pool.is_empty():
@@ -2203,32 +2334,41 @@ func _forge_card() -> String:
 	if pool.is_empty():
 		pool = LootTables.get_all_action_cards().filter(func(c): return c.rarity == target_rarity and c.id != old_card.id)
 	if pool.is_empty():
-		return "A forja esfria e não rende nada. Você recebe o ouro de volta."
+		return "A forja esfria e não rende nada. Seu ouro fica com você."
+	RunManager.spend_gold(cost)
 	var upgraded: ActionCard = pool[randi() % pool.size()]
 	var idx = RunManager.player_deck.find(old_card)
 	RunManager.player_deck[idx] = upgraded
 	_add_transform(_card_visual(old_card, TRANSFORM_CARD_SCALE), _card_visual(upgraded, TRANSFORM_CARD_SCALE), "forge",
 		ActionCardVisual.get_rarity_color(upgraded.rarity), "ANTES", "FORJADA")
-	return "A carta sai da forja transformada (-%d de ouro):" % FORGE_COST
+	if cost <= 0:
+		return "A brasa ainda estava viva. A carta sai da forja transformada:"
+	return "A carta sai da forja transformada (-%d de ouro):" % cost
 
 # Caçador: troca 1 carta aleatória do baralho por outra da MESMA raridade (outro id).
 func _hunter_swap(cost: int = HUNTER_SWAP_COST, who: String = "O caçador") -> String:
 	if RunManager.player_deck.is_empty():
 		return "%s não vê nenhuma carta pra trocar." % who
 	var old_card: ActionCard = RunManager.player_deck[randi() % RunManager.player_deck.size()]
+	if picked_card != null and RunManager.player_deck.has(picked_card):
+		old_card = picked_card
+	picked_card = null
 	var pool = LootTables.get_player_action_cards().filter(func(c: ActionCard): return c.rarity == old_card.rarity and c.id != old_card.id)
 	if pool.is_empty():
 		pool = LootTables.get_unlocked_action_cards().filter(func(c: ActionCard): return c.rarity == old_card.rarity and c.id != old_card.id)
 	if pool.is_empty():
 		pool = LootTables.get_all_action_cards().filter(func(c: ActionCard): return c.rarity == old_card.rarity and c.id != old_card.id)
 	if pool.is_empty():
-		return "%s balança a cabeça: não tem troca justa pra essa carta. Seu ouro fica com você." % who
-	RunManager.spend_gold(cost)
+		return "%s balança a cabeça: não tem troca justa pra essa carta." % who
+	if cost > 0:
+		RunManager.spend_gold(cost)
 	var new_card: ActionCard = LootTables.pick_weighted_actions(pool, 1)[0]
 	RunManager.player_deck[RunManager.player_deck.find(old_card)] = new_card
 	_add_transform(_card_visual(old_card, TRANSFORM_CARD_SCALE), _card_visual(new_card, TRANSFORM_CARD_SCALE), "swap",
 		ActionCardVisual.get_rarity_color(new_card.rarity), "ANTES", "TROCADA")
-	return "%s fecha negócio (-%d de ouro):" % [who, cost]
+	if cost > 0:
+		return "%s fecha negócio (-%d de ouro):" % [who, cost]
+	return "%s fecha negócio:" % who
 
 # Nômade: mesma troca do Caçador (mesma raridade), com o custo e a fala do deserto.
 func _nomad_swap() -> String:
@@ -2240,6 +2380,9 @@ func _monk_swap_law(who: String = "O monge") -> String:
 	if RunManager.active_rules.is_empty():
 		return "%s não encontra nenhuma Lei sua para reescrever." % who
 	var old_rule: RuleCard = RunManager.active_rules[randi() % RunManager.active_rules.size()]
+	if picked_law != null and RunManager.active_rules.has(picked_law):
+		old_rule = picked_law
+	picked_law = null
 	var owned_ids: Array[String] = []
 	for r in RunManager.active_rules:
 		owned_ids.append(r.id)
@@ -2252,13 +2395,12 @@ func _monk_swap_law(who: String = "O monge") -> String:
 	RunManager.remove_rule(old_rule.id)
 	for cand in pool:
 		if RunManager.add_rule(cand):
-			RunManager.spend_gold(MONK_SWAP_COST)
 			_add_transform(_law_visual(old_rule, TRANSFORM_LAW_SCALE), _law_visual(cand, TRANSFORM_LAW_SCALE), "law",
 				Color(0.72, 0.55, 1.0), "REVOGADA", "NOVA LEI")
-			return "%s reescreve suas leis (-%d de ouro):" % [who, MONK_SWAP_COST]
+			return "%s reescreve a Lei que você escolheu:" % who
 	# Nenhuma serviu (todas incompatíveis ou sem opções): devolve a original.
 	RunManager.add_rule(old_rule)
-	return "%s não acha Lei melhor pra você. Seu ouro fica com você." % who
+	return "%s não acha Lei melhor pra você." % who
 
 func _give_random_law() -> String:
 	var owned_ids: Array[String] = []
