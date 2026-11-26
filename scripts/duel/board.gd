@@ -358,6 +358,12 @@ func tick_piece_effects(team: int) -> Array:
 					p.is_king = false
 					p.sd_exempt = false
 					events.append({"type": "heir_expired", "pos": Vector2i(c, r)})
+			# Congelar (carta): descongela depois dos turnos do dono.
+			if p.freeze_turns > 0:
+				p.freeze_turns -= 1
+				if p.freeze_turns == 0 and p.frozen:
+					p.frozen = false
+					events.append({"type": "thaw", "pos": Vector2i(c, r)})
 	return events
 
 # Fileiras de cada lado na formação clássica. Tamanhos ímpares deixam sempre 3

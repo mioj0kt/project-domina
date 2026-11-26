@@ -54,6 +54,8 @@ var frozen: bool = false
 var winded: bool = false
 # Luz Polar: escudo da aurora (a próxima captura contra ela falha).
 var polar_shield: bool = false
+# Carta Congelar: turnos (do dono) que a peça ainda fica congelada; ao zerar, descongela.
+var freeze_turns: int = 0
 # --- Chefe da Caldeira ---
 # Coroa Torta: Dama recém-coroada "sem acabamento": anda e captura só 1 casa até
 # a primeira captura (aí vira Dama completa).
@@ -117,4 +119,5 @@ func clone() -> BoardPiece:
 	copy.frozen = frozen
 	copy.winded = winded
 	copy.polar_shield = polar_shield
+	copy.freeze_turns = freeze_turns
 	return copy

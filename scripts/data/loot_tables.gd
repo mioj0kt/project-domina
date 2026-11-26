@@ -109,7 +109,16 @@ static func get_all_action_cards() -> Array[ActionCard]:
 		CardCounterstrike.new(),
 		CardAllOrNothing.new(),
 		CardSteal.new(),
-		CardSilence.new()
+		CardSilence.new(),
+		# Cume
+		CardIcePatch.new(),
+		CardFreeze.new(),
+		CardBreathless.new(),
+		CardClimbingRope.new(),
+		# Caldeira
+		CardHammerBlow.new(),
+		CardTemper.new(),
+		CardCoolDown.new()
 	]
 	return cards
 
@@ -297,7 +306,9 @@ const AI_ELIGIBLE_CARD_IDS: Array[String] = [
 	"ashes", "flame_wall", "clock_cut", "extension", "pause", "sudden_start", "recycle", "place_sarcophagus",
 	# Cartas novas que a IA sabe usar (Roubo só quando sua mão tem carta que ela conhece).
 	"collapse", "forced_march", "counterstrike", "all_or_nothing", "steal", "silence",
-	"mirror_crystal", "swap", "push"
+	"mirror_crystal", "swap", "push",
+	# Cume e Caldeira
+	"freeze", "breathless", "hammer_blow", "temper"
 ]
 
 # Pesos de raridade [comum, rara, épica, lendária] das cartas do inimigo por
@@ -327,6 +338,8 @@ const CARD_BIOME: Dictionary = {
 	"plant_tree": "floresta", "frog_bait": "floresta",
 	"plant_cactus": "deserto", "place_sarcophagus": "deserto",
 	"mirror_crystal": "mina", "collapse": "mina",
+	"ice_patch": "cume", "freeze": "cume", "breathless": "cume", "climbing_rope": "cume",
+	"hammer_blow": "caldeira", "temper": "caldeira", "cool_down": "caldeira",
 }
 
 static func card_fits_biome(card_id: String, biome: String) -> bool:

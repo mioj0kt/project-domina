@@ -361,6 +361,14 @@ func _run_avalanche(lane: Array) -> Dictionary:
 # quem pulou. Sem ameaça nenhuma, amarra duplas coladas ao acaso.
 # Devolve as casas das peças recém-amarradas (para a animação).
 func _retie_ropes(full: bool = true) -> Array:
+	# Cordas do jogador (carta Corda de Escalada) ficam de fora: o chefe só mexe nas dele.
+	var mine: Array = board.rope_pairs.filter(func(pr): return pr[0].owner_team != ai_team)
+	board.rope_pairs = board.rope_pairs.filter(func(pr): return pr[0].owner_team == ai_team)
+	var tied: Array = _retie_boss_ropes(full)
+	board.rope_pairs.append_array(mine)
+	return tied
+
+func _retie_boss_ropes(full: bool) -> Array:
 	var old: Array = []
 	for pair in board.rope_pairs:
 		old.append(pair[0])

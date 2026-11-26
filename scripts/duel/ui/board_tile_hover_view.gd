@@ -219,7 +219,8 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 		if cp.frozen:
 			effects.append({
 				"title": "CONGELADA",
-				"desc": "Não anda nem captura (mas pode ser capturada). Descongela quando uma peça aliada parar colada nela na diagonal.",
+				"desc": ("Não anda nem captura (mas pode ser capturada). Descongela daqui a %d turno(s) dela." % cp.freeze_turns) if cp.freeze_turns > 0
+					else "Não anda nem captura (mas pode ser capturada). Descongela quando uma peça aliada parar colada nela na diagonal.",
 				"affects": "both",
 				"title_color": Color(0.7, 0.9, 1.0)
 			})
@@ -233,7 +234,7 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 		if cp.winded and cp.rooted_turns > 0:
 			effects.append({
 				"title": "SEM FÔLEGO",
-				"desc": "Chegou perto do cume: fica a próxima jogada parada, recuperando o ar.",
+				"desc": "Ficou sem fôlego: fica a próxima jogada parada, recuperando o ar.",
 				"affects": "both",
 				"title_color": Color(0.8, 0.92, 1.0)
 			})
@@ -248,7 +249,8 @@ func _get_tile_effects(board: Board, row: int, col: int) -> Array:
 			if pair.has(cp):
 				effects.append({
 					"title": "CORDADA",
-					"desc": "Amarrada a outra peça do chefe. Se uma for capturada, a outra é puxada para a casa dela (se estiver a até %d casas). O chefe troca as duplas a cada 4 turnos dele." % Board.ROPE_REACH,
+					"desc": ("Amarrada a outra peça do chefe. Se uma for capturada, a outra é puxada para a casa dela (se estiver a até %d casas). O chefe troca as duplas a cada 4 turnos dele." % Board.ROPE_REACH) if cp.owner_team == board.ai_team_color
+						else ("Amarrada a outra peça sua. Se uma for capturada, a outra é puxada para a casa dela (se estiver a até %d casas)." % Board.ROPE_REACH),
 					"affects": "both",
 					"title_color": Color(0.95, 0.8, 0.55)
 				})

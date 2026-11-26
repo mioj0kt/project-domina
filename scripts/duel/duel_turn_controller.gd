@@ -713,6 +713,32 @@ func _find_ai_card_target(card: ActionCard, board: Board, host: Node2D) -> Varia
 			return _ai_find_advanced_enemy(card, board, host)
 		"mirror_crystal", "swap", "push":
 			return _ai_find_by_simulation(card, board, host)
+		"freeze":
+			# Congela quem ameaça capturar agora; senão a peça do jogador mais avançada.
+			for m in board.get_all_valid_moves(host.human_team):
+				if m.get("is_capture", false):
+					var fp: Vector2i = m.get("from", Vector2i(-1, -1))
+					if card.is_valid_target(board, fp, host.ai_team, {}):
+						return fp
+			return _ai_find_advanced_enemy(card, board, host)
+		"hammer_blow":
+			# Dama sozinha primeiro, depois a peça sozinha mais avançada.
+			for r in range(board.rows):
+				for c in range(board.cols):
+					var hp := Vector2i(c, r)
+					if card.is_valid_target(board, hp, host.ai_team, {}) and board.grid[r][c].is_king:
+						return hp
+			return _ai_find_advanced_enemy(card, board, host)
+		"breathless":
+			@warning_ignore("incompatible_ternary")
+			return Vector2i.ZERO if CardBreathless._invaders(board, host.ai_team).size() >= 2 else null
+		"temper":
+			# Só tempera a peça mais avançada (e se ela já passou da metade).
+			var tp = _ai_find_any_own_common_piece(board, host.ai_team)
+			if tp == null or not card.is_valid_target(board, tp, host.ai_team, {}):
+				return null
+			var prog: int = tp.y if host.ai_team != board.human_team_color else board.rows - 1 - tp.y
+			return tp if prog * 2 >= board.rows else null
 		"forced_march":
 			return _ai_find_forced_march_target(card, board, host)
 		"counterstrike":
@@ -1643,6 +1669,11 @@ func _conclude_turn(team_that_moved: int) -> void:
 			host.rule_banner_view.pop_rule_trigger(
 				host.board_offset + Vector2(hp.x * host.cell_size + host.cell_size / 2.0, hp.y * host.cell_size + host.cell_size / 2.0),
 				"COROA PERDIDA", Color(0.8, 0.7, 0.9))
+		elif ev["type"] == "thaw" and host.rule_banner_view != null:
+			var tp: Vector2i = ev["pos"]
+			CumeBossFx.play_shatter(host, _cell_center(tp), host.cell_size)
+			Juice.burst(host, _cell_center(tp), Color(0.6, 0.85, 1.0), 8, 140.0, 0.35, maxf(2.0, host.cell_size / 24.0), 260.0, 90.0)
+			host.rule_banner_view.pop_rule_trigger(_cell_center(tp), "DEGELOU!", Color(0.6, 0.85, 1.0))
 
 	# Raízes Famintas (lei de chefe): quem capturou fica enraizado no próximo turno.
 	var root_spots: Array = host.board.apply_hungry_roots(team_that_moved)
